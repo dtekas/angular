@@ -10,10 +10,10 @@ import {assertDataInRange, assertDefined, assertDomNode, assertGreaterThan, asse
 import {assertTNodeForLView} from '../assert';
 import {LContainer, TYPE} from '../interfaces/container';
 import {LContext, MONKEY_PATCH_KEY_NAME} from '../interfaces/context';
-import {TConstants, TNode} from '../interfaces/node';
-import {RNode, isProceduralRenderer} from '../interfaces/renderer';
+import {TNode} from '../interfaces/node';
+import {RNode} from '../interfaces/renderer';
 import {isLContainer, isLView} from '../interfaces/type_checks';
-import {FLAGS, HEADER_OFFSET, HOST, LView, LViewFlags, PARENT, PREORDER_HOOK_FLAGS, RENDERER, TData, TVIEW} from '../interfaces/view';
+import {FLAGS, HEADER_OFFSET, HOST, LView, LViewFlags, PARENT, PREORDER_HOOK_FLAGS, TData, TVIEW} from '../interfaces/view';
 
 
 
@@ -93,7 +93,7 @@ export function getNativeByTNode(tNode: TNode, lView: LView): RNode {
   ngDevMode && assertTNodeForLView(tNode, lView);
   ngDevMode && assertDataInRange(lView, tNode.index);
   const node: RNode = unwrapRNode(lView[tNode.index]);
-  ngDevMode && !isProceduralRenderer(lView[RENDERER]) && assertDomNode(node);
+  ngDevMode && assertDomNode(node);
   return node;
 }
 
@@ -106,16 +106,20 @@ export function getNativeByTNode(tNode: TNode, lView: LView): RNode {
  * @param lView
  */
 export function getNativeByTNodeOrNull(tNode: TNode, lView: LView): RNode|null {
+  ngDevMode && assertTNodeForLView(tNode, lView);
   const index = tNode.index;
-  if (index !== -1) {
-    ngDevMode && assertTNodeForLView(tNode, lView);
-    const node: RNode|null = unwrapRNode(lView[index]);
-    ngDevMode && node !== null && !isProceduralRenderer(lView[RENDERER]) && assertDomNode(node);
-    return node;
-  }
-  return null;
+  const node: RNode|null = index == -1 ? null : unwrapRNode(lView[index]);
+  ngDevMode && node !== null && assertDomNode(node);
+  return node;
 }
 
+
+/**
+ * A helper function that returns `true` if a given `TNode` has any matching directives.
+ */
+export function hasDirectives(tNode: TNode): boolean {
+  return tNode.directiveEnd > tNode.directiveStart;
+}
 
 export function getTNode(index: number, view: LView): TNode {
   ngDevMode && assertGreaterThan(index, -1, 'wrong index for TNode');
@@ -124,14 +128,13 @@ export function getTNode(index: number, view: LView): TNode {
 }
 
 /** Retrieves a value from any `LView` or `TData`. */
-export function load<T>(view: LView | TData, index: number): T {
+export function loadInternal<T>(view: LView | TData, index: number): T {
   ngDevMode && assertDataInRange(view, index + HEADER_OFFSET);
   return view[index + HEADER_OFFSET];
 }
 
-export function getComponentLViewByIndex(nodeIndex: number, hostView: LView): LView {
+export function getComponentViewByIndex(nodeIndex: number, hostView: LView): LView {
   // Could be an LView or an LContainer. If LContainer, unwrap to find LView.
-  ngDevMode && assertDataInRange(hostView, nodeIndex);
   const slotValue = hostView[nodeIndex];
   const lView = isLView(slotValue) ? slotValue : slotValue[HOST];
   return lView;
@@ -144,7 +147,7 @@ export function getComponentLViewByIndex(nodeIndex: number, hostView: LView): LV
  */
 export function readPatchedData(target: any): LView|LContext|null {
   ngDevMode && assertDefined(target, 'Target expected');
-  return target[MONKEY_PATCH_KEY_NAME] || null;
+  return target[MONKEY_PATCH_KEY_NAME];
 }
 
 export function readPatchedLView(target: any): LView|null {
@@ -153,11 +156,6 @@ export function readPatchedLView(target: any): LView|null {
     return Array.isArray(value) ? value : (value as LContext).lView;
   }
   return null;
-}
-
-/** Checks whether a given view is in creation mode */
-export function isCreationMode(view: LView): boolean {
-  return (view[FLAGS] & LViewFlags.CreationMode) === LViewFlags.CreationMode;
 }
 
 /**
@@ -173,11 +171,6 @@ export function viewAttachedToChangeDetector(view: LView): boolean {
 /** Returns a boolean for whether the view is attached to a container. */
 export function viewAttachedToContainer(view: LView): boolean {
   return isLContainer(view[PARENT]);
-}
-
-/** Returns a constant from `TConstants` instance. */
-export function getConstant(consts: TConstants | null, index: number | null | undefined) {
-  return consts === null || index == null ? null : consts[index];
 }
 
 /**

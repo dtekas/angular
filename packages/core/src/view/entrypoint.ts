@@ -48,7 +48,7 @@ function cloneNgModuleDefinition(def: NgModuleDefinition): NgModuleDefinition {
 
   return {
     factory: def.factory,
-    scope: def.scope, providers, modules, providersByKey,
+    isRoot: def.isRoot, providers, modules, providersByKey,
   };
 }
 

@@ -9,20 +9,34 @@
 import {NgForOfContext} from '@angular/common';
 
 import {ɵɵdefineComponent} from '../../src/render3/definition';
-import {RenderFlags, ɵɵattribute, ɵɵclassMap, ɵɵelement, ɵɵelementEnd, ɵɵelementStart, ɵɵproperty, ɵɵselect, ɵɵstyleMap, ɵɵstyleProp, ɵɵstyleSanitizer, ɵɵtemplate, ɵɵtext, ɵɵtextInterpolate1} from '../../src/render3/index';
+import {RenderFlags, ɵɵattribute, ɵɵclassMap, ɵɵelement, ɵɵelementEnd, ɵɵelementStart, ɵɵproperty, ɵɵselect, ɵɵstyleMap, ɵɵstyleProp, ɵɵstyleSanitizer, ɵɵstyling, ɵɵstylingApply, ɵɵtemplate, ɵɵtext, ɵɵtextInterpolate1} from '../../src/render3/index';
 import {AttributeMarker} from '../../src/render3/interfaces/node';
-import {bypassSanitizationTrustHtml, bypassSanitizationTrustResourceUrl, bypassSanitizationTrustScript, bypassSanitizationTrustStyle, bypassSanitizationTrustUrl, getSanitizationBypassType, unwrapSafeValue} from '../../src/sanitization/bypass';
+import {bypassSanitizationTrustHtml, bypassSanitizationTrustResourceUrl, bypassSanitizationTrustScript, bypassSanitizationTrustStyle, bypassSanitizationTrustUrl} from '../../src/sanitization/bypass';
 import {ɵɵdefaultStyleSanitizer, ɵɵsanitizeHtml, ɵɵsanitizeResourceUrl, ɵɵsanitizeScript, ɵɵsanitizeStyle, ɵɵsanitizeUrl} from '../../src/sanitization/sanitization';
-import {Sanitizer} from '../../src/sanitization/sanitizer';
-import {SecurityContext} from '../../src/sanitization/security';
+import {Sanitizer, SecurityContext} from '../../src/sanitization/security';
 
 import {NgForOf} from './common_with_def';
 import {ComponentFixture, TemplateFixture} from './render_util';
 
 describe('instructions', () => {
-  function createAnchor() { ɵɵelement(0, 'a'); }
+  function createAnchor() {
+    ɵɵelementStart(0, 'a');
+    ɵɵstyling();
+    ɵɵelementEnd();
+  }
 
-  function createDiv() { ɵɵelement(0, 'div', 0); }
+  function createDiv(initialClasses?: string[] | null, initialStyles?: string[] | null) {
+    const attrs: any[] = [];
+    if (initialClasses) {
+      attrs.push(AttributeMarker.Classes, ...initialClasses);
+    }
+    if (initialStyles) {
+      attrs.push(AttributeMarker.Styles, ...initialStyles);
+    }
+    ɵɵelementStart(0, 'div', attrs);
+    ɵɵstyling();
+    ɵɵelementEnd();
+  }
 
   function createScript() { ɵɵelement(0, 'script'); }
 
@@ -45,7 +59,7 @@ describe('instructions', () => {
       t.update(() => { ɵɵproperty('title', 'World'); });
       expect(t.html).toEqual('<a title="World"></a>');
       expect(ngDevMode).toHaveProperties({
-        firstCreatePass: 1,
+        firstTemplatePass: 1,
         tNode: 2,  // 1 for hostElement + 1 for the template under test
         tView: 2,  // 1 for rootView + 1 for the template view
         rendererCreateElement: 1,
@@ -64,7 +78,7 @@ describe('instructions', () => {
          t.update();
          expect(t.html).toEqual('<a title="Hello"></a>');
          expect(ngDevMode).toHaveProperties({
-           firstCreatePass: 1,
+           firstTemplatePass: 1,
            tNode: 2,  // 1 for hostElement + 1 for the template under test
            tView: 2,  // 1 for rootView + 1 for the template view
            rendererCreateElement: 1,
@@ -76,14 +90,14 @@ describe('instructions', () => {
   describe('element', () => {
     it('should create an element with the correct perf counters', () => {
       const t = new TemplateFixture(() => {
-        ɵɵelement(0, 'div', 0);
-      }, () => {}, 1, 0, null, null, null, undefined, [['id', 'test', 'title', 'Hello']]);
+        ɵɵelement(0, 'div', ['id', 'test', 'title', 'Hello']);
+      }, () => {}, 1);
 
       const div = (t.hostElement as HTMLElement).querySelector('div') !;
       expect(div.id).toEqual('test');
       expect(div.title).toEqual('Hello');
       expect(ngDevMode).toHaveProperties({
-        firstCreatePass: 1,
+        firstTemplatePass: 1,
         tNode: 2,  // 1 for div, 1 for host element
         tView: 2,  // 1 for rootView + 1 for the template view
         rendererCreateElement: 1,
@@ -103,7 +117,7 @@ describe('instructions', () => {
       });
       expect(t.html).toEqual('<div title="javascript:true"></div>');
       expect(ngDevMode).toHaveProperties({
-        firstCreatePass: 1,
+        firstTemplatePass: 1,
         tNode: 2,  // 1 for div, 1 for host element
         tView: 2,  // 1 for rootView + 1 for the template view
         rendererCreateElement: 1,
@@ -126,7 +140,7 @@ describe('instructions', () => {
       t.update(() => { ɵɵproperty('title', 'two')('accessKey', 'B'); });
       expect(t.html).toEqual('<div accesskey="B" title="two"></div>');
       expect(ngDevMode).toHaveProperties({
-        firstCreatePass: 1,
+        firstTemplatePass: 1,
         tNode: 2,  // 1 for div, 1 for host element
         tView: 2,  // 1 for rootView + 1 for the template view
         rendererCreateElement: 1,
@@ -141,28 +155,54 @@ describe('instructions', () => {
       t.update(() => {
         ɵɵstyleSanitizer(ɵɵdefaultStyleSanitizer);
         ɵɵstyleProp('background-image', 'url("http://server")');
+        ɵɵstylingApply();
       });
       // nothing is set because sanitizer suppresses it.
       expect(t.html).toEqual('<div></div>');
 
       t.update(() => {
-        ɵɵstyleSanitizer(ɵɵdefaultStyleSanitizer);
         ɵɵstyleProp('background-image', bypassSanitizationTrustStyle('url("http://server2")'));
+        ɵɵstylingApply();
       });
       expect((t.hostElement.firstChild as HTMLElement).style.getPropertyValue('background-image'))
           .toEqual('url("http://server2")');
     });
+
+    it('should not re-apply the style value even if it is a newly bypassed again', () => {
+      const sanitizerInterceptor = new MockSanitizerInterceptor();
+      const t = createTemplateFixtureWithSanitizer(() => createDiv(), 1, sanitizerInterceptor);
+
+      t.update(() => {
+        ɵɵstyleSanitizer(sanitizerInterceptor.getStyleSanitizer());
+        ɵɵstyleProp('background-image', bypassSanitizationTrustStyle('apple'));
+        ɵɵstylingApply();
+      });
+
+      expect(sanitizerInterceptor.lastValue !).toEqual('apple');
+      sanitizerInterceptor.lastValue = null;
+
+      t.update(() => {
+        ɵɵstyleSanitizer(sanitizerInterceptor.getStyleSanitizer());
+        ɵɵstyleProp('background-image', bypassSanitizationTrustStyle('apple'));
+        ɵɵstylingApply();
+      });
+      expect(sanitizerInterceptor.lastValue).toEqual(null);
+    });
   });
 
   describe('styleMap', () => {
-    const attrs = [[AttributeMarker.Styles, 'height', '10px']];
-
-    function createDivWithStyle() { ɵɵelement(0, 'div', 0); }
+    function createDivWithStyle() {
+      ɵɵelementStart(0, 'div', [AttributeMarker.Styles, 'height', '10px']);
+      ɵɵstyling();
+      ɵɵelementEnd();
+    }
 
     it('should add style', () => {
-      const fixture = new TemplateFixture(
-          createDivWithStyle, () => {}, 1, 0, null, null, null, undefined, attrs);
-      fixture.update(() => { ɵɵstyleMap({'background-color': 'red'}); });
+      const fixture = new TemplateFixture(createDivWithStyle, () => {}, 1);
+      fixture.update(() => {
+        ɵɵstyleMap({'background-color': 'red'});
+        ɵɵstylingApply();
+      });
       expect(fixture.html).toEqual('<div style="background-color: red; height: 10px;"></div>');
     });
 
@@ -170,21 +210,22 @@ describe('instructions', () => {
       const detectedValues: string[] = [];
       const sanitizerInterceptor =
           new MockSanitizerInterceptor(value => { detectedValues.push(value); });
-      const fixture = new TemplateFixture(
-          () => { return createDiv(); },  //
-          () => {
-            ɵɵstyleSanitizer(sanitizerInterceptor.getStyleSanitizer());
-            ɵɵstyleMap({
-              'background-image': 'background-image',
-              'background': 'background',
-              'border-image': 'border-image',
-              'list-style': 'list-style',
-              'list-style-image': 'list-style-image',
-              'filter': 'filter',
-              'width': 'width'
-            });
-          },
-          1, 0, null, null, sanitizerInterceptor);
+      const fixture =
+          createTemplateFixtureWithSanitizer(() => createDiv(), 1, sanitizerInterceptor);
+
+      fixture.update(() => {
+        ɵɵstyleSanitizer(sanitizerInterceptor.getStyleSanitizer());
+        ɵɵstyleMap({
+          'background-image': 'background-image',
+          'background': 'background',
+          'border-image': 'border-image',
+          'list-style': 'list-style',
+          'list-style-image': 'list-style-image',
+          'filter': 'filter',
+          'width': 'width'
+        });
+        ɵɵstylingApply();
+      });
 
       const props = detectedValues.sort();
       expect(props).toEqual([
@@ -194,21 +235,31 @@ describe('instructions', () => {
   });
 
   describe('elementClass', () => {
-    function createDivWithStyling() { ɵɵelement(0, 'div'); }
+    function createDivWithStyling() {
+      ɵɵelementStart(0, 'div');
+      ɵɵstyling();
+      ɵɵelementEnd();
+    }
 
     it('should add class', () => {
-      const fixture =
-          new TemplateFixture(createDivWithStyling, () => { ɵɵclassMap('multiple classes'); }, 1);
+      const fixture = new TemplateFixture(createDivWithStyling, () => {}, 1);
+      fixture.update(() => {
+        ɵɵclassMap('multiple classes');
+        ɵɵstylingApply();
+      });
       expect(fixture.html).toEqual('<div class="classes multiple"></div>');
     });
   });
 
   describe('performance counters', () => {
     it('should create tViews only once for each nested level', () => {
+      const _c0 = [AttributeMarker.Template, 'ngFor', 'ngForOf'];
+      const _c1 = [AttributeMarker.Template, 'ngFor', 'ngForOf'];
+
       function ToDoAppComponent_NgForOf_Template_0(rf: RenderFlags, ctx0: NgForOfContext<any>) {
         if (rf & RenderFlags.Create) {
           ɵɵelementStart(0, 'ul');
-          ɵɵtemplate(1, ToDoAppComponent_NgForOf_NgForOf_Template_1, 2, 1, 'li', 0);
+          ɵɵtemplate(1, ToDoAppComponent_NgForOf_NgForOf_Template_1, 2, 1, 'li', _c1);
           ɵɵelementEnd();
         }
         if (rf & RenderFlags.Update) {
@@ -240,16 +291,15 @@ describe('instructions', () => {
       class NestedLoops {
         rows = [['a', 'b'], ['A', 'B'], ['a', 'b'], ['A', 'B']];
 
-        static ɵfac = function ToDoAppComponent_Factory() { return new NestedLoops(); };
-        static ɵcmp = ɵɵdefineComponent({
+        static ngComponentDef = ɵɵdefineComponent({
           type: NestedLoops,
           selectors: [['nested-loops']],
-          decls: 1,
+          factory: function ToDoAppComponent_Factory() { return new NestedLoops(); },
+          consts: 1,
           vars: 1,
-          consts: [[AttributeMarker.Template, 'ngFor', 'ngForOf']],
           template: function ToDoAppComponent_Template(rf: RenderFlags, ctx: NestedLoops) {
             if (rf & RenderFlags.Create) {
-              ɵɵtemplate(0, ToDoAppComponent_NgForOf_Template_0, 2, 1, 'ul', 0);
+              ɵɵtemplate(0, ToDoAppComponent_NgForOf_Template_0, 2, 1, 'ul', _c0);
             }
             if (rf & RenderFlags.Update) {
               ɵɵproperty('ngForOf', ctx.rows);
@@ -448,8 +498,8 @@ class LocalMockSanitizer implements Sanitizer {
   constructor(private _interceptor: (value: string|null|any) => string) {}
 
   sanitize(context: SecurityContext, value: LocalSanitizedValue|string|null|any): string|null {
-    if (getSanitizationBypassType(value) != null) {
-      return unwrapSafeValue(value) + '-ivy';
+    if (value instanceof String) {
+      return value.toString() + '-ivy';
     }
 
     if (value instanceof LocalSanitizedValue) {
@@ -485,4 +535,9 @@ class MockSanitizerInterceptor {
 function stripStyleWsCharacters(value: string): string {
   // color: blue; => color:blue
   return value.replace(/;/g, '').replace(/:\s+/g, ':');
+}
+
+function createTemplateFixtureWithSanitizer(
+    buildFn: () => any, consts: number, sanitizer: Sanitizer) {
+  return new TemplateFixture(buildFn, () => {}, consts, 0, null, null, sanitizer);
 }

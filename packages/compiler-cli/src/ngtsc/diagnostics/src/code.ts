@@ -24,7 +24,6 @@ export enum ErrorCode {
   COMPONENT_MISSING_TEMPLATE = 2001,
   PIPE_MISSING_NAME = 2002,
   PARAM_MISSING_TOKEN = 2003,
-  DIRECTIVE_MISSING_SELECTOR = 2004,
 
   SYMBOL_NOT_EXPORTED = 3001,
   SYMBOL_EXPORTED_UNDER_DIFFERENT_NAME = 3002,
@@ -59,41 +58,20 @@ export enum ErrorCode {
   NGMODULE_INVALID_REEXPORT = 6004,
 
   /**
-   * Raised when a `ModuleWithProviders` with a missing
-   * generic type argument is passed into an `NgModule`.
-   */
-  NGMODULE_MODULE_WITH_PROVIDERS_MISSING_GENERIC = 6005,
-
-  /**
-   * Raised when an NgModule exports multiple directives/pipes of the same name and the compiler
-   * attempts to generate private re-exports within the NgModule file.
-   */
-  NGMODULE_REEXPORT_NAME_COLLISION = 6006,
-
-  /**
    * Raised when ngcc tries to inject a synthetic decorator over one that already exists.
    */
   NGCC_MIGRATION_DECORATOR_INJECTION_ERROR = 7001,
 
   /**
-   * An element name failed validation against the DOM schema.
+   * Raised when ngcc tries to decorate a base class that was imported from outside the package.
    */
-  SCHEMA_INVALID_ELEMENT = 8001,
+  NGCC_MIGRATION_EXTERNAL_BASE_CLASS = 7002,
 
   /**
-   * An element's attribute name failed validation against the DOM schema.
+   * Raised when ngcc tries to migrate a class that is extended from a dynamic base class
+   * expression.
    */
-  SCHEMA_INVALID_ATTRIBUTE = 8002,
-
-  /**
-   * No matching directive was found for a `#ref="target"` expression.
-   */
-  MISSING_REFERENCE_TARGET = 8003,
-
-  /**
-   * No matching pipe was found for a
-   */
-  MISSING_PIPE = 8004,
+  NGCC_MIGRATION_DYNAMIC_BASE_CLASS = 7003,
 }
 
 export function ngErrorCode(code: ErrorCode): number {

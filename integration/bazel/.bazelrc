@@ -11,13 +11,8 @@ test --test_output=errors
 # https://circleci.com/docs/2.0/configuration-reference/#resource_class
 build --local_resources=14336,8.0,1.0
 
-# Use the Angular Ivy compiler
-# See https://github.com/angular/angular/blob/master/docs/BAZEL.md#various-flags-used-for-tests
-build --define=compile=aot
-
-# Temporary define while angular depends on the legacy rollup_bundle rule.
-# TODO: remove this setting after https://github.com/angular/angular/pull/33201 lands.
-build --define=enable_legacy_rollup_rule=1
+# Use the Angular 6 compiler
+build --define=compile=legacy
 
 # Don't create symlinks
 build --symlink_prefix=/
@@ -25,3 +20,12 @@ build --symlink_prefix=/
 # Turn on managed directories feature in Bazel
 # This allows us to avoid installing a second copy of node_modules
 common --experimental_allow_incremental_repository_updates
+
+# This option is changed to true in Bazel 0.27 and exposes a possible
+# regression in Bazel 0.27.0.
+# See root /.bazelrc for more info. integration/bazel uses
+# ng_package which depends on npm_package so this flag needs to be set
+# her as well.
+build --incompatible_list_based_execution_strategy_selection=false
+test --incompatible_list_based_execution_strategy_selection=false
+run --incompatible_list_based_execution_strategy_selection=false

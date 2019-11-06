@@ -24,7 +24,7 @@ import {ProviderElementContext, ProviderViewContext} from '../provider_analyzer'
 import {ElementSchemaRegistry} from '../schema/element_schema_registry';
 import {CssSelector, SelectorMatcher} from '../selector';
 import {isStyleUrlResolvable} from '../style_url_resolver';
-import {Console, newArray, syntaxError} from '../util';
+import {Console, syntaxError} from '../util';
 
 import {BindingParser} from './binding_parser';
 import * as t from './template_ast';
@@ -305,10 +305,9 @@ class TemplateParseVisitor implements html.Visitor {
         }
         hasInlineTemplates = true;
         const parsedVariables: ParsedVariable[] = [];
-        const absoluteOffset = (attr.valueSpan || attr.sourceSpan).start.offset;
         this._bindingParser.parseInlineTemplateBinding(
-            templateKey !, templateValue !, attr.sourceSpan, absoluteOffset, templateMatchableAttrs,
-            templateElementOrDirectiveProps, parsedVariables);
+            templateKey !, templateValue !, attr.sourceSpan, attr.sourceSpan.start.offset,
+            templateMatchableAttrs, templateElementOrDirectiveProps, parsedVariables);
         templateElementVars.push(...parsedVariables.map(v => t.VariableAst.fromParsedVariable(v)));
       }
 
@@ -529,7 +528,7 @@ class TemplateParseVisitor implements html.Visitor {
     // Need to sort the directives so that we get consistent results throughout,
     // as selectorMatcher uses Maps inside.
     // Also deduplicate directives as they might match more than one time!
-    const directives = newArray(this.directivesIndex.size);
+    const directives = new Array(this.directivesIndex.size);
     // Whether any directive selector matches on the element name
     let matchElement = false;
 

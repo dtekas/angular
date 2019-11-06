@@ -6,10 +6,10 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {DOCUMENT, ɵgetDOM as getDOM} from '@angular/common';
+import {DOCUMENT} from '@angular/common';
 import {DomElementSchemaRegistry} from '@angular/compiler';
 import {Inject, Injectable, NgZone, Renderer2, RendererFactory2, RendererStyleFlags2, RendererType2, ViewEncapsulation} from '@angular/core';
-import {EventManager, ɵNAMESPACE_URIS as NAMESPACE_URIS, ɵSharedStylesHost as SharedStylesHost, ɵflattenStyles as flattenStyles, ɵshimContentAttribute as shimContentAttribute, ɵshimHostAttribute as shimHostAttribute} from '@angular/platform-browser';
+import {EventManager, ɵNAMESPACE_URIS as NAMESPACE_URIS, ɵSharedStylesHost as SharedStylesHost, ɵflattenStyles as flattenStyles, ɵgetDOM as getDOM, ɵshimContentAttribute as shimContentAttribute, ɵshimHostAttribute as shimHostAttribute} from '@angular/platform-browser';
 
 const EMPTY_ARRAY: any[] = [];
 
@@ -72,87 +72,74 @@ class DefaultServerRenderer2 implements Renderer2 {
 
   createElement(name: string, namespace?: string, debugInfo?: any): any {
     if (namespace) {
-      const doc = this.document || getDOM().getDefaultDocument();
-      return doc.createElementNS(NAMESPACE_URIS[namespace], name);
+      return getDOM().createElementNS(NAMESPACE_URIS[namespace], name, this.document);
     }
 
     return getDOM().createElement(name, this.document);
   }
 
-  createComment(value: string, debugInfo?: any): any {
-    return getDOM().getDefaultDocument().createComment(value);
-  }
+  createComment(value: string, debugInfo?: any): any { return getDOM().createComment(value); }
 
-  createText(value: string, debugInfo?: any): any {
-    const doc = getDOM().getDefaultDocument();
-    return doc.createTextNode(value);
-  }
+  createText(value: string, debugInfo?: any): any { return getDOM().createTextNode(value); }
 
-  appendChild(parent: any, newChild: any): void { parent.appendChild(newChild); }
+  appendChild(parent: any, newChild: any): void { getDOM().appendChild(parent, newChild); }
 
   insertBefore(parent: any, newChild: any, refChild: any): void {
     if (parent) {
-      parent.insertBefore(newChild, refChild);
+      getDOM().insertBefore(parent, refChild, newChild);
     }
   }
 
   removeChild(parent: any, oldChild: any): void {
     if (parent) {
-      parent.removeChild(oldChild);
+      getDOM().removeChild(parent, oldChild);
     }
   }
 
   selectRootElement(selectorOrNode: string|any, debugInfo?: any): any {
     let el: any;
     if (typeof selectorOrNode === 'string') {
-      el = this.document.querySelector(selectorOrNode);
+      el = getDOM().querySelector(this.document, selectorOrNode);
       if (!el) {
         throw new Error(`The selector "${selectorOrNode}" did not match any elements`);
       }
     } else {
       el = selectorOrNode;
     }
-    while (el.firstChild) {
-      el.removeChild(el.firstChild);
-    }
+    getDOM().clearNodes(el);
     return el;
   }
 
-  parentNode(node: any): any { return node.parentNode; }
+  parentNode(node: any): any { return getDOM().parentElement(node); }
 
-  nextSibling(node: any): any { return node.nextSibling; }
+  nextSibling(node: any): any { return getDOM().nextSibling(node); }
 
   setAttribute(el: any, name: string, value: string, namespace?: string): void {
     if (namespace) {
-      el.setAttributeNS(NAMESPACE_URIS[namespace], namespace + ':' + name, value);
+      getDOM().setAttributeNS(el, NAMESPACE_URIS[namespace], namespace + ':' + name, value);
     } else {
-      el.setAttribute(name, value);
+      getDOM().setAttribute(el, name, value);
     }
   }
 
   removeAttribute(el: any, name: string, namespace?: string): void {
     if (namespace) {
-      el.removeAttributeNS(NAMESPACE_URIS[namespace], name);
+      getDOM().removeAttributeNS(el, NAMESPACE_URIS[namespace], name);
     } else {
-      el.removeAttribute(name);
+      getDOM().removeAttribute(el, name);
     }
   }
 
-  addClass(el: any, name: string): void { el.classList.add(name); }
+  addClass(el: any, name: string): void { getDOM().addClass(el, name); }
 
-  removeClass(el: any, name: string): void { el.classList.remove(name); }
+  removeClass(el: any, name: string): void { getDOM().removeClass(el, name); }
 
   setStyle(el: any, style: string, value: any, flags: RendererStyleFlags2): void {
-    style = style.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-    const styleMap = _readStyleAttribute(el);
-    styleMap[style] = value || '';
-    _writeStyleAttribute(el, styleMap);
+    getDOM().setStyle(el, style, value);
   }
 
   removeStyle(el: any, style: string, flags: RendererStyleFlags2): void {
-    // IE requires '' instead of null
-    // see https://github.com/angular/angular/issues/7916
-    this.setStyle(el, style, '', flags);
+    getDOM().removeStyle(el, style);
   }
 
   // The value was validated already as a property binding, against the property name.
@@ -166,11 +153,7 @@ class DefaultServerRenderer2 implements Renderer2 {
 
   setProperty(el: any, name: string, value: any): void {
     checkNoSyntheticProp(name, 'property');
-    if (name === 'innerText') {
-      // Domino does not support innerText. Just map it to textContent.
-      el.textContent = value;
-    }
-    (<any>el)[name] = value;
+    getDOM().setProperty(el, name, value);
     // Mirror property values for known HTML element properties in the attributes.
     // Skip `innerhtml` which is conservatively marked as an attribute for security
     // purposes but is not actually an attribute.
@@ -183,7 +166,7 @@ class DefaultServerRenderer2 implements Renderer2 {
     }
   }
 
-  setValue(node: any, value: string): void { node.textContent = value; }
+  setValue(node: any, value: string): void { getDOM().setText(node, value); }
 
   listen(
       target: 'document'|'window'|'body'|any, eventName: string,
@@ -199,12 +182,6 @@ class DefaultServerRenderer2 implements Renderer2 {
 
   private decoratePreventDefault(eventHandler: Function): Function {
     return (event: any) => {
-      // Ivy uses `Function` as a special token that allows us to unwrap the function
-      // so that it can be invoked programmatically by `DebugNode.triggerEventHandler`.
-      if (event === Function) {
-        return eventHandler;
-      }
-
       // Run the event handler inside the ngZone because event handlers are not patched
       // by Zone on the server. This is required only for tests.
       const allowDefaultBehavior = this.ngZone.runGuarded(() => eventHandler(event));
@@ -212,8 +189,6 @@ class DefaultServerRenderer2 implements Renderer2 {
         event.preventDefault();
         event.returnValue = false;
       }
-
-      return undefined;
     };
   }
 }
@@ -250,35 +225,4 @@ class EmulatedEncapsulationServerRenderer2 extends DefaultServerRenderer2 {
     super.setAttribute(el, this.contentAttr, '');
     return el;
   }
-}
-
-function _readStyleAttribute(element: any): {[name: string]: string} {
-  const styleMap: {[name: string]: string} = {};
-  const styleAttribute = element.getAttribute('style');
-  if (styleAttribute) {
-    const styleList = styleAttribute.split(/;+/g);
-    for (let i = 0; i < styleList.length; i++) {
-      const style = styleList[i].trim();
-      if (style.length > 0) {
-        const colonIndex = style.indexOf(':');
-        if (colonIndex === -1) {
-          throw new Error(`Invalid CSS style: ${style}`);
-        }
-        const name = style.substr(0, colonIndex).trim();
-        styleMap[name] = style.substr(colonIndex + 1).trim();
-      }
-    }
-  }
-  return styleMap;
-}
-
-function _writeStyleAttribute(element: any, styleMap: {[name: string]: string}) {
-  let styleAttrValue = '';
-  for (const key in styleMap) {
-    const newValue = styleMap[key];
-    if (newValue) {
-      styleAttrValue += key + ':' + styleMap[key] + ';';
-    }
-  }
-  element.setAttribute('style', styleAttrValue);
 }

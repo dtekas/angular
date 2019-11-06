@@ -1318,7 +1318,7 @@ export class TransitionAnimationEngine {
       const previousPlayers = this._getPreviousPlayers(
           element, isQueriedElement, targetNameSpaceId, targetTriggerName, instruction.toState);
       previousPlayers.forEach(player => {
-        const realPlayer = (player as TransitionAnimationPlayer).getRealPlayer() as any;
+        const realPlayer = player.getRealPlayer() as any;
         if (realPlayer.beforeDestroy) {
           realPlayer.beforeDestroy();
         }
@@ -1708,7 +1708,7 @@ function _flattenGroupPlayersRecur(players: AnimationPlayer[], finalPlayers: Ani
     if (player instanceof AnimationGroupPlayer) {
       _flattenGroupPlayersRecur(player.players, finalPlayers);
     } else {
-      finalPlayers.push(player);
+      finalPlayers.push(player as AnimationPlayer);
     }
   }
 }

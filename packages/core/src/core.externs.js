@@ -16,9 +16,3 @@
  * @suppress {duplicate}
  */
 var wtf;
-
-/**
- * This is needed to declare global `$localize` to let closure compiler know
- * about the global variable.
- */
-var $localize;

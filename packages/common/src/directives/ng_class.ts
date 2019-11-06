@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import {Directive, DoCheck, Input, ɵRenderFlags, ɵɵallocHostVars, ɵɵclassMap, ɵɵdefineDirective} from '@angular/core';
+import {Directive, DoCheck, Input, ɵRenderFlags, ɵɵallocHostVars, ɵɵclassMap, ɵɵdefineDirective, ɵɵstyling, ɵɵstylingApply} from '@angular/core';
 
 import {NgClassImpl, NgClassImplProvider} from './ng_class_impl';
 
@@ -32,21 +32,20 @@ export const ngClassDirectiveDef__PRE_R3__ = undefined;
 export const ngClassDirectiveDef__POST_R3__ = ɵɵdefineDirective({
   type: function() {} as any,
   selectors: null as any,
+  factory: () => {},
   hostBindings: function(rf: ɵRenderFlags, ctx: any, elIndex: number) {
     if (rf & ɵRenderFlags.Create) {
-      ɵɵallocHostVars(2);
+      ɵɵallocHostVars(1);
+      ɵɵstyling();
     }
     if (rf & ɵRenderFlags.Update) {
       ɵɵclassMap(ctx.getValue());
+      ɵɵstylingApply();
     }
   }
 });
 
 export const ngClassDirectiveDef = ngClassDirectiveDef__PRE_R3__;
-
-export const ngClassFactoryDef__PRE_R3__ = undefined;
-export const ngClassFactoryDef__POST_R3__ = function() {};
-export const ngClassFactoryDef = ngClassFactoryDef__PRE_R3__;
 
 /**
  * Serves as the base non-VE container for NgClass.
@@ -54,17 +53,16 @@ export const ngClassFactoryDef = ngClassFactoryDef__PRE_R3__;
  * While this is a base class that NgClass extends from, the
  * class itself acts as a container for non-VE code to setup
  * a link to the `[class]` host binding (via the static
- * `ɵdir` property on the class).
+ * `ngDirectiveDef` property on the class).
  *
- * Note that the `ɵdir` property's code is switched
+ * Note that the `ngDirectiveDef` property's code is switched
  * depending if VE is present or not (this allows for the
  * binding code to be set only for newer versions of Angular).
  *
  * @publicApi
  */
 export class NgClassBase {
-  static ɵdir: any = ngClassDirectiveDef;
-  static ɵfac: any = ngClassFactoryDef;
+  static ngDirectiveDef: any = ngClassDirectiveDef;
 
   constructor(protected _delegate: NgClassImpl) {}
 

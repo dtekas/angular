@@ -8,7 +8,7 @@
 
 import * as ts from 'typescript';
 
-import {AliasingHost, Reference} from '../../imports';
+import {AliasGenerator, Reference} from '../../imports';
 import {DirectiveMeta, MetadataReader, PipeMeta} from '../../metadata';
 import {ClassDeclaration} from '../../reflection';
 
@@ -34,7 +34,7 @@ export class MetadataDtsModuleScopeResolver implements DtsModuleScopeResolver {
   /**
    * @param dtsMetaReader a `MetadataReader` which can read metadata from `.d.ts` files.
    */
-  constructor(private dtsMetaReader: MetadataReader, private aliasingHost: AliasingHost|null) {}
+  constructor(private dtsMetaReader: MetadataReader, private aliasGenerator: AliasGenerator|null) {}
 
   /**
    * Resolve a `Reference`'d NgModule from a .d.ts file and produce a transitive `ExportScope`
@@ -76,16 +76,22 @@ export class MetadataDtsModuleScopeResolver implements DtsModuleScopeResolver {
       // Attempt to process the export as a directive.
       const directive = this.dtsMetaReader.getDirectiveMetadata(exportRef);
       if (directive !== null) {
-        const isReExport = !declarations.has(exportRef.node);
-        directives.push(this.maybeAlias(directive, sourceFile, isReExport));
+        if (!declarations.has(exportRef.node)) {
+          directives.push(this.maybeAlias(directive, sourceFile));
+        } else {
+          directives.push(directive);
+        }
         continue;
       }
 
       // Attempt to process the export as a pipe.
       const pipe = this.dtsMetaReader.getPipeMetadata(exportRef);
       if (pipe !== null) {
-        const isReExport = !declarations.has(exportRef.node);
-        pipes.push(this.maybeAlias(pipe, sourceFile, isReExport));
+        if (!declarations.has(exportRef.node)) {
+          pipes.push(this.maybeAlias(pipe, sourceFile));
+        } else {
+          pipes.push(pipe);
+        }
         continue;
       }
 
@@ -95,7 +101,7 @@ export class MetadataDtsModuleScopeResolver implements DtsModuleScopeResolver {
         // It is a module. Add exported directives and pipes to the current scope. This might
         // involve rewriting the `Reference`s to those types to have an alias expression if one is
         // required.
-        if (this.aliasingHost === null) {
+        if (this.aliasGenerator === null) {
           // Fast path when aliases aren't required.
           directives.push(...exportScope.exported.directives);
           pipes.push(...exportScope.exported.pipes);
@@ -109,10 +115,10 @@ export class MetadataDtsModuleScopeResolver implements DtsModuleScopeResolver {
           // NgModule, and the re-exporting NgModule are all in the same file. In this case,
           // no import alias is needed as it would go to the same file anyway.
           for (const directive of exportScope.exported.directives) {
-            directives.push(this.maybeAlias(directive, sourceFile, /* isReExport */ true));
+            directives.push(this.maybeAlias(directive, sourceFile));
           }
           for (const pipe of exportScope.exported.pipes) {
-            pipes.push(this.maybeAlias(pipe, sourceFile, /* isReExport */ true));
+            pipes.push(this.maybeAlias(pipe, sourceFile));
           }
         }
       }
@@ -128,21 +134,19 @@ export class MetadataDtsModuleScopeResolver implements DtsModuleScopeResolver {
     };
   }
 
-  private maybeAlias<T extends DirectiveMeta|PipeMeta>(
-      dirOrPipe: T, maybeAliasFrom: ts.SourceFile, isReExport: boolean): T {
+  private maybeAlias<T extends DirectiveMeta|PipeMeta>(dirOrPipe: T, maybeAliasFrom: ts.SourceFile):
+      T {
+    if (this.aliasGenerator === null) {
+      return dirOrPipe;
+    }
     const ref = dirOrPipe.ref;
-    if (this.aliasingHost === null || ref.node.getSourceFile() === maybeAliasFrom) {
+    if (ref.node.getSourceFile() !== maybeAliasFrom) {
+      return {
+        ...dirOrPipe,
+        ref: ref.cloneWithAlias(this.aliasGenerator.aliasTo(ref.node, maybeAliasFrom)),
+      };
+    } else {
       return dirOrPipe;
     }
-
-    const alias = this.aliasingHost.getAliasIn(ref.node, maybeAliasFrom, isReExport);
-    if (alias === null) {
-      return dirOrPipe;
-    }
-
-    return {
-      ...dirOrPipe,
-      ref: ref.cloneWithAlias(alias),
-    };
   }
 }

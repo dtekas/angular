@@ -32,7 +32,7 @@ type OnChangesExpando = OnChanges & {
  * Example usage:
  *
  * ```
- * static ɵcmp = defineComponent({
+ * static ngComponentDef = defineComponent({
  *   ...
  *   inputs: {name: 'publicName'},
  *   features: [NgOnChangesFeature()]

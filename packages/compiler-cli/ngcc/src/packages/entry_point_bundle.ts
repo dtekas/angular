@@ -6,10 +6,11 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import * as ts from 'typescript';
-import {AbsoluteFsPath, FileSystem, NgtscCompilerHost, absoluteFrom} from '../../../src/ngtsc/file_system';
+import {AbsoluteFsPath, FileSystem, absoluteFrom} from '../../../src/ngtsc/file_system';
+import {NgtscCompilerHost} from '../../../src/ngtsc/file_system/src/compiler_host';
 import {PathMappings} from '../utils';
 import {BundleProgram, makeBundleProgram} from './bundle_program';
-import {EntryPoint, EntryPointFormat} from './entry_point';
+import {EntryPoint, EntryPointFormat, EntryPointJsonProperty} from './entry_point';
 import {NgccSourcesCompilerHost} from './ngcc_compiler_host';
 
 /**
@@ -18,6 +19,7 @@ import {NgccSourcesCompilerHost} from './ngcc_compiler_host';
  */
 export interface EntryPointBundle {
   entryPoint: EntryPoint;
+  formatProperty: EntryPointJsonProperty;
   format: EntryPointFormat;
   isCore: boolean;
   isFlatCore: boolean;
@@ -32,6 +34,7 @@ export interface EntryPointBundle {
  * @param entryPoint The entry-point that contains the bundle.
  * @param formatPath The path to the source files for this bundle.
  * @param isCore This entry point is the Angular core package.
+ * @param formatProperty The property in the package.json that holds the formatPath.
  * @param format The underlying format of the bundle.
  * @param transformDts Whether to transform the typings along with this bundle.
  * @param pathMappings An optional set of mappings to use when compiling files.
@@ -40,8 +43,8 @@ export interface EntryPointBundle {
  */
 export function makeEntryPointBundle(
     fs: FileSystem, entryPoint: EntryPoint, formatPath: string, isCore: boolean,
-    format: EntryPointFormat, transformDts: boolean, pathMappings?: PathMappings,
-    mirrorDtsFromSrc: boolean = false): EntryPointBundle {
+    formatProperty: EntryPointJsonProperty, format: EntryPointFormat, transformDts: boolean,
+    pathMappings?: PathMappings, mirrorDtsFromSrc: boolean = false): EntryPointBundle|null {
   // Create the TS program and necessary helpers.
   const options: ts.CompilerOptions = {
     allowJs: true,
@@ -56,18 +59,17 @@ export function makeEntryPointBundle(
   // Create the bundle programs, as necessary.
   const absFormatPath = fs.resolve(entryPoint.path, formatPath);
   const typingsPath = fs.resolve(entryPoint.path, entryPoint.typings);
-  const src = makeBundleProgram(
-      fs, isCore, entryPoint.package, absFormatPath, 'r3_symbols.js', options, srcHost);
+  const src = makeBundleProgram(fs, isCore, absFormatPath, 'r3_symbols.js', options, srcHost);
   const additionalDtsFiles = transformDts && mirrorDtsFromSrc ?
       computePotentialDtsFilesFromJsFiles(fs, src.program, absFormatPath, typingsPath) :
       [];
-  const dts = transformDts ? makeBundleProgram(
-                                 fs, isCore, entryPoint.package, typingsPath, 'r3_symbols.d.ts',
-                                 options, dtsHost, additionalDtsFiles) :
-                             null;
+  const dts = transformDts ?
+      makeBundleProgram(
+          fs, isCore, typingsPath, 'r3_symbols.d.ts', options, dtsHost, additionalDtsFiles) :
+      null;
   const isFlatCore = isCore && src.r3SymbolsFile === null;
 
-  return {entryPoint, format, rootDirs, isCore, isFlatCore, src, dts};
+  return {entryPoint, format, formatProperty, rootDirs, isCore, isFlatCore, src, dts};
 }
 
 function computePotentialDtsFilesFromJsFiles(

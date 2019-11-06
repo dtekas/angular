@@ -9,14 +9,12 @@
 import {WrappedValue} from '../change_detection/change_detection_util';
 import {PipeTransform} from '../change_detection/pipe_transform';
 
-import {getFactoryDef} from './definition';
-import {store} from './instructions/all';
+import {store, ɵɵload} from './instructions/all';
 import {PipeDef, PipeDefList} from './interfaces/definition';
-import {HEADER_OFFSET, LView, TVIEW} from './interfaces/view';
+import {BINDING_INDEX, HEADER_OFFSET, TVIEW} from './interfaces/view';
 import {ɵɵpureFunction1, ɵɵpureFunction2, ɵɵpureFunction3, ɵɵpureFunction4, ɵɵpureFunctionV} from './pure_function';
-import {getBindingIndex, getLView} from './state';
+import {getLView} from './state';
 import {NO_CHANGE} from './tokens';
-import {load} from './util/view_utils';
 
 
 
@@ -34,7 +32,7 @@ export function ɵɵpipe(index: number, pipeName: string): any {
   let pipeDef: PipeDef<any>;
   const adjustedIndex = index + HEADER_OFFSET;
 
-  if (tView.firstCreatePass) {
+  if (tView.firstTemplatePass) {
     pipeDef = getPipeDef(pipeName, tView.pipeRegistry);
     tView.data[adjustedIndex] = pipeDef;
     if (pipeDef.onDestroy) {
@@ -44,8 +42,7 @@ export function ɵɵpipe(index: number, pipeName: string): any {
     pipeDef = tView.data[adjustedIndex] as PipeDef<any>;
   }
 
-  const pipeFactory = pipeDef.factory || (pipeDef.factory = getFactoryDef(pipeDef.type, true));
-  const pipeInstance = pipeFactory();
+  const pipeInstance = pipeDef.factory();
   store(index, pipeInstance);
   return pipeInstance;
 }
@@ -85,12 +82,10 @@ function getPipeDef(name: string, registry: PipeDefList | null): PipeDef<any> {
  * @codeGenApi
  */
 export function ɵɵpipeBind1(index: number, slotOffset: number, v1: any): any {
-  const lView = getLView();
-  const pipeInstance = load<PipeTransform>(lView, index);
+  const pipeInstance = ɵɵload<PipeTransform>(index);
   return unwrapValue(
-      lView, isPure(lView, index) ?
-          ɵɵpureFunction1(slotOffset, pipeInstance.transform, v1, pipeInstance) :
-          pipeInstance.transform(v1));
+      isPure(index) ? ɵɵpureFunction1(slotOffset, pipeInstance.transform, v1, pipeInstance) :
+                      pipeInstance.transform(v1));
 }
 
 /**
@@ -107,12 +102,10 @@ export function ɵɵpipeBind1(index: number, slotOffset: number, v1: any): any {
  * @codeGenApi
  */
 export function ɵɵpipeBind2(index: number, slotOffset: number, v1: any, v2: any): any {
-  const lView = getLView();
-  const pipeInstance = load<PipeTransform>(lView, index);
+  const pipeInstance = ɵɵload<PipeTransform>(index);
   return unwrapValue(
-      lView, isPure(lView, index) ?
-          ɵɵpureFunction2(slotOffset, pipeInstance.transform, v1, v2, pipeInstance) :
-          pipeInstance.transform(v1, v2));
+      isPure(index) ? ɵɵpureFunction2(slotOffset, pipeInstance.transform, v1, v2, pipeInstance) :
+                      pipeInstance.transform(v1, v2));
 }
 
 /**
@@ -130,10 +123,9 @@ export function ɵɵpipeBind2(index: number, slotOffset: number, v1: any, v2: an
  * @codeGenApi
  */
 export function ɵɵpipeBind3(index: number, slotOffset: number, v1: any, v2: any, v3: any): any {
-  const lView = getLView();
-  const pipeInstance = load<PipeTransform>(lView, index);
+  const pipeInstance = ɵɵload<PipeTransform>(index);
   return unwrapValue(
-      lView, isPure(lView, index) ?
+      isPure(index) ?
           ɵɵpureFunction3(slotOffset, pipeInstance.transform, v1, v2, v3, pipeInstance) :
           pipeInstance.transform(v1, v2, v3));
 }
@@ -155,10 +147,9 @@ export function ɵɵpipeBind3(index: number, slotOffset: number, v1: any, v2: an
  */
 export function ɵɵpipeBind4(
     index: number, slotOffset: number, v1: any, v2: any, v3: any, v4: any): any {
-  const lView = getLView();
-  const pipeInstance = load<PipeTransform>(lView, index);
+  const pipeInstance = ɵɵload<PipeTransform>(index);
   return unwrapValue(
-      lView, isPure(lView, index) ?
+      isPure(index) ?
           ɵɵpureFunction4(slotOffset, pipeInstance.transform, v1, v2, v3, v4, pipeInstance) :
           pipeInstance.transform(v1, v2, v3, v4));
 }
@@ -176,16 +167,14 @@ export function ɵɵpipeBind4(
  * @codeGenApi
  */
 export function ɵɵpipeBindV(index: number, slotOffset: number, values: [any, ...any[]]): any {
-  const lView = getLView();
-  const pipeInstance = load<PipeTransform>(lView, index);
+  const pipeInstance = ɵɵload<PipeTransform>(index);
   return unwrapValue(
-      lView, isPure(lView, index) ?
-          ɵɵpureFunctionV(slotOffset, pipeInstance.transform, values, pipeInstance) :
-          pipeInstance.transform.apply(pipeInstance, values));
+      isPure(index) ? ɵɵpureFunctionV(slotOffset, pipeInstance.transform, values, pipeInstance) :
+                      pipeInstance.transform.apply(pipeInstance, values));
 }
 
-function isPure(lView: LView, index: number): boolean {
-  return (<PipeDef<any>>lView[TVIEW].data[index + HEADER_OFFSET]).pure;
+function isPure(index: number): boolean {
+  return (<PipeDef<any>>getLView()[TVIEW].data[index + HEADER_OFFSET]).pure;
 }
 
 /**
@@ -195,12 +184,13 @@ function isPure(lView: LView, index: number): boolean {
  *
  * @param newValue the pipe transformation output.
  */
-function unwrapValue(lView: LView, newValue: any): any {
+function unwrapValue(newValue: any): any {
   if (WrappedValue.isWrapped(newValue)) {
     newValue = WrappedValue.unwrap(newValue);
+    const lView = getLView();
     // The NO_CHANGE value needs to be written at the index where the impacted binding value is
     // stored
-    const bindingToInvalidateIdx = getBindingIndex();
+    const bindingToInvalidateIdx = lView[BINDING_INDEX];
     lView[bindingToInvalidateIdx] = NO_CHANGE;
   }
   return newValue;

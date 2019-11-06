@@ -25,7 +25,7 @@ describe('FileNotFoundSearchComponent', () => {
     });
 
     fixture = TestBed.createComponent(FileNotFoundSearchComponent);
-    searchService = TestBed.inject(SearchService);
+    searchService = TestBed.get(SearchService);
     searchResultSubject = new Subject<SearchResults>();
     spyOn(searchService, 'search').and.callFake(() => searchResultSubject.asObservable());
     fixture.detectChanges();

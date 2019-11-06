@@ -94,16 +94,14 @@ describe('css selector matching', () => {
            ])).toBeTruthy(`Selector '[title]' should match <span id="my_id" title="test_title">`);
          });
 
-      /**
-       * We assume that compiler will lower-case all selectors when generating code
-       */
+
       it('should match single attribute with value', () => {
         expect(isMatching('span', ['title', 'My Title'], [
-          '', 'title', 'my title'
+          '', 'title', 'My Title'
         ])).toBeTruthy(`Selector '[title="My Title"]' should match <span title="My Title">'`);
 
         expect(isMatching('span', ['title', 'My Title'], [
-          '', 'title', 'other title'
+          '', 'title', 'Other Title'
         ])).toBeFalsy(`Selector '[title="Other Title"]' should NOT match <span title="My Title">`);
       });
 
@@ -113,7 +111,7 @@ describe('css selector matching', () => {
         ])).toBeFalsy(`Selector 'div[title]' should NOT match <span title="My Title">`);
 
         expect(isMatching('span', ['title', 'My Title'], [
-          'div', 'title', 'my title'
+          'div', 'title', 'My Title'
         ])).toBeFalsy(`Selector 'div[title="My Title"]' should NOT match <span title="My Title">`);
       });
 
@@ -149,8 +147,7 @@ describe('css selector matching', () => {
       });
 
       /**
-       * We assume that compiler will lower-case all selectors and attribute names when generating
-       * code
+       * We assume that compiler will lower-case all attribute names when generating code
        */
       it('should match attribute name case-sensitively', () => {
         expect(isMatching('span', ['foo', ''], [
@@ -162,10 +159,14 @@ describe('css selector matching', () => {
         ])).toBeFalsy(`Selector '[Foo]' should NOT match <span foo>`);
       });
 
-      it('should match attribute values case-insensitively', () => {
+      it('should match attribute values case-sensitively', () => {
         expect(isMatching('span', ['foo', 'Bar'], [
-          '', 'foo', 'bar'
-        ])).toBeTruthy(`Selector '[foo="bar"]' should match <span foo="Bar">`);
+          '', 'foo', 'Bar'
+        ])).toBeTruthy(`Selector '[foo="Bar"]' should match <span foo="Bar">`);
+
+        expect(isMatching('span', ['foo', 'Bar'], [
+          '', 'Foo', 'bar'
+        ])).toBeFalsy(`Selector '[Foo="bar"]' should match <span foo="Bar">`);
       });
 
       it('should match class as an attribute', () => {
@@ -287,13 +288,14 @@ describe('css selector matching', () => {
         ])).toBeTruthy(`Selector '.bar.foo' should match <span class="bar foo">`);
       });
 
-      /**
-       * We assume that compiler will lower-case all selectors when generating code
-       */
-      it('should match class name case-insensitively', () => {
+      it('should match class name case-sensitively', () => {
+        expect(isMatching('span', ['class', 'Foo'], [
+          '', SelectorFlags.CLASS, 'Foo'
+        ])).toBeTruthy(`Selector '.Foo' should match <span class="Foo">`);
+
         expect(isMatching('span', ['class', 'Foo'], [
           '', SelectorFlags.CLASS, 'foo'
-        ])).toBeTruthy(`Selector '.Foo' should match <span class="Foo">`);
+        ])).toBeFalsy(`Selector '.foo' should NOT match <span class-"Foo">`);
       });
 
       it('should work without a class attribute', () => {

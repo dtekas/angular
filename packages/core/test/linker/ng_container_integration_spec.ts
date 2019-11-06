@@ -5,12 +5,11 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-// Make the `$localize()` global function available to the compiled templates, and the direct calls
-// below. This would normally be done inside the application `polyfills.ts` file.
-import '@angular/localize/init';
+
+
 import {AfterContentInit, AfterViewInit, Component, ContentChildren, Directive, Input, QueryList, ViewChildren, ɵivyEnabled as ivyEnabled} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
-import {isCommentNode} from '@angular/platform-browser/testing/src/browser_util';
+import {getDOM} from '@angular/platform-browser/src/dom/dom_adapter';
 import {expect} from '@angular/platform-browser/testing/src/matchers';
 import {modifiedInIvy} from '@angular/private/testing';
 
@@ -57,10 +56,10 @@ function declareTests(config?: {useJit: boolean}) {
           fixture.detectChanges();
 
           const el = fixture.nativeElement;
-          const children = el.childNodes;
+          const children = getDOM().childNodes(el);
           expect(children.length).toBe(2);
-          expect(isCommentNode(children[0])).toBe(true);
-          expect((children[1] as Element).tagName.toUpperCase()).toEqual('P');
+          expect(getDOM().isCommentNode(children[0])).toBe(true);
+          expect(getDOM().tagName(children[1]).toUpperCase()).toEqual('P');
         });
 
     modifiedInIvy('FW-678: ivy generates different DOM structure for <ng-container>')
@@ -73,12 +72,12 @@ function declareTests(config?: {useJit: boolean}) {
           fixture.detectChanges();
 
           const el = fixture.nativeElement;
-          const children = el.childNodes;
+          const children = getDOM().childNodes(el);
           expect(children.length).toBe(5);
-          expect(isCommentNode(children[0])).toBe(true);
+          expect(getDOM().isCommentNode(children[0])).toBe(true);
           expect(children[1]).toHaveText('1');
-          expect(isCommentNode(children[2])).toBe(true);
-          expect(isCommentNode(children[3])).toBe(true);
+          expect(getDOM().isCommentNode(children[2])).toBe(true);
+          expect(getDOM().isCommentNode(children[3])).toBe(true);
           expect(children[4]).toHaveText('2');
         });
 
@@ -92,21 +91,21 @@ function declareTests(config?: {useJit: boolean}) {
           fixture.detectChanges();
 
           const el = fixture.nativeElement;
-          const children = el.childNodes;
+          const children = getDOM().childNodes(el);
 
           expect(children.length).toBe(4);
           // ngIf anchor
-          expect(isCommentNode(children[0])).toBe(true);
+          expect(getDOM().isCommentNode(children[0])).toBe(true);
           // ng-container anchor
-          expect(isCommentNode(children[1])).toBe(true);
-          expect((children[2] as Element).tagName.toUpperCase()).toEqual('P');
-          expect((children[3] as Element).tagName.toUpperCase()).toEqual('B');
+          expect(getDOM().isCommentNode(children[1])).toBe(true);
+          expect(getDOM().tagName(children[2]).toUpperCase()).toEqual('P');
+          expect(getDOM().tagName(children[3]).toUpperCase()).toEqual('B');
 
           fixture.componentInstance.ctxBoolProp = false;
           fixture.detectChanges();
 
           expect(children.length).toBe(1);
-          expect(isCommentNode(children[0])).toBe(true);
+          expect(getDOM().isCommentNode(children[0])).toBe(true);
         });
 
     it('should work with static content projection', () => {

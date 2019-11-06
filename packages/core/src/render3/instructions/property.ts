@@ -5,12 +5,14 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
+import {assertNotEqual} from '../../util/assert';
 import {bindingUpdated} from '../bindings';
 import {SanitizerFn} from '../interfaces/sanitization';
-import {TVIEW} from '../interfaces/view';
-import {getLView, getSelectedIndex, nextBindingIndex} from '../state';
+import {BINDING_INDEX, LView} from '../interfaces/view';
+import {getLView, getSelectedIndex} from '../state';
+import {NO_CHANGE} from '../tokens';
 
-import {TsickleIssue1009, elementPropertyInternal, storePropertyBindingMetadata} from './shared';
+import {TsickleIssue1009, elementPropertyInternal, storeBindingMetadata} from './shared';
 
 
 /**
@@ -33,12 +35,24 @@ import {TsickleIssue1009, elementPropertyInternal, storePropertyBindingMetadata}
  */
 export function ɵɵproperty<T>(
     propName: string, value: T, sanitizer?: SanitizerFn | null): TsickleIssue1009 {
+  const index = getSelectedIndex();
+  ngDevMode && assertNotEqual(index, -1, 'selected index cannot be -1');
   const lView = getLView();
-  const bindingIndex = nextBindingIndex();
-  if (bindingUpdated(lView, bindingIndex, value)) {
-    const nodeIndex = getSelectedIndex();
-    elementPropertyInternal(lView, nodeIndex, propName, value, sanitizer);
-    ngDevMode && storePropertyBindingMetadata(lView[TVIEW].data, nodeIndex, propName, bindingIndex);
+  const bindReconciledValue = bind(lView, value);
+  if (bindReconciledValue !== NO_CHANGE) {
+    elementPropertyInternal(index, propName, bindReconciledValue, sanitizer);
   }
   return ɵɵproperty;
+}
+
+/**
+ * Creates a single value binding.
+ *
+ * @param lView Current view
+ * @param value Value to diff
+ */
+export function bind<T>(lView: LView, value: T): T|NO_CHANGE {
+  const bindingIndex = lView[BINDING_INDEX]++;
+  storeBindingMetadata(lView);
+  return bindingUpdated(lView, bindingIndex, value) ? value : NO_CHANGE;
 }

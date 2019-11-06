@@ -4,12 +4,12 @@ import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 
 // #docregion orders-routing-module-detail
-import { OrdersComponent } from './orders.component';
+import { OrderListComponent } from './order-list/order-list.component';
 
 const routes: Routes = [
   {
     path: '',
-    component: OrdersComponent
+    component: OrderListComponent
   }
 ];
 // #enddocregion orders-routing-module-detail

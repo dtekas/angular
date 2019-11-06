@@ -44,8 +44,7 @@ export const Output = callablePropDecorator();
 export const ViewChild = callablePropDecorator();
 export const ViewChildren = callablePropDecorator();
 
-// T defaults to `any` to reflect what is currently in core.
-export type ModuleWithProviders<T = any> = any;
+export type ModuleWithProviders<T> = any;
 
 export class ChangeDetectorRef {}
 export class ElementRef {}
@@ -77,11 +76,4 @@ export enum ViewEncapsulation {
 export enum ChangeDetectionStrategy {
   OnPush = 0,
   Default = 1
-}
-
-export const CUSTOM_ELEMENTS_SCHEMA: any = false;
-export const NO_ERRORS_SCHEMA: any = false;
-
-export class EventEmitter<T> {
-  subscribe(generatorOrNext?: any, error?: any, complete?: any): unknown { return null; }
 }

@@ -1,6 +1,3 @@
-// tslint:disable-next-line: no-reference
-/// <reference path="./cjson.d.ts" />
-
 import { resolve as resolvePath } from 'canonical-path';
 import { load as loadJson } from 'cjson';
 import { readFileSync } from 'fs';

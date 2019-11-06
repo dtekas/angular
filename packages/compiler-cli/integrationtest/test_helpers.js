@@ -56,7 +56,7 @@ const requiredNodeModules = {
   'source-map': resolveNpmTreeArtifact('npm/node_modules/source-map'),
   'source-map-support': resolveNpmTreeArtifact('npm/node_modules/source-map-support'),
   'typescript': resolveNpmTreeArtifact('npm/node_modules/typescript'),
-  'zone.js': resolveNpmTreeArtifact('angular/packages/zone.js/npm_package'),
+  'zone.js': resolveNpmTreeArtifact('npm/node_modules/zone.js'),
 };
 
 /** Sets up the temporary test directory and returns the path to the directory. */

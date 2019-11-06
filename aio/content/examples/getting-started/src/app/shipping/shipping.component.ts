@@ -1,6 +1,6 @@
 // #docplaster
 // #docregion imports
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 
 import { CartService } from '../cart.service';
 // #enddocregion
@@ -11,7 +11,7 @@ import { CartService } from '../cart.service';
   styleUrls: ['./shipping.component.css']
 })
 // #docregion props, ctor
-export class ShippingComponent implements OnInit {
+export class ShippingComponent {
   shippingCosts;
 // #enddocregion props
 
@@ -19,12 +19,10 @@ export class ShippingComponent implements OnInit {
   constructor(
     private cartService: CartService
   ) {
+// #enddocregion inject-cart-service
+    this.shippingCosts = this.cartService.getShippingPrices();
+// #docregion inject-cart-service
   }
 // #enddocregion inject-cart-service
-
-  ngOnInit() {
-    this.shippingCosts = this.cartService.getShippingPrices();
-  }
-
 // #docregion props
 }

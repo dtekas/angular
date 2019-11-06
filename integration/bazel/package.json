@@ -14,31 +14,24 @@
     "@angular/platform-browser-dynamic": "file:../../dist/packages-dist/platform-browser-dynamic",
     "@angular/router": "file:../../dist/packages-dist/router",
     "reflect-metadata": "0.1.12",
-    "rxjs": "file:../../node_modules/rxjs",
-    "tslib": "file:../../node_modules/tslib",
-    "zone.js": "0.10.2"
+    "rxjs": "6.4.0",
+    "tslib": "1.9.3",
+    "zone.js": "0.9.1"
   },
   "devDependencies": {
     "@angular/bazel": "file:../../dist/packages-dist/bazel",
     "@angular/compiler": "file:../../dist/packages-dist/compiler",
     "@angular/compiler-cli": "file:../../dist/packages-dist/compiler-cli",
     "@bazel/bazel": "file:../../node_modules/@bazel/bazel",
-    "@bazel/karma": "0.39.1",
-    "@bazel/protractor": "0.39.1",
-    "@bazel/rollup": "0.39.1",
-    "@bazel/terser": "0.39.1",
-    "@bazel/typescript": "0.39.1",
+    "@bazel/hide-bazel-files": "0.32.2",
+    "@bazel/karma": "0.32.2",
+    "@bazel/typescript": "0.32.2",
     "@types/jasmine": "2.8.8",
-    "http-server": "^0.11.1",
-    "rollup": "^1.21.4",
-    "rollup-plugin-commonjs": "^10.1.0",
-    "rollup-plugin-node-resolve": "^5.2.0",
-    "rollup-plugin-sourcemaps": "^0.4.2",
-    "terser": "4.3.1",
-    "typescript": "3.6.4"
+    "protractor": "5.1.2",
+    "typescript": "3.4.2"
   },
   "scripts": {
     "test": "bazel build ... --noshow_progress && bazel test ...",
-    "postinstall": "ngcc"
+    "postinstall": "ngc -p ./angular-metadata.tsconfig.json"
   }
 }

@@ -16,7 +16,7 @@ describe('compiler compliance: listen()', () => {
     compileAnimations: false,
   });
 
-  it('should declare inputs/outputs', () => {
+  it('should create declare inputs/outputs', () => {
     const files = {
       app: {
         'spec.ts': `
@@ -52,7 +52,7 @@ describe('compiler compliance: listen()', () => {
     };
 
     const componentDef = `
-      MyComponent.ɵcmp = IDENT.ɵɵdefineComponent({
+      MyComponent.ngComponentDef = IDENT.ɵɵdefineComponent({
           …
           inputs:{
             componentInput: "componentInput",
@@ -66,7 +66,7 @@ describe('compiler compliance: listen()', () => {
         });`;
 
     const directiveDef = `
-      MyDirective.ɵdir = IDENT.ɵɵdefineDirective({
+      MyDirective.ngDirectiveDef = IDENT.ɵɵdefineDirective({
         …
         inputs:{
           directiveInput: "directiveInput",

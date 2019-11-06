@@ -5,6 +5,10 @@ import { first, map, share } from 'rxjs/operators';
 
 import { Logger } from 'app/shared/logger.service';
 
+declare const System: {
+  import(name: string): Promise<any>;
+};
+
 type PrettyPrintOne = (code: string, language?: string, linenums?: number | boolean) => string;
 
 /**
@@ -22,9 +26,8 @@ export class PrettyPrinter {
   private getPrettyPrintOne(): Promise<PrettyPrintOne> {
     const ppo = (window as any)['prettyPrintOne'];
     return ppo ? Promise.resolve(ppo) :
-      // `prettyPrintOne` is not on `window`, which means `prettify.js` has not been loaded yet.
-      // Import it; ad a side-effect it will add `prettyPrintOne` on `window`.
-      import('assets/js/prettify.js' as any)
+      // prettify.js is not in window global; load it with webpack loader
+      System.import('assets/js/prettify.js')
         .then(
           () => (window as any)['prettyPrintOne'],
           err => {

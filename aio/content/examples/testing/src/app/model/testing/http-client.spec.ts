@@ -27,8 +27,8 @@ describe('HttpClient testing', () => {
     });
 
     // Inject the http service and test controller for each test
-    httpClient = TestBed.inject(HttpClient);
-    httpTestingController = TestBed.inject(HttpTestingController);
+    httpClient = TestBed.get(HttpClient);
+    httpTestingController = TestBed.get(HttpTestingController);
   });
   // #enddocregion setup
   // #docregion afterEach

@@ -18,8 +18,11 @@ test:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test
 # See https://github.com/bazelbuild/bazel/issues/4603
 build --symlink_prefix=dist/
 
+# Disable watchfs as it causes tests to be flaky on Windows
+# https://github.com/angular/angular/issues/29541
+build --nowatchfs
+
 # Turn off legacy external runfiles
-build --nolegacy_external_runfiles
 run --nolegacy_external_runfiles
 test --nolegacy_external_runfiles
 
@@ -32,6 +35,22 @@ test --nolegacy_external_runfiles
 build --incompatible_strict_action_env
 run --incompatible_strict_action_env
 test --incompatible_strict_action_env
+
+###############################
+# Saucelabs support           #
+# Turn on these settings with #
+#  --config=saucelabs         #
+###############################
+
+# Expose SauceLabs environment to actions
+# These environment variables are needed by
+# web_test_karma to run on Saucelabs
+test:saucelabs --action_env=SAUCE_USERNAME
+test:saucelabs --action_env=SAUCE_ACCESS_KEY
+test:saucelabs --action_env=SAUCE_READY_FILE
+test:saucelabs --action_env=SAUCE_PID_FILE
+test:saucelabs --action_env=SAUCE_TUNNEL_IDENTIFIER
+test:saucelabs --define=KARMA_WEB_TEST_MODE=SL_REQUIRED
 
 ###############################
 # Release support             #
@@ -59,7 +78,7 @@ test --test_output=errors
 # Settings for CircleCI        #
 ################################
 
-# Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc
+# Bazel flags for CircleCI are in /.circleci/bazel.rc
 
 ################################
 # Temporary Settings for Ivy   #
@@ -68,45 +87,18 @@ test --test_output=errors
 # any bazel target. This is a temporary flag until codebase is permanently switched to Ivy.
 build --define=compile=legacy
 
-################################
-# Settings for rules_nodejs    #
-################################
-# Temporary define while angular depends on the legacy rollup_bundle rule.
-# TODO: remove this setting after https://github.com/angular/angular/pull/33201 lands.
-build --define=enable_legacy_rollup_rule=1
+###############################
+# Remote Build Execution support
+# Turn on these settings with
+#  --config=remote
+###############################
 
-#######################
-# Remote HTTP Caching #
-#######################
-build --remote_http_cache=https://storage.googleapis.com/angular-team-cache
-build --remote_accept_cached=true
-build --remote_upload_local_results=false
-
-######################################
-# Remote HTTP Caching writes support #
-# Turn on these settings with        #
-#  --config=-http-caching            #
-######################################
-build:remote-http-caching --remote_upload_local_results=true
-build:remote-http-caching --google_default_credentials
-
-##################################
-# Remote Build Execution support #
-# Turn on these settings with    #
-#  --config=remote               #
-##################################
-
-# The following --define=EXECUTOR=remote will be able to be removed
-# once https://github.com/bazelbuild/bazel/issues/7254 is fixed
-build:remote --define=EXECUTOR=remote
-
-# Set a higher timeout value, just in case.
-build:remote --remote_timeout=600
+# Load default settings for Remote Build Execution.
+import %workspace%/third_party/github.com/bazelbuild/bazel-toolchains/bazelrc/.bazelrc.notoolchain
 
 # Increase the default number of jobs by 50% because our build has lots of
 # parallelism
 build:remote --jobs=150
-build:remote --google_default_credentials
 
 # Toolchain and platform related flags
 build:remote --host_javabase=@rbe_ubuntu1604_angular//java:jdk
@@ -120,11 +112,21 @@ build:remote --extra_execution_platforms=//tools:rbe_ubuntu1604-angular
 build:remote --host_platform=//tools:rbe_ubuntu1604-angular
 build:remote --platforms=//tools:rbe_ubuntu1604-angular
 
-# Remote instance and caching
+# Remote instance.
 build:remote --remote_instance_name=projects/internal-200822/instances/default_instance
 build:remote --project_id=internal-200822
+
+# Remote caching
 build:remote --remote_cache=remotebuildexecution.googleapis.com
-build:remote --remote_executor=remotebuildexecution.googleapis.com
+# By default, do not accept remote cache, to be set to true for CI based on environment
+build:remote --remote_accept_cached=false
+# By default, do not upload local results to cache, to be set to true for CI based on environment
+build:remote --remote_upload_local_results=false
+
+# Build Event Service Configuration
+build:remote --bes_backend=buildeventservice.googleapis.com
+build:remote --bes_timeout=30s
+build:remote --bes_results_url="https://source.cloud.google.com/results/invocations/"
 
 ###############################
 # NodeJS rules settings
@@ -134,6 +136,31 @@ build:remote --remote_executor=remotebuildexecution.googleapis.com
 # Turn on managed directories feature in Bazel
 # This allows us to avoid installing a second copy of node_modules
 common --experimental_allow_incremental_repository_updates
+
+# This option is changed to true in Bazel 0.27 and exposes a possible
+# regression in Bazel 0.27.0.
+# Error observed is in npm_package target `//packages/common/locales:package`:
+# ```
+# ERROR: /home/circleci/ng/packages/common/locales/BUILD.bazel:13:1: Assembling
+# npm package packages/common/locales/package failed: No usable spawn strategy found
+# for spawn with mnemonic SkylarkAction.  Your --spawn_strategyor --strategy flags
+# are probably too strict. Visit https://github.com/bazelbuild/bazel/issues/7480 for
+# migration advises
+# ```
+# Suspect is https://github.com/bazelbuild/rules_nodejs/blob/master/internal/npm_package/npm_package.bzl#L75-L82:
+# ```
+# execution_requirements = {
+#     # Never schedule this action remotely because it's not computationally expensive.
+#     # It just copies files into a directory; it's not worth copying inputs and outputs to a remote worker.
+#     # Also don't run it in a sandbox, because it resolves an absolute path to the bazel-out directory
+#     # allowing the .pack and .publish runnables to work with no symlink_prefix
+#     # See https://github.com/bazelbuild/rules_nodejs/issues/187
+#     "local": "1",
+# },
+# ```
+build --incompatible_list_based_execution_strategy_selection=false
+test --incompatible_list_based_execution_strategy_selection=false
+run --incompatible_list_based_execution_strategy_selection=false
 
 ####################################################
 # User bazel configuration

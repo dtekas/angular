@@ -9,10 +9,10 @@ There are new requirements for the Tour of Heroes app:
 
 When you’re done, users will be able to navigate the app like this:
 
-<figure class="lightbox">
-  <div class="card">
-    <img src='generated/images/guide/toh/nav-diagram.png' alt="View navigations">
-  </div>
+<figure>
+
+  <img src='generated/images/guide/toh/nav-diagram.png' alt="View navigations">
+
 </figure>
 
 ## Add the `AppRoutingModule`
@@ -44,9 +44,9 @@ Replace it with the following:
 <code-example path="toh-pt5/src/app/app-routing.module.1.ts" header="src/app/app-routing.module.ts (updated)">
 </code-example>
 
-First, `AppRoutingModule` imports `RouterModule` and `Routes` so the app can have routing functionality. The next import, `HeroesComponent`, will give the Router somewhere to go once you configure the routes.
+First, `AppRoutingModule` imports `RouterModule` and `Routes` so the app can have routing functionality. The next import, `HeroesComponent`, will give the Router somewhere to go once you  configure the routes.
 
-Notice that the `CommonModule` references and `declarations` array are unnecessary, so are no
+Notice that the `CommonModule` references and `declarations` array are unecessary, so are no
 longer part of `AppRoutingModule`. The following sections explain the rest of the `AppRoutingModule` in more detail.
 
 
@@ -90,6 +90,8 @@ configures it with the `routes` in one step by calling
 </div>
 
 Next, `AppRoutingModule` exports `RouterModule` so it will be available throughout the app.
+
+Open the `AppComponent` template and replace the `<app-heroes>` element with a `<router-outlet>` element.
 
 <code-example path="toh-pt5/src/app/app-routing.module.ts" header="src/app/app-routing.module.ts (exports array)" region="export-routermodule">
 </code-example>

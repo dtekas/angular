@@ -30,29 +30,28 @@
       &:hover {
         color: $accentblue;
       }
+
     }
   }
 
-  button {
-    &.toc-heading,
-    &.toc-more-items {
-      cursor: pointer;
-      display: inline-block;
-      background: 0;
-      background-color: transparent;
-      border: none;
-      box-shadow: none;
-      padding: 0;
-      text-align: start;
+  button.toc-heading,
+  button.toc-more-items {
+    cursor: pointer;
+    display: inline-block;
+    background: 0;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    text-align: start;
 
-      &.embedded:focus {
-        outline: none;
-        background: $lightgray;
-      }
+    &.embedded:focus {
+      outline: none;
+      background: $lightgray;
     }
   }
 
-  &.toc-heading {
+  button.toc-heading {
     mat-icon.rotating-icon {
       height: 18px;
       width: 18px;
@@ -66,7 +65,7 @@
     }
   }
 
-  &.toc-more-items {
+  button.toc-more-items {
     color: $mediumgray;
     top: 10px;
     position: relative;
@@ -98,7 +97,7 @@
     list-style-type: none;
     margin: 0;
     padding: 0 8px 0 0;
-    
+
     @media (max-width: 800px) {
       width: auto;
     }

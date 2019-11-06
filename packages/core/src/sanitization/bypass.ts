@@ -6,116 +6,61 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {assertEqual} from '../util/assert';
-
+const BRAND = '__SANITIZER_TRUSTED_BRAND__';
 
 export const enum BypassType {
-  Url = 'URL',
-  Html = 'HTML',
-  ResourceUrl = 'ResourceURL',
+  Url = 'Url',
+  Html = 'Html',
+  ResourceUrl = 'ResourceUrl',
   Script = 'Script',
   Style = 'Style',
 }
 
 /**
- * Marker interface for a value that's safe to use in a particular context.
+ * A branded trusted string used with sanitization.
  *
- * @publicApi
+ * See: {@link TrustedHtmlString}, {@link TrustedResourceUrlString}, {@link TrustedScriptString},
+ * {@link TrustedStyleString}, {@link TrustedUrlString}
  */
-export interface SafeValue {}
+export interface TrustedString extends String { [BRAND]: BypassType; }
 
 /**
- * Marker interface for a value that's safe to use as HTML.
+ * A branded trusted string used with sanitization of `html` strings.
  *
- * @publicApi
+ * See: {@link bypassSanitizationTrustHtml} and {@link htmlSanitizer}.
  */
-export interface SafeHtml extends SafeValue {}
+export interface TrustedHtmlString extends TrustedString { [BRAND]: BypassType.Html; }
 
 /**
- * Marker interface for a value that's safe to use as style (CSS).
+ * A branded trusted string used with sanitization of `style` strings.
  *
- * @publicApi
+ * See: {@link bypassSanitizationTrustStyle} and {@link styleSanitizer}.
  */
-export interface SafeStyle extends SafeValue {}
+export interface TrustedStyleString extends TrustedString { [BRAND]: BypassType.Style; }
 
 /**
- * Marker interface for a value that's safe to use as JavaScript.
+ * A branded trusted string used with sanitization of `url` strings.
  *
- * @publicApi
+ * See: {@link bypassSanitizationTrustScript} and {@link scriptSanitizer}.
  */
-export interface SafeScript extends SafeValue {}
+export interface TrustedScriptString extends TrustedString { [BRAND]: BypassType.Script; }
 
 /**
- * Marker interface for a value that's safe to use as a URL linking to a document.
+ * A branded trusted string used with sanitization of `url` strings.
  *
- * @publicApi
+ * See: {@link bypassSanitizationTrustUrl} and {@link urlSanitizer}.
  */
-export interface SafeUrl extends SafeValue {}
+export interface TrustedUrlString extends TrustedString { [BRAND]: BypassType.Url; }
 
 /**
- * Marker interface for a value that's safe to use as a URL to load executable code from.
+ * A branded trusted string used with sanitization of `resourceUrl` strings.
  *
- * @publicApi
+ * See: {@link bypassSanitizationTrustResourceUrl} and {@link resourceUrlSanitizer}.
  */
-export interface SafeResourceUrl extends SafeValue {}
+export interface TrustedResourceUrlString extends TrustedString { [BRAND]: BypassType.ResourceUrl; }
 
-
-abstract class SafeValueImpl implements SafeValue {
-  constructor(public changingThisBreaksApplicationSecurity: string) {}
-
-  abstract getTypeName(): string;
-
-  toString() {
-    return `SafeValue must use [property]=binding: ${this.changingThisBreaksApplicationSecurity}` +
-        ` (see http://g.co/ng/security#xss)`;
-  }
-}
-
-class SafeHtmlImpl extends SafeValueImpl implements SafeHtml {
-  getTypeName() { return BypassType.Html; }
-}
-class SafeStyleImpl extends SafeValueImpl implements SafeStyle {
-  getTypeName() { return BypassType.Style; }
-}
-class SafeScriptImpl extends SafeValueImpl implements SafeScript {
-  getTypeName() { return BypassType.Script; }
-}
-class SafeUrlImpl extends SafeValueImpl implements SafeUrl {
-  getTypeName() { return BypassType.Url; }
-}
-class SafeResourceUrlImpl extends SafeValueImpl implements SafeResourceUrl {
-  getTypeName() { return BypassType.ResourceUrl; }
-}
-
-export function unwrapSafeValue(value: string | SafeValue): string {
-  return value instanceof SafeValueImpl ? value.changingThisBreaksApplicationSecurity :
-                                          value as string;
-}
-
-
-export function allowSanitizationBypassAndThrow(
-    value: any, type: BypassType.Html): value is SafeHtml;
-export function allowSanitizationBypassAndThrow(
-    value: any, type: BypassType.ResourceUrl): value is SafeResourceUrl;
-export function allowSanitizationBypassAndThrow(
-    value: any, type: BypassType.Script): value is SafeScript;
-export function allowSanitizationBypassAndThrow(
-    value: any, type: BypassType.Style): value is SafeStyle;
-export function allowSanitizationBypassAndThrow(value: any, type: BypassType.Url): value is SafeUrl;
-export function allowSanitizationBypassAndThrow(value: any, type: BypassType): boolean;
-export function allowSanitizationBypassAndThrow(value: any, type: BypassType): boolean {
-  const actualType = getSanitizationBypassType(value);
-  if (actualType != null && actualType !== type) {
-    // Allow ResourceURLs in URL contexts, they are strictly more trusted.
-    if (actualType === BypassType.ResourceUrl && type === BypassType.Url) return true;
-    throw new Error(
-        `Required a safe ${type}, got a ${actualType} (see http://g.co/ng/security#xss)`);
-  }
-  return actualType === type;
-}
-
-export function getSanitizationBypassType(value: any): BypassType|null {
-  return value instanceof SafeValueImpl && value.getTypeName() as BypassType || null;
+export function allowSanitizationBypass(value: any, type: BypassType): boolean {
+  return (value instanceof String && (value as TrustedStyleString)[BRAND] === type);
 }
 
 /**
@@ -125,10 +70,10 @@ export function getSanitizationBypassType(value: any): BypassType|null {
  * recognizable to {@link htmlSanitizer} to be trusted implicitly.
  *
  * @param trustedHtml `html` string which needs to be implicitly trusted.
- * @returns a `html` which has been branded to be implicitly trusted.
+ * @returns a `html` `String` which has been branded to be implicitly trusted.
  */
-export function bypassSanitizationTrustHtml(trustedHtml: string): SafeHtml {
-  return new SafeHtmlImpl(trustedHtml);
+export function bypassSanitizationTrustHtml(trustedHtml: string): TrustedHtmlString {
+  return bypassSanitizationTrustString(trustedHtml, BypassType.Html);
 }
 /**
  * Mark `style` string as trusted.
@@ -137,10 +82,10 @@ export function bypassSanitizationTrustHtml(trustedHtml: string): SafeHtml {
  * recognizable to {@link styleSanitizer} to be trusted implicitly.
  *
  * @param trustedStyle `style` string which needs to be implicitly trusted.
- * @returns a `style` hich has been branded to be implicitly trusted.
+ * @returns a `style` `String` which has been branded to be implicitly trusted.
  */
-export function bypassSanitizationTrustStyle(trustedStyle: string): SafeStyle {
-  return new SafeStyleImpl(trustedStyle);
+export function bypassSanitizationTrustStyle(trustedStyle: string): TrustedStyleString {
+  return bypassSanitizationTrustString(trustedStyle, BypassType.Style);
 }
 /**
  * Mark `script` string as trusted.
@@ -149,10 +94,10 @@ export function bypassSanitizationTrustStyle(trustedStyle: string): SafeStyle {
  * recognizable to {@link scriptSanitizer} to be trusted implicitly.
  *
  * @param trustedScript `script` string which needs to be implicitly trusted.
- * @returns a `script` which has been branded to be implicitly trusted.
+ * @returns a `script` `String` which has been branded to be implicitly trusted.
  */
-export function bypassSanitizationTrustScript(trustedScript: string): SafeScript {
-  return new SafeScriptImpl(trustedScript);
+export function bypassSanitizationTrustScript(trustedScript: string): TrustedScriptString {
+  return bypassSanitizationTrustString(trustedScript, BypassType.Script);
 }
 /**
  * Mark `url` string as trusted.
@@ -161,10 +106,10 @@ export function bypassSanitizationTrustScript(trustedScript: string): SafeScript
  * recognizable to {@link urlSanitizer} to be trusted implicitly.
  *
  * @param trustedUrl `url` string which needs to be implicitly trusted.
- * @returns a `url`  which has been branded to be implicitly trusted.
+ * @returns a `url` `String` which has been branded to be implicitly trusted.
  */
-export function bypassSanitizationTrustUrl(trustedUrl: string): SafeUrl {
-  return new SafeUrlImpl(trustedUrl);
+export function bypassSanitizationTrustUrl(trustedUrl: string): TrustedUrlString {
+  return bypassSanitizationTrustString(trustedUrl, BypassType.Url);
 }
 /**
  * Mark `url` string as trusted.
@@ -173,8 +118,26 @@ export function bypassSanitizationTrustUrl(trustedUrl: string): SafeUrl {
  * recognizable to {@link resourceUrlSanitizer} to be trusted implicitly.
  *
  * @param trustedResourceUrl `url` string which needs to be implicitly trusted.
- * @returns a `url` which has been branded to be implicitly trusted.
+ * @returns a `url` `String` which has been branded to be implicitly trusted.
  */
-export function bypassSanitizationTrustResourceUrl(trustedResourceUrl: string): SafeResourceUrl {
-  return new SafeResourceUrlImpl(trustedResourceUrl);
+export function bypassSanitizationTrustResourceUrl(trustedResourceUrl: string):
+    TrustedResourceUrlString {
+  return bypassSanitizationTrustString(trustedResourceUrl, BypassType.ResourceUrl);
+}
+
+
+function bypassSanitizationTrustString(
+    trustedString: string, mode: BypassType.Html): TrustedHtmlString;
+function bypassSanitizationTrustString(
+    trustedString: string, mode: BypassType.Style): TrustedStyleString;
+function bypassSanitizationTrustString(
+    trustedString: string, mode: BypassType.Script): TrustedScriptString;
+function bypassSanitizationTrustString(
+    trustedString: string, mode: BypassType.Url): TrustedUrlString;
+function bypassSanitizationTrustString(
+    trustedString: string, mode: BypassType.ResourceUrl): TrustedResourceUrlString;
+function bypassSanitizationTrustString(trustedString: string, mode: BypassType): TrustedString {
+  const trusted = new String(trustedString) as TrustedString;
+  trusted[BRAND] = mode;
+  return trusted;
 }

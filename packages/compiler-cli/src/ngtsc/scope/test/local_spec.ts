@@ -52,7 +52,6 @@ describe('LocalModuleScopeRegistry', () => {
       imports: [],
       declarations: [Dir1, Dir2, Pipe1],
       exports: [Dir1, Pipe1],
-      schemas: [],
     });
 
     const scope = scopeRegistry.getScopeOfModule(Module.node) !;
@@ -68,21 +67,18 @@ describe('LocalModuleScopeRegistry', () => {
       imports: [ModuleB],
       declarations: [DirA],
       exports: [],
-      schemas: [],
     });
     metaRegistry.registerNgModuleMetadata({
       ref: new Reference(ModuleB.node),
       exports: [ModuleC, DirB],
       declarations: [DirB],
-      imports: [],
-      schemas: [],
+      imports: []
     });
     metaRegistry.registerNgModuleMetadata({
       ref: new Reference(ModuleC.node),
       declarations: [DirCI, DirCE],
       exports: [DirCE],
-      imports: [],
-      schemas: [],
+      imports: []
     });
 
     const scopeA = scopeRegistry.getScopeOfModule(ModuleA.node) !;
@@ -98,14 +94,12 @@ describe('LocalModuleScopeRegistry', () => {
       exports: [ModuleB],
       imports: [],
       declarations: [],
-      schemas: [],
     });
     metaRegistry.registerNgModuleMetadata({
       ref: new Reference(ModuleB.node),
       declarations: [Dir],
       exports: [Dir],
       imports: [],
-      schemas: [],
     });
 
     const scopeA = scopeRegistry.getScopeOfModule(ModuleA.node) !;
@@ -121,21 +115,18 @@ describe('LocalModuleScopeRegistry', () => {
       declarations: [DirA, DirA],
       imports: [ModuleB, ModuleC],
       exports: [DirA, DirA, DirB, ModuleB],
-      schemas: [],
     });
     metaRegistry.registerNgModuleMetadata({
       ref: new Reference(ModuleB.node),
       declarations: [DirB],
       imports: [],
       exports: [DirB],
-      schemas: [],
     });
     metaRegistry.registerNgModuleMetadata({
       ref: new Reference(ModuleC.node),
       declarations: [],
       imports: [],
       exports: [ModuleB],
-      schemas: [],
     });
 
     const scope = scopeRegistry.getScopeOfModule(ModuleA.node) !;
@@ -158,7 +149,6 @@ describe('LocalModuleScopeRegistry', () => {
       exports: [],
       imports: [],
       declarations: [DirInModule],
-      schemas: [],
     });
 
     const scope = scopeRegistry.getScopeOfModule(Module.node) !;
@@ -173,14 +163,12 @@ describe('LocalModuleScopeRegistry', () => {
       exports: [Dir],
       imports: [ModuleB],
       declarations: [],
-      schemas: [],
     });
     metaRegistry.registerNgModuleMetadata({
       ref: new Reference(ModuleB.node),
       declarations: [Dir],
       exports: [Dir],
       imports: [],
-      schemas: [],
     });
 
     const scopeA = scopeRegistry.getScopeOfModule(ModuleA.node) !;
@@ -195,14 +183,12 @@ describe('LocalModuleScopeRegistry', () => {
       exports: [Dir],
       imports: [],
       declarations: [],
-      schemas: [],
     });
     metaRegistry.registerNgModuleMetadata({
       ref: new Reference(ModuleB.node),
       declarations: [Dir],
       exports: [Dir],
       imports: [],
-      schemas: [],
     });
 
     expect(scopeRegistry.getScopeOfModule(ModuleA.node)).toBe(null);
@@ -228,7 +214,6 @@ function fakeDirective(ref: Reference<ClassDeclaration>): DirectiveMeta {
     queries: [],
     hasNgTemplateContextGuard: false,
     ngTemplateGuards: [],
-    coercedInputFields: new Set<string>(),
     baseClass: null,
   };
 }

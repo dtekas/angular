@@ -7,21 +7,19 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import {FileSystem, absoluteFrom, dirname} from '../../../src/ngtsc/file_system';
-import {EntryPointJsonProperty} from '../packages/entry_point';
+import {EntryPoint} from '../packages/entry_point';
 import {EntryPointBundle} from '../packages/entry_point_bundle';
 import {FileToWrite} from '../rendering/utils';
 import {FileWriter} from './file_writer';
 
 /**
  * This FileWriter overwrites the transformed file, in-place, while creating
- * a back-up of the original file with an extra `.__ivy_ngcc_bak` extension.
+ * a back-up of the original file with an extra `.bak` extension.
  */
 export class InPlaceFileWriter implements FileWriter {
   constructor(protected fs: FileSystem) {}
 
-  writeBundle(
-      _bundle: EntryPointBundle, transformedFiles: FileToWrite[],
-      _formatProperties?: EntryPointJsonProperty[]) {
+  writeBundle(_entryPoint: EntryPoint, _bundle: EntryPointBundle, transformedFiles: FileToWrite[]) {
     transformedFiles.forEach(file => this.writeFileAndBackup(file));
   }
 

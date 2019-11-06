@@ -8,7 +8,7 @@
 
 import {ChangeDetectorRef, Component as _Component, ComponentFactoryResolver, ComponentRef, ElementRef, QueryList, TemplateRef, ViewContainerRef, ViewRef,} from '../../src/core';
 import {ViewEncapsulation} from '../../src/metadata';
-import {injectComponentFactoryResolver, ɵɵdefineComponent, ɵɵdefineDirective, ɵɵlistener, ɵɵloadQuery, ɵɵqueryRefresh, ɵɵviewQuery,} from '../../src/render3/index';
+import {injectComponentFactoryResolver, ɵɵdefineComponent, ɵɵdefineDirective, ɵɵlistener, ɵɵloadViewQuery, ɵɵqueryRefresh, ɵɵviewQuery,} from '../../src/render3/index';
 
 import {ɵɵcontainer, ɵɵcontainerRefreshEnd, ɵɵcontainerRefreshStart, ɵɵdirectiveInject, ɵɵelement, ɵɵelementEnd, ɵɵelementStart, ɵɵembeddedViewEnd, ɵɵembeddedViewStart, ɵɵtemplate, ɵɵtext,} from '../../src/render3/instructions/all';
 import {RenderFlags} from '../../src/render3/interfaces/definition';
@@ -29,14 +29,14 @@ describe('ViewContainerRef', () => {
   beforeEach(() => directiveInstance = null);
 
   class DirectiveWithVCRef {
-    static ɵfac = () => directiveInstance = new DirectiveWithVCRef(
-        ɵɵdirectiveInject(ViewContainerRef as any), injectComponentFactoryResolver())
+    static ngDirectiveDef = ɵɵdefineDirective({
+      type: DirectiveWithVCRef,
+      selectors: [['', 'vcref', '']],
+      factory: () => directiveInstance = new DirectiveWithVCRef(
 
-        static ɵdir = ɵɵdefineDirective({
-          type: DirectiveWithVCRef,
-          selectors: [['', 'vcref', '']],
-          inputs: {tplRef: 'tplRef', name: 'name'}
-        });
+                   ɵɵdirectiveInject(ViewContainerRef as any), injectComponentFactoryResolver()),
+      inputs: {tplRef: 'tplRef', name: 'name'}
+    });
 
     // TODO(issue/24571): remove '!'.
     tplRef !: TemplateRef<{}>;
@@ -57,20 +57,18 @@ describe('ViewContainerRef', () => {
            let directiveInstances: TestDirective[] = [];
 
            class TestDirective {
-             static ɵfac =
-                 () => {
-                   const instance = new TestDirective(
-                       ɵɵdirectiveInject(ViewContainerRef as any),
-                       ɵɵdirectiveInject(TemplateRef as any));
-
-                   directiveInstances.push(instance);
-
-                   return instance;
-                 }
-
-             static ɵdir = ɵɵdefineDirective({
+             static ngDirectiveDef = ɵɵdefineDirective({
                type: TestDirective,
                selectors: [['', 'testdir', '']],
+               factory: () => {
+                 const instance = new TestDirective(
+                     ɵɵdirectiveInject(ViewContainerRef as any),
+                     ɵɵdirectiveInject(TemplateRef as any));
+
+                 directiveInstances.push(instance);
+
+                 return instance;
+               }
              });
 
              constructor(private _vcRef: ViewContainerRef, private _tplRef: TemplateRef<{}>) {}
@@ -101,19 +99,18 @@ describe('ViewContainerRef', () => {
            class TestComponent {
              // TODO(issue/24571): remove '!'.
              testDir !: TestDirective;
-             static ɵfac = () => new TestComponent();
-             static ɵcmp = ɵɵdefineComponent({
+             static ngComponentDef = ɵɵdefineComponent({
                type: TestComponent,
                encapsulation: ViewEncapsulation.None,
                selectors: [['test-cmp']],
-               decls: 4,
+               factory: () => new TestComponent(),
+               consts: 4,
                vars: 0,
-               consts: [['testdir', '']],
                template: (rf: RenderFlags, cmp: TestComponent) => {
                  if (rf & RenderFlags.Create) {
                    ɵɵtext(0, 'before|');
-                   ɵɵtemplate(1, EmbeddedTemplateA, 1, 0, 'ng-template', 0);
-                   ɵɵtemplate(2, EmbeddedTemplateB, 1, 0, 'ng-template', 0);
+                   ɵɵtemplate(1, EmbeddedTemplateA, 1, 0, 'ng-template', ['testdir', '']);
+                   ɵɵtemplate(2, EmbeddedTemplateB, 1, 0, 'ng-template', ['testdir', '']);
                    ɵɵtext(3, '|after');
                  }
                },
@@ -137,11 +134,13 @@ describe('ViewContainerRef', () => {
            let directiveInstance: TestDirective;
 
            class TestDirective {
-             static ɵfac = () => directiveInstance = new TestDirective(
-                 ɵɵdirectiveInject(ViewContainerRef as any), ɵɵdirectiveInject(TemplateRef as any))
-
-                 static ɵdir =
-                     ɵɵdefineDirective({type: TestDirective, selectors: [['', 'testdir', '']]});
+             static ngDirectiveDef = ɵɵdefineDirective({
+               type: TestDirective,
+               selectors: [['', 'testdir', '']],
+               factory: () => directiveInstance = new TestDirective(
+                            ɵɵdirectiveInject(ViewContainerRef as any),
+                            ɵɵdirectiveInject(TemplateRef as any))
+             });
 
              constructor(private _vcRef: ViewContainerRef, private _tplRef: TemplateRef<{}>) {}
 
@@ -173,18 +172,17 @@ describe('ViewContainerRef', () => {
              condition = false;
              // TODO(issue/24571): remove '!'.
              testDir !: TestDirective;
-             static ɵfac = () => new TestComponent();
-             static ɵcmp = ɵɵdefineComponent({
+             static ngComponentDef = ɵɵdefineComponent({
                type: TestComponent,
                encapsulation: ViewEncapsulation.None,
                selectors: [['test-cmp']],
-               decls: 4,
+               consts: 4,
                vars: 0,
-               consts: [['testdir', '']],
+               factory: () => new TestComponent(),
                template: (rf: RenderFlags, cmp: TestComponent) => {
                  if (rf & RenderFlags.Create) {
                    ɵɵtext(0, 'before|');
-                   ɵɵtemplate(1, EmbeddedTemplateA, 1, 0, 'ng-template', 0);
+                   ɵɵtemplate(1, EmbeddedTemplateA, 1, 0, 'ng-template', ['testdir', '']);
                    ɵɵcontainer(2);
                    ɵɵtext(3, '|after');
                  }
@@ -241,16 +239,13 @@ describe('ViewContainerRef', () => {
         class AppComp {
           constructor(public vcr: ViewContainerRef, public cfr: ComponentFactoryResolver) {}
 
-          static ɵfac =
-              () => {
-                return new AppComp(
-                    ɵɵdirectiveInject(ViewContainerRef as any), injectComponentFactoryResolver());
-              }
-
-          static ɵcmp = ɵɵdefineComponent({
+          static ngComponentDef = ɵɵdefineComponent({
             type: AppComp,
             selectors: [['app-comp']],
-            decls: 0,
+            factory:
+                () => new AppComp(
+                    ɵɵdirectiveInject(ViewContainerRef as any), injectComponentFactoryResolver()),
+            consts: 0,
             vars: 0,
             template: (rf: RenderFlags, cmp: AppComp) => {}
           });
@@ -261,12 +256,11 @@ describe('ViewContainerRef', () => {
 
           ngDoCheck() { this.doCheckCount++; }
 
-          static ɵfac = () => dynamicComp = new DynamicComp();
-
-          static ɵcmp = ɵɵdefineComponent({
+          static ngComponentDef = ɵɵdefineComponent({
             type: DynamicComp,
             selectors: [['dynamic-comp']],
-            decls: 0,
+            factory: () => dynamicComp = new DynamicComp(),
+            consts: 0,
             vars: 0,
             template: (rf: RenderFlags, cmp: DynamicComp) => {}
           });
@@ -301,7 +295,7 @@ describe('ViewContainerRef', () => {
              const changeDetector = ref.injector.get(ChangeDetectorRef);
              changeDetector.detectChanges();
              expect(dynamicComp.doCheckCount).toEqual(1);
-             expect((changeDetector as any).context).toEqual(dynamicComp);
+             expect(changeDetector.context).toEqual(dynamicComp);
            });
 
         it('should not throw when destroying a reattached component', () => {
@@ -322,13 +316,11 @@ describe('ViewContainerRef', () => {
     describe('getters', () => {
       it('should work on elements', () => {
         function createTemplate() {
-          ɵɵelement(0, 'header', 0);
+          ɵɵelement(0, 'header', ['vcref', '']);
           ɵɵelement(1, 'footer');
         }
 
-        new TemplateFixture(
-            createTemplate, undefined, 2, 0, [DirectiveWithVCRef], null, null, undefined,
-            [['vcref', '']]);
+        new TemplateFixture(createTemplate, undefined, 2, 0, [DirectiveWithVCRef]);
 
         expect(directiveInstance !.vcref.element.nativeElement.tagName.toLowerCase())
             .toEqual('header');
@@ -343,13 +335,11 @@ describe('ViewContainerRef', () => {
             createComponent('header-cmp', function(rf: RenderFlags, ctx: any) {});
 
         function createTemplate() {
-          ɵɵelement(0, 'header-cmp', 0);
+          ɵɵelement(0, 'header-cmp', ['vcref', '']);
           ɵɵelement(1, 'footer');
         }
 
-        new TemplateFixture(
-            createTemplate, undefined, 2, 0, [HeaderComponent, DirectiveWithVCRef], null, null,
-            undefined, [['vcref', '']]);
+        new TemplateFixture(createTemplate, undefined, 2, 0, [HeaderComponent, DirectiveWithVCRef]);
 
         expect(directiveInstance !.vcref.element.nativeElement.tagName.toLowerCase())
             .toEqual('header-cmp');
@@ -365,16 +355,15 @@ describe('ViewContainerRef', () => {
 
     @Component({selector: 'app', template: ''})
     class AppCmpt {
-      static ɵfac = () =>
-          new AppCmpt(ɵɵdirectiveInject(ViewContainerRef as any), injectComponentFactoryResolver())
-
-              static ɵcmp = ɵɵdefineComponent({
-                type: AppCmpt,
-                selectors: [['app']],
-                decls: 0,
-                vars: 0,
-                template: (rf: RenderFlags, cmp: AppCmpt) => {}
-              });
+      static ngComponentDef = ɵɵdefineComponent({
+        type: AppCmpt,
+        selectors: [['app']],
+        factory: () => new AppCmpt(
+                     ɵɵdirectiveInject(ViewContainerRef as any), injectComponentFactoryResolver()),
+        consts: 0,
+        vars: 0,
+        template: (rf: RenderFlags, cmp: AppCmpt) => {}
+      });
 
       constructor(private _vcRef: ViewContainerRef, private _cfResolver: ComponentFactoryResolver) {
       }
@@ -435,16 +424,15 @@ describe('ViewContainerRef', () => {
         // @ViewChildren('foo')
         foo !: QueryList<any>;
 
-        static ɵfac = () => dynamicComp = new DynamicCompWithViewQueries();
-        static ɵcmp = ɵɵdefineComponent({
+        static ngComponentDef = ɵɵdefineComponent({
           type: DynamicCompWithViewQueries,
           selectors: [['dynamic-cmpt-with-view-queries']],
-          decls: 2,
+          factory: () => dynamicComp = new DynamicCompWithViewQueries(),
+          consts: 2,
           vars: 0,
-          consts: [['foo', ''], ['bar', '']],
           template: (rf: RenderFlags, ctx: DynamicCompWithViewQueries) => {
             if (rf & RenderFlags.Create) {
-              ɵɵelement(0, 'div', 1, 0);
+              ɵɵelement(0, 'div', ['bar', ''], ['foo', '']);
             }
             // testing only
             fooEl = getNativeByIndex(0, getLView()) as RElement;
@@ -455,7 +443,7 @@ describe('ViewContainerRef', () => {
             }
             if (rf & RenderFlags.Update) {
               let tmp: any;
-              ɵɵqueryRefresh(tmp = ɵɵloadQuery<QueryList<any>>()) &&
+              ɵɵqueryRefresh(tmp = ɵɵloadViewQuery<QueryList<any>>()) &&
                   (ctx.foo = tmp as QueryList<any>);
             }
           }
@@ -480,28 +468,27 @@ describe('ViewContainerRef', () => {
 
       ngOnDestroy() { this.viewRef.destroy(); }
 
-      // We want the ViewRef, so we rely on the knowledge that `ViewRef` is actually given
-      // when injecting `ChangeDetectorRef`.
-      static ɵfac = () =>
-          new CompWithListenerThatDestroysItself(ɵɵdirectiveInject(ChangeDetectorRef as any))
-
-              static ɵcmp = ɵɵdefineComponent({
-                type: CompWithListenerThatDestroysItself,
-                selectors: [['comp-with-listener-and-on-destroy']],
-                decls: 2,
-                vars: 0,
-                /** <button (click)="onClick()"> Click me </button> */
-                template: function CompTemplate(rf: RenderFlags, ctx: any) {
-                  if (rf & RenderFlags.Create) {
-                    ɵɵelementStart(0, 'button');
-                    {
-                      ɵɵlistener('click', function() { return ctx.onClick(); });
-                      ɵɵtext(1, 'Click me');
-                    }
-                    ɵɵelementEnd();
-                  }
-                },
-              });
+      static ngComponentDef = ɵɵdefineComponent({
+        type: CompWithListenerThatDestroysItself,
+        selectors: [['comp-with-listener-and-on-destroy']],
+        consts: 2,
+        vars: 0,
+        /** <button (click)="onClick()"> Click me </button> */
+        template: function CompTemplate(rf: RenderFlags, ctx: any) {
+          if (rf & RenderFlags.Create) {
+            ɵɵelementStart(0, 'button');
+            {
+              ɵɵlistener('click', function() { return ctx.onClick(); });
+              ɵɵtext(1, 'Click me');
+            }
+            ɵɵelementEnd();
+          }
+        },
+        // We want the ViewRef, so we rely on the knowledge that `ViewRef` is actually given
+        // when injecting `ChangeDetectorRef`.
+        factory: () => new CompWithListenerThatDestroysItself(
+                     ɵɵdirectiveInject(ChangeDetectorRef as any)),
+      });
     }
 
 

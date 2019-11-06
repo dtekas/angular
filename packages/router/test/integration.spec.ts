@@ -439,7 +439,7 @@ describe('Integration', () => {
 
        TestBed.configureTestingModule({imports: [TestModule]});
 
-       const router: Router = TestBed.inject(Router);
+       const router: Router = TestBed.get(Router);
        const fixture = createRoot(router, RootCmp);
 
        router.resetConfig([{
@@ -509,7 +509,7 @@ describe('Integration', () => {
        }
        TestBed.configureTestingModule({declarations: [RootCmpWithLink]});
 
-       const router: Router = TestBed.inject(Router);
+       const router: Router = TestBed.get(Router);
 
        const fixture = createRoot(router, RootCmpWithLink);
 
@@ -544,8 +544,8 @@ describe('Integration', () => {
 
        TestBed.configureTestingModule({imports: [TestModule]});
 
-       const router = TestBed.inject(Router);
-       const location = TestBed.inject(Location);
+       const router = TestBed.get(Router);
+       const location = TestBed.get(Location);
        const fixture = createRoot(router, RootCmp);
 
        router.resetConfig([{path: 'record/:id', component: RecordLocationCmp}]);
@@ -1208,8 +1208,8 @@ describe('Integration', () => {
   // Errors should behave the same for both deferred and eager URL update strategies
   ['deferred', 'eager'].forEach((strat: any) => {
     it('should dispatch NavigationError after the url has been reset back', fakeAsync(() => {
-         const router: Router = TestBed.inject(Router);
-         const location = TestBed.inject(Location) as SpyLocation;
+         const router: Router = TestBed.get(Router);
+         const location: SpyLocation = TestBed.get(Location);
          const fixture = createRoot(router, RootCmp);
 
          router.resetConfig(
@@ -1235,8 +1235,8 @@ describe('Integration', () => {
        }));
 
     it('should reset the url with the right state when navigation errors', fakeAsync(() => {
-         const router: Router = TestBed.inject(Router);
-         const location = TestBed.inject(Location) as SpyLocation;
+         const router: Router = TestBed.get(Router);
+         const location: SpyLocation = TestBed.get(Location);
          const fixture = createRoot(router, RootCmp);
 
          router.resetConfig([
@@ -1270,7 +1270,7 @@ describe('Integration', () => {
 
     it('should not trigger another navigation when resetting the url back due to a NavigationError',
        fakeAsync(() => {
-         const router = TestBed.inject(Router);
+         const router = TestBed.get(Router);
          router.onSameUrlNavigation = 'reload';
 
          const fixture = createRoot(router, RootCmp);
@@ -1302,8 +1302,8 @@ describe('Integration', () => {
        TestBed.configureTestingModule(
            {providers: [{provide: 'returnsFalse', useValue: () => false}]});
 
-       const router: Router = TestBed.inject(Router);
-       const location = TestBed.inject(Location) as SpyLocation;
+       const router: Router = TestBed.get(Router);
+       const location: SpyLocation = TestBed.get(Location);
 
        const fixture = createRoot(router, RootCmp);
 
@@ -1489,7 +1489,7 @@ describe('Integration', () => {
 
        TestBed.configureTestingModule({declarations: [Container]});
 
-       const router: Router = TestBed.inject(Router);
+       const router: Router = TestBed.get(Router);
 
        const fixture = createRoot(router, Container);
        const cmp = fixture.componentInstance;
@@ -1791,7 +1791,7 @@ describe('Integration', () => {
          }
 
          TestBed.configureTestingModule({declarations: [RootCmpWithLink]});
-         const router: Router = TestBed.inject(Router);
+         const router: Router = TestBed.get(Router);
 
          const fixture = createRoot(router, RootCmpWithLink);
 
@@ -1814,7 +1814,7 @@ describe('Integration', () => {
          }
 
          TestBed.configureTestingModule({declarations: [CmpWithLink]});
-         const router: Router = TestBed.inject(Router);
+         const router: Router = TestBed.get(Router);
 
          let fixture: ComponentFixture<CmpWithLink> = createRoot(router, CmpWithLink);
          router.resetConfig([{path: 'home', component: SimpleCmp}]);
@@ -1834,7 +1834,7 @@ describe('Integration', () => {
          class RootCmpWithLink {
          }
          TestBed.configureTestingModule({declarations: [RootCmpWithLink]});
-         const router: Router = TestBed.inject(Router);
+         const router: Router = TestBed.get(Router);
          const fixture = createRoot(router, RootCmpWithLink);
 
          router.resetConfig([{path: 'home', component: SimpleCmp}]);
@@ -1864,7 +1864,7 @@ describe('Integration', () => {
          class RootCmpWithLink {
          }
          TestBed.configureTestingModule({declarations: [RootCmpWithLink]});
-         const router: Router = TestBed.inject(Router);
+         const router: Router = TestBed.get(Router);
          const fixture = createRoot(router, RootCmpWithLink);
 
          router.resetConfig([{path: 'home', component: SimpleCmp}]);
@@ -1886,7 +1886,7 @@ describe('Integration', () => {
          class RootCmpWithLink {
          }
          TestBed.configureTestingModule({declarations: [RootCmpWithLink]});
-         const router: Router = TestBed.inject(Router);
+         const router: Router = TestBed.get(Router);
          const fixture = createRoot(router, RootCmpWithLink);
 
          router.resetConfig([{path: 'home', component: SimpleCmp}]);
@@ -2058,7 +2058,7 @@ describe('Integration', () => {
          }
 
          TestBed.configureTestingModule({declarations: [RootCmpWithArea]});
-         const router: Router = TestBed.inject(Router);
+         const router: Router = TestBed.get(Router);
 
          const fixture = createRoot(router, RootCmpWithArea);
 
@@ -2463,39 +2463,6 @@ describe('Integration', () => {
                [ChildActivationEnd, undefined],
                [NavigationEnd, '/'],
              ]);
-           })));
-
-        it('replaces URL when URL is updated eagerly so back button can still work',
-           fakeAsync(inject([Router, Location], (router: Router, location: SpyLocation) => {
-             router.urlUpdateStrategy = 'eager';
-             router.resetConfig([
-               {path: '', component: SimpleCmp},
-               {path: 'one', component: RouteCmp, canActivate: ['returnUrlTree']},
-               {path: 'redirected', component: SimpleCmp}
-             ]);
-             const fixture = createRoot(router, RootCmp);
-             router.navigateByUrl('/one');
-
-             tick();
-
-             expect(location.path()).toEqual('/redirected');
-             expect(location.urlChanges).toEqual(['replace: /', '/one', 'replace: /redirected']);
-           })));
-
-        it('should resolve navigateByUrl promise after redirect finishes',
-           fakeAsync(inject([Router, Location], (router: Router, location: SpyLocation) => {
-             let resolvedPath = '';
-             router.urlUpdateStrategy = 'eager';
-             router.resetConfig([
-               {path: '', component: SimpleCmp},
-               {path: 'one', component: RouteCmp, canActivate: ['returnUrlTree']},
-               {path: 'redirected', component: SimpleCmp}
-             ]);
-             const fixture = createRoot(router, RootCmp);
-             router.navigateByUrl('/one').then(v => { resolvedPath = location.path(); });
-
-             tick();
-             expect(resolvedPath).toBe('/redirected');
            })));
       });
 
@@ -3720,7 +3687,7 @@ describe('Integration', () => {
          }
 
          TestBed.configureTestingModule({declarations: [RootCmpWithLink]});
-         const router: Router = TestBed.inject(Router);
+         const router: Router = TestBed.get(Router);
 
          const f = TestBed.createComponent(RootCmpWithLink);
          advance(f);
@@ -3805,7 +3772,7 @@ describe('Integration', () => {
          }
 
          TestBed.configureTestingModule({declarations: [ComponentWithRouterLink]});
-         const router: Router = TestBed.inject(Router);
+         const router: Router = TestBed.get(Router);
 
          router.resetConfig([
            {
@@ -4430,7 +4397,7 @@ describe('Integration', () => {
       beforeEach(() => {
         TestBed.configureTestingModule(
             {providers: [{provide: PreloadingStrategy, useExisting: PreloadAllModules}]});
-        const preloader = TestBed.inject(RouterPreloader);
+        const preloader = TestBed.get(RouterPreloader);
         preloader.setUpPreloading();
       });
 
@@ -4830,7 +4797,7 @@ describe('Integration', () => {
 
          TestBed.configureTestingModule({imports: [TestModule]});
 
-         const router: Router = TestBed.inject(Router);
+         const router: Router = TestBed.get(Router);
          router.routeReuseStrategy = new AttachDetachReuseStrategy();
 
          const fixture = createRoot(router, RootCmpWithCondOutlet);

@@ -7,10 +7,10 @@
  */
 
 import {Type, isType} from '../interface/type';
-import {newArray} from '../util/array_utils';
 import {ANNOTATIONS, PARAMETERS, PROP_METADATA} from '../util/decorators';
 import {global} from '../util/global';
 import {stringify} from '../util/stringify';
+
 import {PlatformReflectionCapabilities} from './platform_reflection_capabilities';
 import {GetterFn, MethodFn, SetterFn} from './types';
 
@@ -53,9 +53,9 @@ export class ReflectionCapabilities implements PlatformReflectionCapabilities {
     let result: any[][];
 
     if (typeof paramTypes === 'undefined') {
-      result = newArray(paramAnnotations.length);
+      result = new Array(paramAnnotations.length);
     } else {
-      result = newArray(paramTypes.length);
+      result = new Array(paramTypes.length);
     }
 
     for (let i = 0; i < result.length; i++) {
@@ -120,7 +120,7 @@ export class ReflectionCapabilities implements PlatformReflectionCapabilities {
     // based on function.length.
     // Note: We know that this is a real constructor as we checked
     // the content of the constructor above.
-    return newArray<any[]>(type.length);
+    return new Array((<any>type.length)).fill(undefined);
   }
 
   parameters(type: Type<any>): any[][] {

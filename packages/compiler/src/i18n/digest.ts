@@ -6,35 +6,19 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {newArray, utf8Encode} from '../util';
+import {utf8Encode} from '../util';
 
 import * as i18n from './i18n_ast';
 
-/**
- * Return the message id or compute it using the XLIFF1 digest.
- */
 export function digest(message: i18n.Message): string {
-  return message.id || computeDigest(message);
+  return message.id || sha1(serializeNodes(message.nodes).join('') + `[${message.meaning}]`);
 }
 
-/**
- * Compute the message id using the XLIFF1 digest.
- */
-export function computeDigest(message: i18n.Message): string {
-  return sha1(serializeNodes(message.nodes).join('') + `[${message.meaning}]`);
-}
-
-/**
- * Return the message id or compute it using the XLIFF2/XMB/$localize digest.
- */
 export function decimalDigest(message: i18n.Message): string {
-  return message.id || computeDecimalDigest(message);
-}
+  if (message.id) {
+    return message.id;
+  }
 
-/**
- * Compute the message id using the XLIFF2/XMB/$localize digest.
- */
-export function computeDecimalDigest(message: i18n.Message): string {
   const visitor = new _SerializerIgnoreIcuExpVisitor();
   const parts = message.nodes.map(a => a.visit(visitor, null));
   return computeMsgId(parts.join(''), message.meaning);
@@ -109,7 +93,7 @@ export function sha1(str: string): string {
   const words32 = stringToWords32(utf8, Endian.Big);
   const len = utf8.length * 8;
 
-  const w = newArray(80);
+  const w = new Array(80);
   let [a, b, c, d, e]: number[] = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
 
   words32[len >> 5] |= 0x80 << (24 - len % 32);
@@ -173,7 +157,7 @@ export function fingerprint(str: string): [number, number] {
   return [hi, lo];
 }
 
-export function computeMsgId(msg: string, meaning: string = ''): string {
+export function computeMsgId(msg: string, meaning: string): string {
   let [hi, lo] = fingerprint(msg);
 
   if (meaning) {
@@ -263,10 +247,9 @@ function rol64([hi, lo]: [number, number], count: number): [number, number] {
 }
 
 function stringToWords32(str: string, endian: Endian): number[] {
-  const size = (str.length + 3) >>> 2;
-  const words32 = [];
+  const words32 = Array((str.length + 3) >>> 2);
 
-  for (let i = 0; i < size; i++) {
+  for (let i = 0; i < words32.length; i++) {
     words32[i] = wordAt(str, i * 4, endian);
   }
 

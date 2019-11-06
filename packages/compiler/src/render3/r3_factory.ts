@@ -15,9 +15,7 @@ import * as o from '../output/output_ast';
 import {Identifiers as R3} from '../render3/r3_identifiers';
 import {OutputContext} from '../util';
 
-import {typeWithParameters} from './util';
 import {unsupported} from './view/util';
-
 
 
 /**
@@ -30,21 +28,13 @@ export interface R3ConstructorFactoryMetadata {
   name: string;
 
   /**
-   * An expression representing the interface type being constructed.
+   * An expression representing the function (or constructor) which will instantiate the requested
+   * type.
+   *
+   * This could be a reference to a constructor type, or to a user-defined factory function. The
+   * `useNew` property determines whether it will be called as a constructor or not.
    */
   type: o.Expression;
-
-  /**
-   * An expression representing the constructor type, intended for use within a class definition
-   * itself.
-   *
-   * This can differ from the outer `type` if the class is being compiled by ngcc and is inside
-   * an IIFE structure that uses a different name internally.
-   */
-  internalType: o.Expression;
-
-  /** Number of arguments for the `type`. */
-  typeArgumentCount: number;
 
   /**
    * Regardless of whether `fnOrClass` is a constructor function or a user-defined factory, it
@@ -61,11 +51,6 @@ export interface R3ConstructorFactoryMetadata {
    * function could be different, and other options control how it will be invoked.
    */
   injectFn: o.ExternalReference;
-
-  /**
-   * Type of the target being created by the factory.
-   */
-  target: R3FactoryTarget;
 }
 
 export enum R3FactoryDelegateType {
@@ -91,14 +76,6 @@ export interface R3ExpressionFactoryMetadata extends R3ConstructorFactoryMetadat
 
 export type R3FactoryMetadata = R3ConstructorFactoryMetadata | R3DelegatedFactoryMetadata |
     R3DelegatedFnOrClassMetadata | R3ExpressionFactoryMetadata;
-
-export enum R3FactoryTarget {
-  Directive = 0,
-  Component = 1,
-  Injectable = 2,
-  Pipe = 3,
-  NgModule = 4,
-}
 
 /**
  * Resolved type of a dependency.
@@ -163,16 +140,11 @@ export interface R3DependencyMetadata {
   skipSelf: boolean;
 }
 
-export interface R3FactoryFn {
-  factory: o.Expression;
-  statements: o.Statement[];
-  type: o.ExpressionType;
-}
-
 /**
  * Construct a factory function expression for the given `R3FactoryMetadata`.
  */
-export function compileFactoryFunction(meta: R3FactoryMetadata): R3FactoryFn {
+export function compileFactoryFunction(
+    meta: R3FactoryMetadata, isPipe = false): {factory: o.Expression, statements: o.Statement[]} {
   const t = o.variable('t');
   const statements: o.Statement[] = [];
 
@@ -181,24 +153,23 @@ export function compileFactoryFunction(meta: R3FactoryMetadata): R3FactoryFn {
   // parameter provided by the user (t) if specified, or the current type if not. If there is a
   // delegated factory (which is used to create the current type) then this is only the type-to-
   // create parameter (t).
-  const typeForCtor = !isDelegatedMetadata(meta) ?
-      new o.BinaryOperatorExpr(o.BinaryOperator.Or, t, meta.internalType) :
-      t;
+  const typeForCtor =
+      !isDelegatedMetadata(meta) ? new o.BinaryOperatorExpr(o.BinaryOperator.Or, t, meta.type) : t;
 
   let ctorExpr: o.Expression|null = null;
   if (meta.deps !== null) {
     // There is a constructor (either explicitly or implicitly defined).
     if (meta.deps !== 'invalid') {
-      ctorExpr = new o.InstantiateExpr(
-          typeForCtor,
-          injectDependencies(meta.deps, meta.injectFn, meta.target === R3FactoryTarget.Pipe));
+      ctorExpr =
+          new o.InstantiateExpr(typeForCtor, injectDependencies(meta.deps, meta.injectFn, isPipe));
     }
   } else {
     const baseFactory = o.variable(`ɵ${meta.name}_BaseFactory`);
     const getInheritedFactory = o.importExpr(R3.getInheritedFactory);
     const baseFactoryStmt =
-        baseFactory.set(getInheritedFactory.callFn([meta.internalType]))
-            .toDeclStmt(o.INFERRED_TYPE, [o.StmtModifier.Exported, o.StmtModifier.Final]);
+        baseFactory.set(getInheritedFactory.callFn([meta.type])).toDeclStmt(o.INFERRED_TYPE, [
+          o.StmtModifier.Exported, o.StmtModifier.Final
+        ]);
     statements.push(baseFactoryStmt);
 
     // There is no constructor, use the base class' factory to construct typeForCtor.
@@ -216,7 +187,7 @@ export function compileFactoryFunction(meta: R3FactoryMetadata): R3FactoryFn {
     if (ctorExprFinal !== null) {
       ctorStmt = r.set(ctorExprFinal).toStmt();
     } else {
-      ctorStmt = o.importExpr(R3.invalidFactory).callFn([]).toStmt();
+      ctorStmt = makeErrorStmt(meta.name);
     }
     body.push(o.ifStmt(t, [ctorStmt], [r.set(nonCtorExpr).toStmt()]));
     return r;
@@ -225,7 +196,7 @@ export function compileFactoryFunction(meta: R3FactoryMetadata): R3FactoryFn {
   if (isDelegatedMetadata(meta) && meta.delegateType === R3FactoryDelegateType.Factory) {
     const delegateFactory = o.variable(`ɵ${meta.name}_BaseFactory`);
     const getFactoryOf = o.importExpr(R3.getFactoryOf);
-    if (meta.delegate.isEquivalent(meta.internalType)) {
+    if (meta.delegate.isEquivalent(meta.type)) {
       throw new Error(`Illegal state: compiling factory that delegates to itself`);
     }
     const delegateFactoryStmt =
@@ -238,9 +209,8 @@ export function compileFactoryFunction(meta: R3FactoryMetadata): R3FactoryFn {
   } else if (isDelegatedMetadata(meta)) {
     // This type is created with a delegated factory. If a type parameter is not specified, call
     // the factory instead.
-    const delegateArgs =
-        injectDependencies(meta.delegateDeps, meta.injectFn, meta.target === R3FactoryTarget.Pipe);
-    // Either call `new delegate(...)` or `delegate(...)` depending on meta.delegateType.
+    const delegateArgs = injectDependencies(meta.delegateDeps, meta.injectFn, isPipe);
+    // Either call `new delegate(...)` or `delegate(...)` depending on meta.useNewForDelegate.
     const factoryExpr = new (
         meta.delegateType === R3FactoryDelegateType.Class ?
             o.InstantiateExpr :
@@ -256,7 +226,7 @@ export function compileFactoryFunction(meta: R3FactoryMetadata): R3FactoryFn {
   if (retExpr !== null) {
     body.push(new o.ReturnStatement(retExpr));
   } else {
-    body.push(o.importExpr(R3.invalidFactory).callFn([]).toStmt());
+    body.push(makeErrorStmt(meta.name));
   }
 
   return {
@@ -264,8 +234,6 @@ export function compileFactoryFunction(meta: R3FactoryMetadata): R3FactoryFn {
         [new o.FnParam('t', o.DYNAMIC_TYPE)], body, o.INFERRED_TYPE, undefined,
         `${meta.name}_Factory`),
     statements,
-    type: o.expressionType(
-        o.importExpr(R3.FactoryDef, [typeWithParameters(meta.type, meta.typeArgumentCount)]))
   };
 }
 
@@ -352,6 +320,13 @@ export function dependenciesFromGlobalMetadata(
   }
 
   return deps;
+}
+
+function makeErrorStmt(name: string): o.Statement {
+  return new o.ThrowStmt(new o.InstantiateExpr(new o.ReadVarExpr('Error'), [
+    o.literal(
+        `${name} has a constructor which is not compatible with Dependency Injection. It should probably not be @Injectable().`)
+  ]));
 }
 
 function isDelegatedMetadata(meta: R3FactoryMetadata): meta is R3DelegatedFactoryMetadata|

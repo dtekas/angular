@@ -107,10 +107,8 @@ As you click the button, the displayed date alternates between
 "**<samp>Friday, April 15, 1988</samp>**".
 
 
-<figure class="lightbox">
-  <div class="card">
-    <img src='generated/images/guide/pipes/date-format-toggle-anim.gif' alt="Date Format Toggle">
-  </div>
+<figure>
+  <img src='generated/images/guide/pipes/date-format-toggle-anim.gif' alt="Date Format Toggle">
 </figure>
 
 
@@ -188,10 +186,8 @@ Now you need a component to demonstrate the pipe.
 
 <code-example path="pipes/src/app/power-booster.component.ts" header="src/app/power-booster.component.ts"></code-example>
 
-<figure class="lightbox">
-  <div class="card">
-    <img src='generated/images/guide/pipes/power-booster.png' alt="Power Booster">
-  </div>
+<figure>
+  <img src='generated/images/guide/pipes/power-booster.png' alt="Power Booster">
 </figure>
 
 
@@ -234,10 +230,8 @@ your pipe and two-way data binding with `ngModel`.
 
 
 
-<figure class="lightbox">
-  <div class="card">
-    <img src='generated/images/guide/pipes/power-boost-calculator-anim.gif' alt="Power Boost Calculator">
-  </div>
+<figure>
+  <img src='generated/images/guide/pipes/power-boost-calculator-anim.gif' alt="Power Boost Calculator">
 </figure>
 
 
@@ -300,7 +294,7 @@ Notice how a hero is added:
 
 
 
-You add the hero into the `heroes` array. The reference to the array hasn't changed.
+You add the hero into the `heroes` array.  The reference to the array hasn't changed.
 It's the same array. That's all Angular cares about. From its perspective, *same array, no change, no display update*.
 
 To fix that, create an array with the new hero appended and assign that to `heroes`.
@@ -313,10 +307,8 @@ The Flying Heroes application extends the
 code with checkbox switches and additional displays to help you experience these effects.
 
 
-<figure class="lightbox">
-  <div class="card">
-    <img src='generated/images/guide/pipes/flying-heroes-anim.gif' alt="Flying Heroes">
-  </div>
+<figure>
+  <img src='generated/images/guide/pipes/flying-heroes-anim.gif' alt="Flying Heroes">
 </figure>
 
 
@@ -494,10 +486,8 @@ both requesting the heroes from the `heroes.json` file.
 The component renders as the following:
 
 
-<figure class="lightbox">
-  <div class="card">
-    <img src='generated/images/guide/pipes/hero-list.png' alt="Hero List">
-  </div>
+<figure>
+  <img src='generated/images/guide/pipes/hero-list.png' alt="Hero List">
 </figure>
 
 

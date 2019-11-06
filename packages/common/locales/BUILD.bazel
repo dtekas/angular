@@ -12,7 +12,7 @@ ts_library(
 
 npm_package(
     name = "package",
-    srcs = glob(["global/*.js"]) + ["package.json"],
+    srcs = ["package.json"],
     replacements = {
 
         # Workaround for `.d.ts`` containing `/// <amd-module .../>`

@@ -21,10 +21,11 @@ For an existing application, you have to manually add the `RouterModule` and def
 Use the CLI to automatically create the app shell.
 
 <code-example language="bash">
-ng generate app-shell
+ng generate app-shell --client-project my-app --universal-project server-app
 </code-example>
 
-* `client-project` takes the name of your client application.
+* `my-app` takes the name of your client application.
+* `server-app` takes the name of the Universal (or server) application.
 
 After running this command you will notice that the `angular.json` configuration file has been updated to add two new targets, with a few other changes.
 
@@ -43,12 +44,6 @@ After running this command you will notice that the `angular.json` configuration
     "browserTarget": "my-app:build",
     "serverTarget": "my-app:server",
     "route": "shell"
-  },
-  "configurations": {
-    "production": {
-      "browserTarget": "my-app:build:production",
-      "serverTarget": "my-app:server:production"
-    }
   }
 }
 </code-example>
@@ -61,12 +56,4 @@ Use the CLI to build the `app-shell` target.
 ng run my-app:app-shell
 </code-example>
 
-Or to use the production configuration.
-
-<code-example language="bash">
-ng run my-app:app-shell:production
-</code-example>
-
 To verify the build output, open `dist/my-app/index.html`. Look for default text `app-shell works!` to show that the app shell route was rendered as part of the output.
-
-

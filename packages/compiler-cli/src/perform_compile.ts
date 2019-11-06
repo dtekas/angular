@@ -36,30 +36,23 @@ export function formatDiagnosticPosition(
 }
 
 export function flattenDiagnosticMessageChain(
-    chain: api.DiagnosticMessageChain, host: ts.FormatDiagnosticsHost = defaultFormatHost,
-    indent = 0): string {
+    chain: api.DiagnosticMessageChain, host: ts.FormatDiagnosticsHost = defaultFormatHost): string {
+  let result = chain.messageText;
+  let indent = 1;
+  let current = chain.next;
   const newLine = host.getNewLine();
-  let result = '';
-  if (indent) {
+  while (current) {
     result += newLine;
-
     for (let i = 0; i < indent; i++) {
       result += '  ';
     }
-  }
-  result += chain.messageText;
-
-  const position = chain.position;
-  // add position if available, and we are not at the depest frame
-  if (position && indent !== 0) {
-    result += ` at ${formatDiagnosticPosition(position, host)}`;
-  }
-
-  indent++;
-  if (chain.next) {
-    for (const kid of chain.next) {
-      result += flattenDiagnosticMessageChain(kid, host, indent);
+    result += current.messageText;
+    const position = current.position;
+    if (position) {
+      result += ` at ${formatDiagnosticPosition(position, host)}`;
     }
+    current = current.next;
+    indent++;
   }
   return result;
 }
@@ -127,11 +120,10 @@ export function calcProjectFileAndBasePath(project: string):
 export function createNgCompilerOptions(
     basePath: string, config: any, tsOptions: ts.CompilerOptions): api.CompilerOptions {
   // enableIvy `ngtsc` is an alias for `true`.
-  const {angularCompilerOptions = {}} = config;
-  const {enableIvy} = angularCompilerOptions;
-  angularCompilerOptions.enableIvy = enableIvy !== false && enableIvy !== 'tsc';
-
-  return {...tsOptions, ...angularCompilerOptions, genDir: basePath, basePath};
+  if (config.angularCompilerOptions && config.angularCompilerOptions.enableIvy === 'ngtsc') {
+    config.angularCompilerOptions.enableIvy = true;
+  }
+  return {...tsOptions, ...config.angularCompilerOptions, genDir: basePath, basePath};
 }
 
 export function readConfiguration(
@@ -290,7 +282,7 @@ export function performCompilation(
     return {diagnostics: allDiagnostics, program};
   }
 }
-export function defaultGatherDiagnostics(program: api.Program): Diagnostics {
+function defaultGatherDiagnostics(program: api.Program): Diagnostics {
   const allDiagnostics: Array<ts.Diagnostic|api.Diagnostic> = [];
 
   function checkDiagnostics(diags: Diagnostics | undefined) {

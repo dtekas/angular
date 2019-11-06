@@ -21,7 +21,7 @@ withEachNg1Version(() => {
       defineAppModule();
       // Configure an NgModule that has the Angular and AngularJS injectors wired up
       TestBed.configureTestingModule({imports: [createAngularTestingModule(['app']), AppModule]});
-      const inventory = TestBed.inject(Inventory);
+      const inventory = TestBed.get(Inventory) as Inventory;
       expect(inventory.serverRequest).toBe(serverRequestInstance);
     });
 
@@ -29,20 +29,20 @@ withEachNg1Version(() => {
       defineAppModule();
       TestBed.configureTestingModule({imports: [createAngularTestingModule(['app']), AppModule]});
       // Check that the injectors are wired up correctly
-      TestBed.inject(Inventory);
+      TestBed.get(Inventory) as Inventory;
 
       // Grab references to the current injectors
-      const injector = TestBed.inject(Injector);
-      const $injector = TestBed.inject($INJECTOR as any);
+      const injector = TestBed.get(Injector);
+      const $injector = TestBed.get($INJECTOR);
 
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({imports: [createAngularTestingModule(['app']), AppModule]});
       // Check that the injectors are wired up correctly
-      TestBed.inject(Inventory);
+      TestBed.get(Inventory) as Inventory;
 
       // Check that the new injectors are different to the previous ones.
-      expect(TestBed.inject(Injector)).not.toBe(injector);
-      expect(TestBed.inject($INJECTOR as any)).not.toBe($injector);
+      expect(TestBed.get(Injector)).not.toBe(injector);
+      expect(TestBed.get($INJECTOR)).not.toBe($injector);
     });
   });
 });

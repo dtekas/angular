@@ -71,6 +71,8 @@ interface AssetGroup {
   updateMode?: 'prefetch' | 'lazy';
   resources: {
     files?: string[];
+    /** @deprecated As of v6 `versionedFiles` and `files` options have the same behavior. Use `files` instead. */
+    versionedFiles?: string[];
     urls?: string[];
   };
 }
@@ -102,9 +104,11 @@ Defaults to the value `installMode` is set to.
 
 ### `resources`
 
-This section describes the resources to cache, broken up into the following groups:
+This section describes the resources to cache, broken up into three groups.
 
 * `files` lists patterns that match files in the distribution directory. These can be single files or glob-like patterns that match a number of files.
+
+* `versionedFiles` has been deprecated. As of v6 `versionedFiles` and `files` options have the same behavior. Use `files` instead.
 
 * `urls` includes both URLs and URL patterns that will be matched at runtime. These resources are not fetched directly and do not have content hashes, but they will be cached according to their HTTP headers. This is most useful for CDNs such as the Google Fonts service.<br>
   _(Negative glob patterns are not supported and `?` will be matched literally; i.e. it will not match any character other than `?`.)_
@@ -133,9 +137,8 @@ export interface DataGroup {
 Similar to `assetGroups`, every data group has a `name` which uniquely identifies it.
 
 ### `urls`
-A list of URL patterns. URLs that match these patterns are cached according to this data group's policy. Only non-mutating requests (GET and HEAD) are cached.
- * Negative glob patterns are not supported.
- * `?` is matched literally; that is, it matches *only* the character `?`.
+A list of URL patterns. URLs that match these patterns will be cached according to this data group's policy.<br>
+  _(Negative glob patterns are not supported and `?` will be matched literally; i.e. it will not match any character other than `?`.)_
 
 ### `version`
 Occasionally APIs change formats in a way that is not backward-compatible. A new version of the app may not be compatible with the old API format and thus may not be compatible with existing cached resources from that API.

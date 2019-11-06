@@ -126,17 +126,13 @@ describe('@angular/core ng_package', () => {
       });
 
       if (ivyEnabled) {
-        it('should have decorators downleveled to static props e.g. ɵprov', () => {
+        it('should have decorators downleveled to static props e.g. ngInjectableDef', () => {
           expect(shx.cat('fesm5/core.js')).not.toContain('__decorate');
-          expect(shx.cat('fesm5/core.js')).toContain('.ɵprov = ');
+          expect(shx.cat('fesm5/core.js')).toContain('.ngInjectableDef = ');
         });
       } else {
         it('should have decorators',
            () => { expect(shx.cat('fesm5/core.js')).toContain('__decorate'); });
-
-        // See: https://github.com/angular/angular/pull/32069
-        it('should retain access to const',
-           () => { expect(shx.cat('fesm5/core.js')).toContain('!ivyEnabled'); });
       }
 
       it('should load tslib from external bundle', () => {

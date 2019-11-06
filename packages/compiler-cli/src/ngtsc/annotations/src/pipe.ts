@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {Identifiers, R3FactoryTarget, R3PipeMetadata, Statement, WrappedNodeExpr, compilePipeFromMetadata} from '@angular/compiler';
+import {R3PipeMetadata, Statement, WrappedNodeExpr, compilePipeFromMetadata} from '@angular/compiler';
 import * as ts from 'typescript';
 
 import {ErrorCode, FatalDiagnosticError} from '../../diagnostics';
@@ -16,7 +16,6 @@ import {PartialEvaluator} from '../../partial_evaluator';
 import {ClassDeclaration, Decorator, ReflectionHost, reflectObjectLiteral} from '../../reflection';
 import {AnalysisOutput, CompileResult, DecoratorHandler, DetectResult, HandlerPrecedence} from '../../transform';
 
-import {compileNgFactoryDefField} from './factory';
 import {generateSetClassMetadataCall} from './metadata';
 import {findAngularDecorator, getValidConstructorDependencies, unwrapExpression} from './util';
 
@@ -51,16 +50,13 @@ export class PipeDecoratorHandler implements DecoratorHandler<PipeHandlerData, D
   analyze(clazz: ClassDeclaration, decorator: Decorator): AnalysisOutput<PipeHandlerData> {
     const name = clazz.name.text;
     const type = new WrappedNodeExpr(clazz.name);
-    const internalType = new WrappedNodeExpr(this.reflector.getInternalNameOfClass(clazz));
     if (decorator.args === null) {
       throw new FatalDiagnosticError(
-          ErrorCode.DECORATOR_NOT_CALLED, Decorator.nodeForError(decorator),
-          `@Pipe must be called`);
+          ErrorCode.DECORATOR_NOT_CALLED, decorator.node, `@Pipe must be called`);
     }
     if (decorator.args.length !== 1) {
       throw new FatalDiagnosticError(
-          ErrorCode.DECORATOR_ARITY_WRONG, Decorator.nodeForError(decorator),
-          '@Pipe must have exactly one argument');
+          ErrorCode.DECORATOR_ARITY_WRONG, decorator.node, '@Pipe must have exactly one argument');
     }
     const meta = unwrapExpression(decorator.args[0]);
     if (!ts.isObjectLiteralExpression(meta)) {
@@ -98,7 +94,6 @@ export class PipeDecoratorHandler implements DecoratorHandler<PipeHandlerData, D
         meta: {
           name,
           type,
-          internalType,
           typeArgumentCount: this.reflector.getGenericArityOfClass(clazz) || 0, pipeName,
           deps: getValidConstructorDependencies(
               clazz, this.reflector, this.defaultImportRecorder, this.isCore),
@@ -110,24 +105,16 @@ export class PipeDecoratorHandler implements DecoratorHandler<PipeHandlerData, D
     };
   }
 
-  compile(node: ClassDeclaration, analysis: PipeHandlerData): CompileResult[] {
-    const meta = analysis.meta;
-    const res = compilePipeFromMetadata(meta);
-    const factoryRes = compileNgFactoryDefField({
-      ...meta,
-      injectFn: Identifiers.directiveInject,
-      target: R3FactoryTarget.Pipe,
-    });
+  compile(node: ClassDeclaration, analysis: PipeHandlerData): CompileResult {
+    const res = compilePipeFromMetadata(analysis.meta);
+    const statements = res.statements;
     if (analysis.metadataStmt !== null) {
-      factoryRes.statements.push(analysis.metadataStmt);
+      statements.push(analysis.metadataStmt);
     }
-    return [
-      factoryRes, {
-        name: 'ɵpipe',
-        initializer: res.expression,
-        statements: [],
-        type: res.type,
-      }
-    ];
+    return {
+      name: 'ngPipeDef',
+      initializer: res.expression, statements,
+      type: res.type,
+    };
   }
 }

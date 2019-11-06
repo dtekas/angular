@@ -1,5 +1,5 @@
 import { NO_ERRORS_SCHEMA, DebugElement } from '@angular/core';
-import { inject, ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
+import { inject, ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { APP_BASE_HREF } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -442,7 +442,7 @@ describe('AppComponent', () => {
       });
 
       it('should update the document title', async () => {
-        const titleService = TestBed.inject(Title);
+        const titleService = TestBed.get(Title);
         spyOn(titleService, 'setTitle');
 
         await navigateTo('guide/pipes');
@@ -450,7 +450,7 @@ describe('AppComponent', () => {
       });
 
       it('should update the document title, with a default value if the document has no title', async () => {
-        const titleService = TestBed.inject(Title);
+        const titleService = TestBed.get(Title);
         spyOn(titleService, 'setTitle');
 
         await navigateTo('no-title');
@@ -464,14 +464,14 @@ describe('AppComponent', () => {
       let scrollSpy: jasmine.Spy;
       let scrollToTopSpy: jasmine.Spy;
       let scrollAfterRenderSpy: jasmine.Spy;
-      let removeStoredScrollInfoSpy: jasmine.Spy;
+      let removeStoredScrollPositionSpy: jasmine.Spy;
 
       beforeEach(() => {
         scrollService = fixture.debugElement.injector.get<ScrollService>(ScrollService);
         scrollSpy = spyOn(scrollService, 'scroll');
         scrollToTopSpy = spyOn(scrollService, 'scrollToTop');
         scrollAfterRenderSpy = spyOn(scrollService, 'scrollAfterRender');
-        removeStoredScrollInfoSpy = spyOn(scrollService, 'removeStoredScrollInfo');
+        removeStoredScrollPositionSpy = spyOn(scrollService, 'removeStoredScrollPosition');
       });
 
       it('should not scroll immediately when the docId (path) changes', () => {
@@ -516,9 +516,9 @@ describe('AppComponent', () => {
         expect(scrollSpy).toHaveBeenCalledTimes(1);
       });
 
-      it('should call `removeStoredScrollInfo` when call `onDocRemoved` directly', () => {
+      it('should call `removeStoredScrollPosition` when call `onDocRemoved` directly', () => {
         component.onDocRemoved();
-        expect(removeStoredScrollInfoSpy).toHaveBeenCalled();
+        expect(removeStoredScrollPositionSpy).toHaveBeenCalled();
       });
 
       it('should call `scrollAfterRender` when call `onDocInserted` directly', (() => {
@@ -529,8 +529,7 @@ describe('AppComponent', () => {
       it('should call `scrollAfterRender` (via `onDocInserted`) when navigate to a new Doc', fakeAsync(() => {
         locationService.go('guide/pipes');
         tick(1); // triggers the HTTP response for the document
-        fixture.detectChanges();  // passes the new doc to the `DocViewer`
-        flushMicrotasks();  // triggers the `DocViewer` event that calls `onDocInserted`
+        fixture.detectChanges(); // triggers the event that calls `onDocInserted`
 
         expect(scrollAfterRenderSpy).toHaveBeenCalledWith(scrollDelay);
 
@@ -668,7 +667,7 @@ describe('AppComponent', () => {
 
       it('should restrain scrolling inside the ToC container', () => {
         const restrainScrolling = spyOn(component, 'restrainScrolling');
-        const evt = new WheelEvent('wheel');
+        const evt = new MouseEvent('mousewheel');
 
         setHasFloatingToc(true);
         expect(restrainScrolling).not.toHaveBeenCalled();
@@ -678,7 +677,7 @@ describe('AppComponent', () => {
       });
 
       it('should not be loaded/registered until necessary', () => {
-        const loader = fixture.debugElement.injector.get(ElementsLoader) as unknown as TestElementsLoader;
+        const loader: TestElementsLoader = fixture.debugElement.injector.get(ElementsLoader);
         expect(loader.loadCustomElement).not.toHaveBeenCalled();
 
         setHasFloatingToc(true);
@@ -783,14 +782,14 @@ describe('AppComponent', () => {
 
       describe('showing search results', () => {
         it('should not display search results when query is empty', () => {
-          const searchService = TestBed.inject(SearchService) as Partial<SearchService> as MockSearchService;
+          const searchService: MockSearchService = TestBed.get(SearchService);
           searchService.searchResults.next({ query: '', results: [] });
           fixture.detectChanges();
           expect(component.showSearchResults).toBe(false);
         });
 
         it('should hide the results when a search result is selected', () => {
-          const searchService = TestBed.inject(SearchService) as Partial<SearchService> as MockSearchService;
+          const searchService: MockSearchService = TestBed.get(SearchService);
 
           const results = [
             { path: 'news', title: 'News', type: 'marketing', keywords: '', titleWords: '', deprecated: false }
@@ -827,14 +826,14 @@ describe('AppComponent', () => {
         const description =
             `should ${doRedirect ? '' : 'not '}redirect to 'docs' if deployment mode is '${mode}' ` +
             'and at a marketing page';
-        const verifyNoRedirection = () => expect(TestBed.inject(LocationService).replace).not.toHaveBeenCalled();
-        const verifyRedirection = () => expect(TestBed.inject(LocationService).replace).toHaveBeenCalledWith('docs');
+        const verifyNoRedirection = () => expect(TestBed.get(LocationService).replace).not.toHaveBeenCalled();
+        const verifyRedirection = () => expect(TestBed.get(LocationService).replace).toHaveBeenCalledWith('docs');
         const verifyPossibleRedirection = doRedirect ? verifyRedirection : verifyNoRedirection;
 
         it(description, () => {
           createTestingModule('', mode);
 
-          const navService = TestBed.inject(NavigationService);
+          const navService = TestBed.get(NavigationService) as NavigationService;
           const testCurrentNodes = navService.currentNodes = new Subject<CurrentNodes>();
 
           initializeTest(false);

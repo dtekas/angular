@@ -11,7 +11,6 @@ import {CacheState, UpdateCacheStatus, UpdateSource} from './api';
 import {AssetGroup, LazyAssetGroup, PrefetchAssetGroup} from './assets';
 import {DataGroup} from './data';
 import {Database} from './database';
-import {DebugHandler} from './debug';
 import {IdleScheduler} from './idle';
 import {Manifest} from './manifest';
 
@@ -61,8 +60,7 @@ export class AppVersion implements UpdateSource {
 
   constructor(
       private scope: ServiceWorkerGlobalScope, private adapter: Adapter, private database: Database,
-      private idle: IdleScheduler, private debugHandler: DebugHandler, readonly manifest: Manifest,
-      readonly manifestHash: string) {
+      private idle: IdleScheduler, readonly manifest: Manifest, readonly manifestHash: string) {
     // The hashTable within the manifest is an Object - convert it to a Map for easier lookups.
     Object.keys(this.manifest.hashTable).forEach(url => {
       this.hashTable.set(url, this.manifest.hashTable[url]);
@@ -87,12 +85,11 @@ export class AppVersion implements UpdateSource {
     });
 
     // Process each `DataGroup` declared in the manifest.
-    this.dataGroups =
-        (manifest.dataGroups || [])
-            .map(
-                config => new DataGroup(
-                    this.scope, this.adapter, config, this.database, this.debugHandler,
-                    `${adapter.cacheNamePrefix}:${config.version}:data`));
+    this.dataGroups = (manifest.dataGroups || [])
+                          .map(
+                              config => new DataGroup(
+                                  this.scope, this.adapter, config, this.database,
+                                  `${adapter.cacheNamePrefix}:${config.version}:data`));
 
     // This keeps backwards compatibility with app versions without navigation urls.
     // Fix: https://github.com/angular/angular/issues/27209

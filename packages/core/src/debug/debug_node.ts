@@ -10,18 +10,18 @@ import {Injector} from '../di';
 import {getViewComponent} from '../render3/global_utils_api';
 import {CONTAINER_HEADER_OFFSET, LContainer, NATIVE} from '../render3/interfaces/container';
 import {TElementNode, TNode, TNodeFlags, TNodeType} from '../render3/interfaces/node';
-import {StylingMapArray, TStylingContext} from '../render3/interfaces/styling';
-import {isComponentHost, isLContainer} from '../render3/interfaces/type_checks';
+import {isComponent, isLContainer} from '../render3/interfaces/type_checks';
 import {LView, PARENT, TData, TVIEW, T_HOST} from '../render3/interfaces/view';
-import {NodeStylingDebug} from '../render3/styling/styling_debug';
-import {getComponent, getContext, getInjectionTokens, getInjector, getListeners, getLocalRefs, isBrowserEvents, loadLContext} from '../render3/util/discovery_utils';
-import {INTERPOLATION_DELIMITER, renderStringify} from '../render3/util/misc_utils';
-import {isStylingContext, stylingMapToStringMap} from '../render3/util/styling_utils';
+import {TStylingContext} from '../render3/styling_next/interfaces';
+import {stylingMapToStringMap} from '../render3/styling_next/map_based_bindings';
+import {NodeStylingDebug} from '../render3/styling_next/styling_debug';
+import {isStylingContext} from '../render3/styling_next/util';
+import {getComponent, getContext, getInjectionTokens, getInjector, getListeners, getLocalRefs, isBrowserEvents, loadLContext, loadLContextFromNode} from '../render3/util/discovery_utils';
+import {INTERPOLATION_DELIMITER, isPropMetadataString, renderStringify} from '../render3/util/misc_utils';
 import {findComponentView} from '../render3/util/view_traversal_utils';
-import {getComponentLViewByIndex, getNativeByTNodeOrNull} from '../render3/util/view_utils';
+import {getComponentViewByIndex, getNativeByTNodeOrNull} from '../render3/util/view_utils';
 import {assertDomNode} from '../util/assert';
 import {DebugContext} from '../view/index';
-import {createProxy} from './proxy';
 
 
 
@@ -247,17 +247,7 @@ class DebugElement__POST_R3__ extends DebugNode__POST_R3__ implements DebugEleme
     return this.nativeNode.nodeType == Node.ELEMENT_NODE ? this.nativeNode as Element : null;
   }
 
-  get name(): string {
-    try {
-      const context = loadLContext(this.nativeNode) !;
-      const lView = context.lView;
-      const tData = lView[TVIEW].data;
-      const tNode = tData[context.nodeIndex] as TNode;
-      return tNode.tagName !;
-    } catch (e) {
-      return this.nativeNode.nodeName;
-    }
-  }
+  get name(): string { return this.nativeElement !.nodeName; }
 
   /**
    *  Gets a map of property names to property values for an element.
@@ -272,24 +262,21 @@ class DebugElement__POST_R3__ extends DebugNode__POST_R3__ implements DebugEleme
    *  - attribute bindings (e.g. `[attr.role]="menu"`)
    */
   get properties(): {[key: string]: any;} {
-    const context = loadLContext(this.nativeNode, false);
-    if (context == null) {
-      return {};
-    }
-
+    const context = loadLContext(this.nativeNode) !;
     const lView = context.lView;
     const tData = lView[TVIEW].data;
     const tNode = tData[context.nodeIndex] as TNode;
 
     const properties = collectPropertyBindings(tNode, lView, tData);
+    const hostProperties = collectHostPropertyBindings(tNode, lView, tData);
     const className = collectClassNames(this);
+    const output = {...properties, ...hostProperties};
 
     if (className) {
-      properties['className'] =
-          properties['className'] ? properties['className'] + ` ${className}` : className;
+      output['className'] = output['className'] ? output['className'] + ` ${className}` : className;
     }
 
-    return properties;
+    return output;
   }
 
   get attributes(): {[key: string]: string | null;} {
@@ -300,11 +287,7 @@ class DebugElement__POST_R3__ extends DebugNode__POST_R3__ implements DebugEleme
       return attributes;
     }
 
-    const context = loadLContext(element, false);
-    if (context == null) {
-      return {};
-    }
-
+    const context = loadLContext(element);
     const lView = context.lView;
     const tNodeAttrs = (lView[TVIEW].data[context.nodeIndex] as TNode).attrs;
     const lowercaseTNodeAttrs: string[] = [];
@@ -346,42 +329,12 @@ class DebugElement__POST_R3__ extends DebugNode__POST_R3__ implements DebugEleme
     return attributes;
   }
 
-  get styles(): {[key: string]: string | null} {
-    if (this.nativeElement && (this.nativeElement as HTMLElement).style) {
-      return (this.nativeElement as HTMLElement).style as{[key: string]: any};
-    }
-    return {};
+  get styles(): {[key: string]: string | null;} {
+    return _getStylingDebugInfo(this.nativeElement, false);
   }
 
-  private _classesProxy !: {};
   get classes(): {[key: string]: boolean;} {
-    if (!this._classesProxy) {
-      const element = this.nativeElement;
-
-      // we use a proxy here because VE code expects `.classes` to keep
-      // track of which classes have been added and removed. Because we
-      // do not make use of a debug renderer anymore, the return value
-      // must always be `false` in the event that a class does not exist
-      // on the element (even if it wasn't added and removed beforehand).
-      this._classesProxy = createProxy({
-        get(target: {}, prop: string) {
-          return element ? element.classList.contains(prop) : false;
-        },
-        set(target: {}, prop: string, value: any) {
-          return element ? element.classList.toggle(prop, !!value) : false;
-        },
-        ownKeys() { return element ? Array.from(element.classList).sort() : []; },
-        getOwnPropertyDescriptor(k: any) {
-          // we use a special property descriptor here so that enumeration operations
-          // such as `Object.keys` will work on this proxy.
-          return {
-            enumerable: true,
-            configurable: true,
-          };
-        },
-      });
-    }
-    return this._classesProxy;
+    return _getStylingDebugInfo(this.nativeElement, true);
   }
 
   get childNodes(): DebugNode[] {
@@ -424,29 +377,31 @@ class DebugElement__POST_R3__ extends DebugNode__POST_R3__ implements DebugEleme
   }
 
   triggerEventHandler(eventName: string, eventObj: any): void {
-    const node = this.nativeNode as any;
-    const invokedListeners: Function[] = [];
-
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       if (listener.name === eventName) {
-        const callback = listener.callback;
-        callback(eventObj);
-        invokedListeners.push(callback);
+        listener.callback(eventObj);
       }
     });
+  }
+}
 
-    // We need to check whether `eventListeners` exists, because it's something
-    // that Zone.js only adds to `EventTarget` in browser environments.
-    if (typeof node.eventListeners === 'function') {
-      // Note that in Ivy we wrap event listeners with a call to `event.preventDefault` in some
-      // cases. We use `Function` as a special token that gives us access to the actual event
-      // listener.
-      node.eventListeners(eventName).forEach((listener: Function) => {
-        const unwrappedListener = listener(Function);
-        return invokedListeners.indexOf(unwrappedListener) === -1 && unwrappedListener(eventObj);
-      });
+function _getStylingDebugInfo(element: any, isClassBased: boolean) {
+  if (element) {
+    const context = loadLContextFromNode(element);
+    const lView = context.lView;
+    const tData = lView[TVIEW].data;
+    const tNode = tData[context.nodeIndex] as TNode;
+    if (isClassBased) {
+      return isStylingContext(tNode.classes) ?
+          new NodeStylingDebug(tNode.classes as TStylingContext, lView, true).values :
+          stylingMapToStringMap(tNode.classes);
+    } else {
+      return isStylingContext(tNode.styles) ?
+          new NodeStylingDebug(tNode.styles as TStylingContext, lView, false).values :
+          stylingMapToStringMap(tNode.styles);
     }
   }
+  return {};
 }
 
 /**
@@ -491,10 +446,10 @@ function _queryNodeChildrenR3(
     // Case 1: the TNode is an element
     // The native node has to be checked.
     _addQueryMatchR3(nativeNode, predicate, matches, elementsOnly, rootNativeNode);
-    if (isComponentHost(tNode)) {
+    if (isComponent(tNode)) {
       // If the element is the host of a component, then all nodes in its view have to be processed.
       // Note: the component's content (tNode.child) will be processed from the insertion points.
-      const componentView = getComponentLViewByIndex(tNode.index, lView);
+      const componentView = getComponentViewByIndex(tNode.index, lView);
       if (componentView && componentView[TVIEW].firstChild) {
         _queryNodeChildrenR3(
             componentView[TVIEW].firstChild !, componentView, predicate, matches, elementsOnly,
@@ -654,26 +609,81 @@ function _queryNativeNodeDescendants(
 function collectPropertyBindings(
     tNode: TNode, lView: LView, tData: TData): {[key: string]: string} {
   const properties: {[key: string]: string} = {};
-  let bindingIndexes = tNode.propertyBindings;
+  let bindingIndex = getFirstBindingIndex(tNode.propertyMetadataStartIndex, tData);
 
-  if (bindingIndexes !== null) {
-    for (let i = 0; i < bindingIndexes.length; i++) {
-      const bindingIndex = bindingIndexes[i];
-      const propMetadata = tData[bindingIndex] as string;
-      const metadataParts = propMetadata.split(INTERPOLATION_DELIMITER);
-      const propertyName = metadataParts[0];
-      if (metadataParts.length > 1) {
-        let value = metadataParts[1];
-        for (let j = 1; j < metadataParts.length - 1; j++) {
-          value += renderStringify(lView[bindingIndex + j - 1]) + metadataParts[j + 1];
-        }
-        properties[propertyName] = value;
-      } else {
-        properties[propertyName] = lView[bindingIndex];
-      }
+  while (bindingIndex < tNode.propertyMetadataEndIndex) {
+    let value: any;
+    let propMetadata = tData[bindingIndex] as string;
+    while (!isPropMetadataString(propMetadata)) {
+      // This is the first value for an interpolation. We need to build up
+      // the full interpolation by combining runtime values in LView with
+      // the static interstitial values stored in TData.
+      value = (value || '') + renderStringify(lView[bindingIndex]) + tData[bindingIndex];
+      propMetadata = tData[++bindingIndex] as string;
     }
+    value = value === undefined ? lView[bindingIndex] : value += lView[bindingIndex];
+    // Property metadata string has 3 parts: property name, prefix, and suffix
+    const metadataParts = propMetadata.split(INTERPOLATION_DELIMITER);
+    const propertyName = metadataParts[0];
+    // Attr bindings don't have property names and should be skipped
+    if (propertyName) {
+      // Wrap value with prefix and suffix (will be '' for normal bindings), if they're defined.
+      // Avoid wrapping for normal bindings so that the value doesn't get cast to a string.
+      properties[propertyName] = (metadataParts[1] && metadataParts[2]) ?
+          metadataParts[1] + value + metadataParts[2] :
+          value;
+    }
+    bindingIndex++;
   }
+  return properties;
+}
 
+/**
+ * Retrieves the first binding index that holds values for this property
+ * binding.
+ *
+ * For normal bindings (e.g. `[id]="id"`), the binding index is the
+ * same as the metadata index. For interpolations (e.g. `id="{{id}}-{{name}}"`),
+ * there can be multiple binding values, so we might have to loop backwards
+ * from the metadata index until we find the first one.
+ *
+ * @param metadataIndex The index of the first property metadata string for
+ * this node.
+ * @param tData The data array for the current TView
+ * @returns The first binding index for this binding
+ */
+function getFirstBindingIndex(metadataIndex: number, tData: TData): number {
+  let currentBindingIndex = metadataIndex - 1;
+
+  // If the slot before the metadata holds a string, we know that this
+  // metadata applies to an interpolation with at least 2 bindings, and
+  // we need to search further to access the first binding value.
+  let currentValue = tData[currentBindingIndex];
+
+  // We need to iterate until we hit either a:
+  // - TNode (it is an element slot marking the end of `consts` section), OR a
+  // - metadata string (slot is attribute metadata or a previous node's property metadata)
+  while (typeof currentValue === 'string' && !isPropMetadataString(currentValue)) {
+    currentValue = tData[--currentBindingIndex];
+  }
+  return currentBindingIndex + 1;
+}
+
+function collectHostPropertyBindings(
+    tNode: TNode, lView: LView, tData: TData): {[key: string]: string} {
+  const properties: {[key: string]: string} = {};
+
+  // Host binding values for a node are stored after directives on that node
+  let hostPropIndex = tNode.directiveEnd;
+  let propMetadata = tData[hostPropIndex] as any;
+
+  // When we reach a value in TView.data that is not a string, we know we've
+  // hit the next node's providers and directives and should stop copying data.
+  while (typeof propMetadata === 'string') {
+    const propertyName = propMetadata.split(INTERPOLATION_DELIMITER)[0];
+    properties[propertyName] = lView[hostPropIndex];
+    propMetadata = tData[++hostPropIndex];
+  }
   return properties;
 }
 

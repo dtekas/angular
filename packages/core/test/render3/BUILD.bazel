@@ -42,10 +42,10 @@ ts_library(
         "load_domino.ts",
     ],
     deps = [
-        "//packages/common",
         "//packages/compiler",
+        "//packages/platform-browser",
         "//packages/platform-server",
-        "//packages/zone.js/lib:zone_d_ts",
+        "@npm//zone.js",
     ],
 )
 
@@ -66,7 +66,7 @@ jasmine_node_test(
     ],
     deps = [
         ":render3_node_lib",
-        "//packages/zone.js/lib",
+        "@npm//zone.js",
     ],
 )
 

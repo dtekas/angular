@@ -8,7 +8,7 @@ import { NgForm } from '@angular/forms';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  @ViewChild('itemForm') form: NgForm;
+  @ViewChild('itemForm', { static: false }) form: NgForm;
 
   private _submitMessage = '';
 

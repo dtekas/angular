@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Meta, Title } from '@angular/platform-browser';
 
-import { Observable, asapScheduler, of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 
 import { FILE_NOT_FOUND_ID, FETCHING_ERROR_ID } from 'app/documents/document.service';
 import { Logger } from 'app/shared/logger.service';
@@ -20,8 +20,6 @@ describe('DocViewerComponent', () => {
   let parentComponent: TestParentComponent;
   let docViewerEl: HTMLElement;
   let docViewer: TestDocViewerComponent;
-
-  const safeFlushAsapScheduler = () => asapScheduler.actions.length && asapScheduler.flush();
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -44,20 +42,19 @@ describe('DocViewerComponent', () => {
   describe('#doc', () => {
     let renderSpy: jasmine.Spy;
 
-    const setCurrentDoc = (newDoc: TestParentComponent['currentDoc']) => {
-      parentComponent.currentDoc = newDoc && {id: 'fizz/buzz', ...newDoc};
-      parentFixture.detectChanges();  // Run change detection to propagate the new doc to `DocViewer`.
-      safeFlushAsapScheduler();  // Flush `asapScheduler` to trigger `DocViewer#render()`.
+    const setCurrentDoc = (contents: string|null, id = 'fizz/buzz') => {
+      parentComponent.currentDoc = {contents, id};
+      parentFixture.detectChanges();
     };
 
-    beforeEach(() => renderSpy = spyOn(docViewer, 'render').and.callFake(() => of(undefined)));
+    beforeEach(() => renderSpy = spyOn(docViewer, 'render').and.returnValue([null]));
 
     it('should render the new document', () => {
-      setCurrentDoc({contents: 'foo', id: 'bar'});
+      setCurrentDoc('foo', 'bar');
       expect(renderSpy).toHaveBeenCalledTimes(1);
       expect(renderSpy.calls.mostRecent().args).toEqual([{id: 'bar', contents: 'foo'}]);
 
-      setCurrentDoc({contents: null, id: 'baz'});
+      setCurrentDoc(null, 'baz');
       expect(renderSpy).toHaveBeenCalledTimes(2);
       expect(renderSpy.calls.mostRecent().args).toEqual([{id: 'baz', contents: null}]);
     });
@@ -66,42 +63,43 @@ describe('DocViewerComponent', () => {
       const obs = new ObservableWithSubscriptionSpies();
       renderSpy.and.returnValue(obs);
 
-      setCurrentDoc({contents: 'foo', id: 'bar'});
+      setCurrentDoc('foo', 'bar');
       expect(obs.subscribeSpy).toHaveBeenCalledTimes(1);
       expect(obs.unsubscribeSpies[0]).not.toHaveBeenCalled();
 
-      setCurrentDoc({contents: 'baz', id: 'qux'});
+      setCurrentDoc('baz', 'qux');
       expect(obs.subscribeSpy).toHaveBeenCalledTimes(2);
       expect(obs.unsubscribeSpies[0]).toHaveBeenCalledTimes(1);
     });
 
     it('should ignore falsy document values', () => {
-      setCurrentDoc(null);
+      parentComponent.currentDoc = null;
+      parentFixture.detectChanges();
+
       expect(renderSpy).not.toHaveBeenCalled();
 
-      setCurrentDoc(undefined);
+      parentComponent.currentDoc = undefined;
+      parentFixture.detectChanges();
+
       expect(renderSpy).not.toHaveBeenCalled();
     });
   });
 
   describe('#ngOnDestroy()', () => {
     it('should stop responding to document changes', () => {
-      const renderSpy = spyOn(docViewer, 'render').and.callFake(() => of(undefined));
+      const renderSpy = spyOn(docViewer, 'render').and.returnValue([undefined]);
 
       expect(renderSpy).not.toHaveBeenCalled();
 
       docViewer.doc = {contents: 'Some content', id: 'some-id'};
-      safeFlushAsapScheduler();
       expect(renderSpy).toHaveBeenCalledTimes(1);
 
       docViewer.ngOnDestroy();
 
       docViewer.doc = {contents: 'Other content', id: 'other-id'};
-      safeFlushAsapScheduler();
       expect(renderSpy).toHaveBeenCalledTimes(1);
 
       docViewer.doc = {contents: 'More content', id: 'more-id'};
-      safeFlushAsapScheduler();
       expect(renderSpy).toHaveBeenCalledTimes(1);
     });
   });
@@ -130,8 +128,8 @@ describe('DocViewerComponent', () => {
     };
 
     beforeEach(() => {
-      titleService = TestBed.inject(Title) as unknown as MockTitle;
-      tocService = TestBed.inject(TocService) as unknown as MockTocService;
+      titleService = TestBed.get(Title);
+      tocService = TestBed.get(TocService);
 
       targetEl = document.createElement('div');
       document.body.appendChild(targetEl);  // Required for `innerText` to work as expected.
@@ -301,10 +299,10 @@ describe('DocViewerComponent', () => {
       docViewer.render({contents, id}).toPromise();
 
     beforeEach(() => {
-      const elementsLoader = TestBed.inject(ElementsLoader) as Partial<ElementsLoader> as MockElementsLoader;
-      loadElementsSpy = elementsLoader.loadContainedCustomElements.and.callFake(() => of(undefined));
+      const elementsLoader = TestBed.get(ElementsLoader) as MockElementsLoader;
+      loadElementsSpy = elementsLoader.loadContainedCustomElements.and.returnValue(of(undefined));
       prepareTitleAndTocSpy = spyOn(docViewer, 'prepareTitleAndToc');
-      swapViewsSpy = spyOn(docViewer, 'swapViews').and.callFake(() => of(undefined));
+      swapViewsSpy = spyOn(docViewer, 'swapViews').and.returnValue(of(undefined));
     });
 
     it('should return an `Observable`', () => {
@@ -371,17 +369,17 @@ describe('DocViewerComponent', () => {
 
       it('should remove the "noindex" meta tag if the document is valid', async () => {
         await doRender('foo', 'bar');
-        expect(TestBed.inject(Meta).removeTag).toHaveBeenCalledWith('name="robots"');
+        expect(TestBed.get(Meta).removeTag).toHaveBeenCalledWith('name="robots"');
       });
 
       it('should add the "noindex" meta tag if the document is 404', async () => {
         await doRender('missing', FILE_NOT_FOUND_ID);
-        expect(TestBed.inject(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
+        expect(TestBed.get(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
       });
 
       it('should add a "noindex" meta tag if the document fetching fails', async () => {
         await doRender('error', FETCHING_ERROR_ID);
-        expect(TestBed.inject(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
+        expect(TestBed.get(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
       });
     });
 
@@ -456,9 +454,7 @@ describe('DocViewerComponent', () => {
     describe('(on error) should clean up, log the error and recover', () => {
       let logger: MockLogger;
 
-      beforeEach(() => {
-        logger = TestBed.inject(Logger) as unknown as MockLogger;
-      });
+      beforeEach(() => logger = TestBed.get(Logger));
 
       it('when `prepareTitleAndTocSpy()` fails', async () => {
         const error = Error('Typical `prepareTitleAndToc()` error');
@@ -476,7 +472,7 @@ describe('DocViewerComponent', () => {
           [jasmine.any(Error)]
         ]);
         expect(logger.output.error[0][0].message).toEqual(`[DocViewer] Error preparing document 'foo': ${error.stack}`);
-        expect(TestBed.inject(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
+        expect(TestBed.get(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
       });
 
       it('when `EmbedComponentsService.embedInto()` fails', async () => {
@@ -495,7 +491,7 @@ describe('DocViewerComponent', () => {
         expect(logger.output.error).toEqual([
           [jasmine.any(Error)]
         ]);
-        expect(TestBed.inject(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
+        expect(TestBed.get(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
       });
 
       it('when `swapViews()` fails', async () => {
@@ -514,7 +510,7 @@ describe('DocViewerComponent', () => {
           [jasmine.any(Error)]
         ]);
         expect(logger.output.error[0][0].message).toEqual(`[DocViewer] Error preparing document 'qux': ${error.stack}`);
-        expect(TestBed.inject(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
+        expect(TestBed.get(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
       });
 
       it('when something fails with non-Error', async () => {
@@ -532,7 +528,7 @@ describe('DocViewerComponent', () => {
           [jasmine.any(Error)]
         ]);
         expect(logger.output.error[0][0].message).toEqual(`[DocViewer] Error preparing document 'qux': ${error}`);
-        expect(TestBed.inject(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
+        expect(TestBed.get(Meta).addTag).toHaveBeenCalledWith({ name: 'robots', content: 'noindex' });
       });
     });
 
@@ -573,7 +569,9 @@ describe('DocViewerComponent', () => {
     let oldCurrViewContainer: HTMLElement;
     let oldNextViewContainer: HTMLElement;
 
-    const doSwapViews = (cb?: () => void) => docViewer.swapViews(cb).toPromise();
+    const doSwapViews = (cb?: () => void) =>
+      new Promise<void>((resolve, reject) =>
+        docViewer.swapViews(cb).subscribe(resolve, reject));
 
     beforeEach(() => {
       oldCurrViewContainer = docViewer.currViewContainer;

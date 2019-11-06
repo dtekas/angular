@@ -10,7 +10,6 @@ import * as ts from 'typescript';
 import {fromObject, generateMapFileComment, SourceMapConverter} from 'convert-source-map';
 import {absoluteFrom, getFileSystem} from '../../../src/ngtsc/file_system';
 import {TestFile, runInEachFileSystem} from '../../../src/ngtsc/file_system/testing';
-import {Reexport} from '../../../src/ngtsc/imports';
 import {loadTestFiles} from '../../../test/helpers';
 import {Import, ImportManager} from '../../../src/ngtsc/translator';
 import {DecorationAnalyzer} from '../../src/analysis/decoration_analyzer';
@@ -20,7 +19,6 @@ import {ModuleWithProvidersInfo} from '../../src/analysis/module_with_providers_
 import {PrivateDeclarationsAnalyzer, ExportInfo} from '../../src/analysis/private_declarations_analyzer';
 import {SwitchMarkerAnalyzer} from '../../src/analysis/switch_marker_analyzer';
 import {Esm2015ReflectionHost} from '../../src/host/esm2015_host';
-import {Esm5ReflectionHost} from '../../src/host/esm5_host';
 import {Renderer} from '../../src/rendering/renderer';
 import {MockLogger} from '../helpers/mock_logger';
 import {RenderingFormatter, RedundantDecoratorMap} from '../../src/rendering/rendering_formatter';
@@ -32,9 +30,6 @@ class TestRenderingFormatter implements RenderingFormatter {
   }
   addExports(output: MagicString, baseEntryPointPath: string, exports: ExportInfo[]) {
     output.prepend('\n// ADD EXPORTS\n');
-  }
-  addDirectExports(output: MagicString, exports: Reexport[]): void {
-    output.prepend('\n// ADD DIRECT EXPORTS\n');
   }
   addConstants(output: MagicString, constants: string, file: ts.SourceFile): void {
     output.prepend('\n// ADD CONSTANTS\n');
@@ -56,8 +51,7 @@ class TestRenderingFormatter implements RenderingFormatter {
 }
 
 function createTestRenderer(
-    packageName: string, files: TestFile[], dtsFiles?: TestFile[], mappingFiles?: TestFile[],
-    isEs5 = false) {
+    packageName: string, files: TestFile[], dtsFiles?: TestFile[], mappingFiles?: TestFile[]) {
   const logger = new MockLogger();
   loadTestFiles(files);
   if (dtsFiles) {
@@ -69,10 +63,10 @@ function createTestRenderer(
   const fs = getFileSystem();
   const isCore = packageName === '@angular/core';
   const bundle = makeTestEntryPointBundle(
-      'test-package', 'esm5', isCore, getRootFiles(files), dtsFiles && getRootFiles(dtsFiles));
+      'test-package', 'es2015', 'esm2015', isCore, getRootFiles(files),
+      dtsFiles && getRootFiles(dtsFiles));
   const typeChecker = bundle.src.program.getTypeChecker();
-  const host = isEs5 ? new Esm5ReflectionHost(logger, isCore, typeChecker, bundle.dts) :
-                       new Esm2015ReflectionHost(logger, isCore, typeChecker, bundle.dts);
+  const host = new Esm2015ReflectionHost(logger, isCore, typeChecker, bundle.dts);
   const referencesRegistry = new NgccReferencesRegistry(host);
   const decorationAnalyses =
       new DecorationAnalyzer(fs, bundle, host, referencesRegistry).analyzeProgram();
@@ -89,7 +83,7 @@ function createTestRenderer(
   spyOn(testFormatter, 'rewriteSwitchableDeclarations').and.callThrough();
   spyOn(testFormatter, 'addModuleWithProvidersParams').and.callThrough();
 
-  const renderer = new Renderer(host, testFormatter, fs, logger, bundle);
+  const renderer = new Renderer(testFormatter, fs, logger, bundle);
 
   return {renderer,
           testFormatter,
@@ -104,7 +98,6 @@ runInEachFileSystem(() => {
     let _: typeof absoluteFrom;
     let INPUT_PROGRAM: TestFile;
     let COMPONENT_PROGRAM: TestFile;
-    let NGMODULE_PROGRAM: TestFile;
     let INPUT_PROGRAM_MAP: SourceMapConverter;
     let RENDERED_CONTENTS: string;
     let OUTPUT_PROGRAM_MAP: SourceMapConverter;
@@ -123,12 +116,6 @@ runInEachFileSystem(() => {
         name: _('/node_modules/test-package/src/component.js'),
         contents:
             `import { Component } from '@angular/core';\nexport class A {}\nA.decorators = [\n    { type: Component, args: [{ selector: 'a', template: '{{ person!.name }}' }] }\n];\n`
-      };
-
-      NGMODULE_PROGRAM = {
-        name: _('/node_modules/test-package/src/ngmodule.js'),
-        contents:
-            `import { NgModule } from '@angular/core';\nexport class A {}\nA.decorators = [\n    { type: NgModule, args: [{}] }\n];\n`
       };
 
       INPUT_PROGRAM_MAP = fromObject({
@@ -195,8 +182,8 @@ runInEachFileSystem(() => {
             decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses);
         const addDefinitionsSpy = testFormatter.addDefinitions as jasmine.Spy;
         expect(addDefinitionsSpy.calls.first().args[2])
-            .toEqual(`A.ɵfac = function A_Factory(t) { return new (t || A)(); };
-A.ɵcmp = ɵngcc0.ɵɵdefineComponent({ type: A, selectors: [["a"]], decls: 1, vars: 1, template: function A_Template(rf, ctx) { if (rf & 1) {
+            .toEqual(
+                `A.ngComponentDef = ɵngcc0.ɵɵdefineComponent({ type: A, selectors: [["a"]], factory: function A_Factory(t) { return new (t || A)(); }, consts: 1, vars: 1, template: function A_Template(rf, ctx) { if (rf & 1) {
         ɵngcc0.ɵɵtext(0);
     } if (rf & 2) {
         ɵngcc0.ɵɵtextInterpolate(ctx.person.name);
@@ -234,10 +221,9 @@ A.ɵcmp = ɵngcc0.ɵɵdefineComponent({ type: A, selectors: [["a"]], decls: 1, v
                name: 'A',
                decorators: [jasmine.objectContaining({name: 'Directive'})]
              }));
-
              expect(addDefinitionsSpy.calls.first().args[2])
-                 .toEqual(`A.ɵfac = function A_Factory(t) { return new (t || A)(); };
-A.ɵdir = ɵngcc0.ɵɵdefineDirective({ type: A, selectors: [["", "a", ""]] });
+                 .toEqual(
+                     `A.ngDirectiveDef = ɵngcc0.ɵɵdefineDirective({ type: A, selectors: [["", "a", ""]], factory: function A_Factory(t) { return new (t || A)(); } });
 /*@__PURE__*/ ɵngcc0.ɵsetClassMetadata(A, [{
         type: Directive,
         args: [{ selector: '[a]' }]
@@ -268,145 +254,7 @@ A.ɵdir = ɵngcc0.ɵɵdefineDirective({ type: A, selectors: [["", "a", ""]] });
                  .toEqual(`{ type: Directive, args: [{ selector: '[a]' }] }`);
            });
 
-        it('should render static fields before any additional statements', () => {
-          const {renderer, decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses,
-                 testFormatter} = createTestRenderer('test-package', [NGMODULE_PROGRAM]);
-          renderer.renderProgram(
-              decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses);
-          const addDefinitionsSpy = testFormatter.addDefinitions as jasmine.Spy;
-          const definitions: string = addDefinitionsSpy.calls.first().args[2];
-          const ngModuleDef = definitions.indexOf('ɵmod');
-          expect(ngModuleDef).not.toEqual(-1, 'ɵmod should exist');
-          const ngInjectorDef = definitions.indexOf('ɵinj');
-          expect(ngInjectorDef).not.toEqual(-1, 'ɵinj should exist');
-          const setClassMetadata = definitions.indexOf('setClassMetadata');
-          expect(setClassMetadata).not.toEqual(-1, 'setClassMetadata call should exist');
-          expect(setClassMetadata)
-              .toBeGreaterThan(ngModuleDef, 'setClassMetadata should follow ɵmod');
-          expect(setClassMetadata)
-              .toBeGreaterThan(ngInjectorDef, 'setClassMetadata should follow ɵinj');
-        });
-
-        it('should render directives using the inner class name if different from outer', () => {
-          const {renderer, decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses,
-                 testFormatter} =
-              createTestRenderer(
-                  'test-package', [{
-                    name: _('/node_modules/test-package/src/file.js'),
-                    contents: `
-                      import { Directive } from '@angular/core';
-                      var OuterClass = /** @class */ (function () {
-                        function InnerClass() {}
-                        return InnerClass;
-                      }());
-                      OuterClass.decorators = [{ type: Directive, args: [{ selector: '[test]' }]
-                      export OuterClass;`
-                  }],
-                  undefined, undefined, /* isEs5 */ true);
-
-          renderer.renderProgram(
-              decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses);
-
-          const addDefinitionsSpy = testFormatter.addDefinitions as jasmine.Spy;
-          const output = addDefinitionsSpy.calls.first().args[2];
-          expect(output).toContain('InnerClass.ɵfac');
-          expect(output).toContain('new (t || InnerClass)');
-          expect(output).toContain('InnerClass.ɵdir');
-          expect(output).toContain('type: InnerClass');
-          expect(output).toContain('ɵsetClassMetadata(InnerClass');
-        });
-
-        it('should render injectables using the inner class name if different from outer', () => {
-          const {renderer, decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses,
-                 testFormatter} =
-              createTestRenderer(
-                  'test-package', [{
-                    name: _('/node_modules/test-package/src/file.js'),
-                    contents: `
-                      import { Injectable } from '@angular/core';
-                      var OuterClass = /** @class */ (function () {
-                        function InnerClass() {}
-                        return InnerClass;
-                      }());
-                      OuterClass.decorators = [{ type: Injectable }]
-                      export OuterClass;`
-                  }],
-                  undefined, undefined, /* isEs5 */ true);
-
-          renderer.renderProgram(
-              decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses);
-
-          const addDefinitionsSpy = testFormatter.addDefinitions as jasmine.Spy;
-          const output = addDefinitionsSpy.calls.first().args[2];
-          expect(output).toContain('InnerClass.ɵfac');
-          expect(output).toContain('new (t || InnerClass)()');
-          expect(output).toContain('InnerClass.ɵprov');
-          expect(output).toContain('token: InnerClass');
-          expect(output).toContain('ɵsetClassMetadata(InnerClass');
-        });
-
-        it('should render ng-modules using the inner class name if different from outer', () => {
-          const {renderer, decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses,
-                 testFormatter} =
-              createTestRenderer(
-                  'test-package', [{
-                    name: _('/node_modules/test-package/src/file.js'),
-                    contents: `
-                      import { NgModule, Directive } from '@angular/core';
-                      var DirectiveClass = /** @class */ (function () {
-                        function DirectiveClass() {}
-                        return DirectiveClass;
-                      }());
-                      DirectiveClass.decorators = [{ type: Directive, args: [{selector: 'x'}] }];
-                      var OuterClass = /** @class */ (function () {
-                        function InnerClass() {}
-                        return InnerClass;
-                      }());
-                      OuterClass.decorators = [{ type: NgModule, args: [{declarations: [DirectiveClass], exports: [DirectiveClass]}]
-                      export OuterClass;`
-                  }],
-                  undefined, undefined, /* isEs5 */ true);
-
-          renderer.renderProgram(
-              decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses);
-
-          const addDefinitionsSpy = testFormatter.addDefinitions as jasmine.Spy;
-          const output = addDefinitionsSpy.calls.all()[1].args[2];
-          expect(output).toContain('InnerClass.ɵmod');
-          expect(output).toContain('type: InnerClass');
-          expect(output).toContain('ɵɵsetNgModuleScope(InnerClass');
-          expect(output).toContain('ɵsetClassMetadata(InnerClass');
-        });
-
-        it('should render pipes using the inner class name if different from outer', () => {
-          const {renderer, decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses,
-                 testFormatter} =
-              createTestRenderer(
-                  'test-package', [{
-                    name: _('/node_modules/test-package/src/file.js'),
-                    contents: `
-                      import { Pipe } from '@angular/core';
-                      var OuterClass = /** @class */ (function () {
-                        function InnerClass() {}
-                        return InnerClass;
-                      }());
-                      OuterClass.decorators = [{ type: Pipe, args: [{name: 'pipe'}]
-                      export OuterClass;`
-                  }],
-                  undefined, undefined, /* isEs5 */ true);
-
-          renderer.renderProgram(
-              decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses);
-
-          const addDefinitionsSpy = testFormatter.addDefinitions as jasmine.Spy;
-          const output = addDefinitionsSpy.calls.first().args[2];
-          expect(output).toContain('InnerClass.ɵfac');
-          expect(output).toContain('new (t || InnerClass)()');
-          expect(output).toContain('InnerClass.ɵpipe');
-          expect(output).toContain('ɵsetClassMetadata(InnerClass');
-        });
-
-        it('should render classes without decorators if class fields are decorated', () => {
+        it('should render classes without decorators if handler matches', () => {
           const {renderer, decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses,
                  testFormatter} =
               createTestRenderer('test-package', [{
@@ -431,12 +279,11 @@ A.ɵdir = ɵngcc0.ɵɵdefineDirective({ type: A, selectors: [["", "a", ""]] });
           const addDefinitionsSpy = testFormatter.addDefinitions as jasmine.Spy;
           expect(addDefinitionsSpy.calls.first().args[2])
               .toEqual(
-                  `UndecoratedBase.ɵfac = function UndecoratedBase_Factory(t) { return new (t || UndecoratedBase)(); };
-UndecoratedBase.ɵdir = ɵngcc0.ɵɵdefineDirective({ type: UndecoratedBase, viewQuery: function UndecoratedBase_Query(rf, ctx) { if (rf & 1) {
+                  `UndecoratedBase.ngBaseDef = ɵngcc0.ɵɵdefineBase({ viewQuery: function (rf, ctx) { if (rf & 1) {
         ɵngcc0.ɵɵstaticViewQuery(_c0, true);
     } if (rf & 2) {
         var _t;
-        ɵngcc0.ɵɵqueryRefresh(_t = ɵngcc0.ɵɵloadQuery()) && (ctx.test = _t.first);
+        ɵngcc0.ɵɵqueryRefresh(_t = ɵngcc0.ɵɵloadViewQuery()) && (ctx.test = _t.first);
     } } });`);
         });
 

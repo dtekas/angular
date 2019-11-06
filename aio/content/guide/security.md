@@ -118,10 +118,8 @@ Angular recognizes the value as unsafe and automatically sanitizes it, which rem
 tag but keeps safe content such as the `<b>` element.
 
 
-<figure class="lightbox">
-  <div class="card">
-    <img src='generated/images/guide/security/binding-inner-html.png' alt='A screenshot showing interpolated and bound HTML values'>
-  </div>
+<figure>
+  <img src='generated/images/guide/security/binding-inner-html.png' alt='A screenshot showing interpolated and bound HTML values'>
 </figure>
 
 
@@ -211,10 +209,8 @@ this, mark the URL value as a trusted URL using the `bypassSecurityTrustUrl` cal
 
 
 
-<figure class="lightbox">
-  <div class="card">
-    <img src='generated/images/guide/security/bypass-security-component.png' alt='A screenshot showing an alert box created from a trusted URL'>
-  </div>
+<figure>
+  <img src='generated/images/guide/security/bypass-security-component.png' alt='A screenshot showing an alert box created from a trusted URL'>
 </figure>
 
 

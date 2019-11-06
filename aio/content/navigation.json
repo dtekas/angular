@@ -507,12 +507,6 @@
           "tooltip": "Incrementally upgrade an AngularJS application to Angular.",
           "children": [
             {
-              "url": "guide/upgrade-setup",
-              "title": "Setup for Upgrading from AngularJS",
-              "tooltip": "Use code from the Angular QuickStart seed as part of upgrading from AngularJS.",
-              "hidden": true
-            },
-            {
               "url": "guide/upgrade",
               "title": "Upgrading Instructions",
               "tooltip": "Incrementally upgrade an AngularJS application to Angular."
@@ -577,6 +571,11 @@
           "tooltip": "Using builders to customize Angular CLI."
         },
         {
+          "url": "guide/ivy",
+          "title": "Angular Ivy",
+          "tooltip": "Opting into Angular Ivy with Angular CLI."
+        },
+        {
           "url": "guide/web-worker",
           "title": "Web Workers",
           "tooltip": "Using Web Workers with Angular CLI."
@@ -588,37 +587,16 @@
       "tooltip": "Build, testing, and deployment information.",
       "children": [
         {
-          "url": "guide/upgrade-setup",
+          "url": "guide/setup",
           "title": "Upgrade setup",
           "tooltip": "How to set up the Angular QuickStart seed in the context of upgrading from AngularJS.",
           "hidden": true
         },
         {
-          "title": "AoT Compiler",
-          "tooltip": "Understanding ahead-of-time compilation.",
-          "children": [
-            {
-              "url": "guide/aot-compiler",
-              "title": "Ahead-of-Time Compilation",
-              "tooltip": "Learn why and how to use the Ahead-of-Time (AoT) compiler."
-            },
-            {
-              "url": "guide/angular-compiler-options",
-              "title": "Angular Compiler Options",
-              "tooltip": "Configuring AoT compilation."
-           },
-           {
-              "url": "guide/aot-metadata-errors",
-              "title": "AoT Metadata Errors",
-              "tooltip": "Troubleshooting AoT compilation."
-           },
-           {
-            "url": "guide/template-typecheck",
-            "title": "Template Type-checking",
-            "tooltip": "Template type-checking in Angular."
-         }
-        ]
-      },
+          "url": "guide/aot-compiler",
+          "title": "Ahead-of-Time Compilation",
+          "tooltip": "Learn why and how to use the Ahead-of-Time (AOT) compiler."
+        },
         {
           "url": "guide/build",
           "title": "Building & Serving",
@@ -704,19 +682,9 @@
           "tooltip": "Angular versioning, release, support, and deprecation policies and practices."
         },
         {
-          "url": "guide/updating-to-version-9",
-          "title": "Updating to Version 9",
-          "tooltip": "Support for updating your application from version 8 to 9."
-        },
-        {
           "url": "guide/deprecations",
           "title": "Deprecations",
           "tooltip": "Summary of Angular APIs and features that are deprecated."
-        },
-        {
-          "url": "guide/ivy",
-          "title": "Angular Ivy",
-          "tooltip": "About the Angular Ivy compilation and rendering pipeline."
         }
       ]
     },
@@ -754,11 +722,6 @@
           "title": "Usage Analytics",
           "tooltip": "For administrators, guide to gathering usage analytics from your users.",
           "url": "cli/usage-analytics-gathering"
-        },
-        {
-          "title": "ngcc",
-          "tooltip": "Description of the Angular Compatibility Compiler.",
-          "url": "guide/ngcc"
         }
       ]
     },

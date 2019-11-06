@@ -10,7 +10,7 @@ import * as ts from 'typescript';
 
 import {Reference} from '../../imports';
 import {OwningModule} from '../../imports/src/references';
-import {Declaration, InlineDeclaration, ReflectionHost} from '../../reflection';
+import {Declaration, ReflectionHost} from '../../reflection';
 import {isDeclaration} from '../../util/src/typescript';
 
 import {ArrayConcatBuiltinFn, ArraySliceBuiltinFn} from './builtin';
@@ -18,7 +18,6 @@ import {DynamicValue} from './dynamic';
 import {DependencyTracker, ForeignFunctionResolver} from './interface';
 import {BuiltinFn, EnumValue, ResolvedValue, ResolvedValueArray, ResolvedValueMap} from './result';
 import {evaluateTsHelperInline} from './ts_helpers';
-
 
 
 /**
@@ -138,7 +137,7 @@ export class StaticInterpreter {
     } else if (this.host.isClass(node)) {
       result = this.visitDeclaration(node, context);
     } else {
-      return DynamicValue.fromUnsupportedSyntax(node);
+      return DynamicValue.fromUnknownExpressionType(node);
     }
     if (result instanceof DynamicValue && result.node !== node) {
       return DynamicValue.fromDynamicInput(node, result);
@@ -184,8 +183,7 @@ export class StaticInterpreter {
         if (spread instanceof DynamicValue) {
           return DynamicValue.fromDynamicInput(node, spread);
         } else if (!(spread instanceof Map)) {
-          return DynamicValue.fromDynamicInput(
-              node, DynamicValue.fromInvalidExpressionType(property, spread));
+          throw new Error(`Unexpected value in spread assignment: ${spread}`);
         }
         spread.forEach((value, key) => map.set(key, value));
       } else {
@@ -225,13 +223,8 @@ export class StaticInterpreter {
         return DynamicValue.fromUnknownIdentifier(node);
       }
     }
-    const declContext = {...context, ...joinModuleContext(context, node, decl)};
-    // The identifier's declaration is either concrete (a ts.Declaration exists for it) or inline
-    // (a direct reference to a ts.Expression).
-    // TODO(alxhub): remove cast once TS is upgraded in g3.
-    const result = decl.node !== null ?
-        this.visitDeclaration(decl.node, declContext) :
-        this.visitExpression((decl as InlineDeclaration).expression, declContext);
+    const result =
+        this.visitDeclaration(decl.node, {...context, ...joinModuleContext(context, node, decl)});
     if (result instanceof Reference) {
       // Only record identifiers to non-synthetic references. Synthetic references may not have the
       // same value at runtime as they do at compile time, so it's not legal to refer to them by the
@@ -293,6 +286,9 @@ export class StaticInterpreter {
   private visitElementAccessExpression(node: ts.ElementAccessExpression, context: Context):
       ResolvedValue {
     const lhs = this.visitExpression(node.expression, context);
+    if (node.argumentExpression === undefined) {
+      throw new Error(`Expected argument in ElementAccessExpression`);
+    }
     if (lhs instanceof DynamicValue) {
       return DynamicValue.fromDynamicInput(node, lhs);
     }
@@ -301,7 +297,8 @@ export class StaticInterpreter {
       return DynamicValue.fromDynamicInput(node, rhs);
     }
     if (typeof rhs !== 'string' && typeof rhs !== 'number') {
-      return DynamicValue.fromInvalidExpressionType(node, rhs);
+      throw new Error(
+          `ElementAccessExpression index should be string or number, got ${typeof rhs}: ${rhs}`);
     }
 
     return this.accessHelper(node, lhs, rhs, context);
@@ -325,14 +322,10 @@ export class StaticInterpreter {
     }
     const map = new Map<string, ResolvedValue>();
     declarations.forEach((decl, name) => {
-      const declContext = {
-          ...context, ...joinModuleContext(context, node, decl),
-      };
-      // Visit both concrete and inline declarations.
-      // TODO(alxhub): remove cast once TS is upgraded in g3.
-      const value = decl.node !== null ?
-          this.visitDeclaration(decl.node, declContext) :
-          this.visitExpression((decl as InlineDeclaration).expression, declContext);
+      const value = this.visitDeclaration(
+          decl.node, {
+                         ...context, ...joinModuleContext(context, node, decl),
+                     });
       map.set(name, value);
     });
     return map;
@@ -357,7 +350,10 @@ export class StaticInterpreter {
         return new ArrayConcatBuiltinFn(node, lhs);
       }
       if (typeof rhs !== 'number' || !Number.isInteger(rhs)) {
-        return DynamicValue.fromInvalidExpressionType(node, rhs);
+        return DynamicValue.fromUnknown(node);
+      }
+      if (rhs < 0 || rhs >= lhs.length) {
+        throw new Error(`Index out of bounds: ${rhs} vs ${lhs.length}`);
       }
       return lhs[rhs];
     } else if (lhs instanceof Reference) {
@@ -492,7 +488,7 @@ export class StaticInterpreter {
       ResolvedValue {
     const operatorKind = node.operator;
     if (!UNARY_OPERATORS.has(operatorKind)) {
-      return DynamicValue.fromUnsupportedSyntax(node);
+      throw new Error(`Unsupported prefix unary operator: ${ts.SyntaxKind[operatorKind]}`);
     }
 
     const op = UNARY_OPERATORS.get(operatorKind) !;
@@ -507,14 +503,14 @@ export class StaticInterpreter {
   private visitBinaryExpression(node: ts.BinaryExpression, context: Context): ResolvedValue {
     const tokenKind = node.operatorToken.kind;
     if (!BINARY_OPERATORS.has(tokenKind)) {
-      return DynamicValue.fromUnsupportedSyntax(node);
+      throw new Error(`Unsupported binary operator: ${ts.SyntaxKind[tokenKind]}`);
     }
 
     const opRecord = BINARY_OPERATORS.get(tokenKind) !;
     let lhs: ResolvedValue, rhs: ResolvedValue;
     if (opRecord.literal) {
-      lhs = literal(this.visitExpression(node.left, context), node.left);
-      rhs = literal(this.visitExpression(node.right, context), node.right);
+      lhs = literal(this.visitExpression(node.left, context));
+      rhs = literal(this.visitExpression(node.right, context));
     } else {
       lhs = this.visitExpression(node.left, context);
       rhs = this.visitExpression(node.right, context);
@@ -548,9 +544,9 @@ export class StaticInterpreter {
   private visitSpreadElement(node: ts.SpreadElement, context: Context): ResolvedValueArray {
     const spread = this.visitExpression(node.expression, context);
     if (spread instanceof DynamicValue) {
-      return [DynamicValue.fromDynamicInput(node, spread)];
+      return [DynamicValue.fromDynamicInput(node.expression, spread)];
     } else if (!Array.isArray(spread)) {
-      return [DynamicValue.fromInvalidExpressionType(node, spread)];
+      throw new Error(`Unexpected value in spread expression: ${spread}`);
     } else {
       return spread;
     }
@@ -576,12 +572,12 @@ function isFunctionOrMethodReference(ref: Reference<ts.Node>):
       ts.isFunctionExpression(ref.node);
 }
 
-function literal(value: ResolvedValue, node: ts.Node): any {
+function literal(value: ResolvedValue): any {
   if (value instanceof DynamicValue || value === null || value === undefined ||
       typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value;
   }
-  return DynamicValue.fromInvalidExpressionType(node, value);
+  throw new Error(`Value ${value} is not literal and cannot be used in this context.`);
 }
 
 function isVariableDeclarationDeclared(node: ts.VariableDeclaration): boolean {

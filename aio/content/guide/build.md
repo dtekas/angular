@@ -8,7 +8,13 @@ This page discusses build-specific configuration options for Angular projects.
 
 You can define different named build configurations for your project, such as *stage* and *production*, with different defaults.
 
-Each named configuration can have defaults for any of the options that apply to the various [builder targets](guide/glossary#target), such as `build`, `serve`, and `test`. The [Angular CLI](cli) `build`, `serve`, and `test` commands can then replace files with appropriate versions for your intended target environment.
+Each named build configuration can have defaults for any of the options that apply to the various build targets, such as `build`, `serve`, and `test`. The [Angular CLI](cli) `build`, `serve`, and `test` commands can then replace files with appropriate versions for your intended target environment.
+
+The following figure shows how a project has multiple build targets, which can be executed using the named configurations that you define.
+
+<figure>
+  <img src="generated/images/guide/build/build-config-targets.gif" alt="build configurations and targets">
+</figure>
 
 ### Configure environment-specific defaults
 
@@ -164,9 +170,8 @@ You can also configure the `serve` command to use the targeted build configurati
 ```
 
 {@a size-budgets}
-{@a configure-size-budgets}
 
-## Configuring size budgets
+## Configure size budgets
 
 As applications grow in functionality, they also grow in size.
 The CLI allows you to set size thresholds in your configuration to ensure that parts of your application stay within size boundaries that you define.
@@ -209,17 +214,14 @@ Each budget entry is a JSON object with the following properties:
 
   <tr>
     <td>type</td>
-    <td>
+    <td>The type of budget. One of:
 
-    The type of budget. One of:
-
-* `bundle` - The size of a specific bundle.
-* `initial` - The initial size of the app.
-* `allScript` - The size of all scripts.
-* `all` - The size of the entire app.
-* `anyComponentStyle` - This size of any one component stylesheet.
-* `anyScript` - The size of any one script.
-* `any` - The size of any file.
+        * bundle - The size of a specific bundle.
+        * initial - The initial size of the app.
+        * allScript - The size of all scripts.
+        * all - The size of the entire app.
+        * anyScript - The size of any one script.
+        * any - The size of any file.
 
     </td>
   </tr>
@@ -291,9 +293,10 @@ Autoprefixer looks for the `browserslist` configuration when it prefixes your CS
 
 See the [browserslist repo](https://github.com/browserslist/browserslist) for more examples of how to target specific browsers and versions.
 
-### Backward compatibility with Lighthouse
+<div class="alert is-helpful">
+Backward compatibility
 
-If you want to produce a progressive web app and are using [Lighthouse](https://developers.google.com/web/tools/lighthouse/) to grade the project, add the following `browserslist` entry to your `package.json` file, in order to eliminate the [old flexbox](https://developers.google.com/web/tools/lighthouse/audits/old-flexbox) prefixes:
+If you want to produce a progressive web app and are using [Lighthouse](https://developers.google.com/web/tools/lighthouse/) to grade the project, add the following browserslist entry to your `package.json` file, in order to eliminate the [old flexbox](https://developers.google.com/web/tools/lighthouse/audits/old-flexbox) prefixes:
 
 ```
 "browserslist": [
@@ -303,23 +306,7 @@ If you want to produce a progressive web app and are using [Lighthouse](https://
 ]
 ```
 
-### Backward compatibility with CSS grid
-
-CSS grid layout support in Autoprefixer, which was previously on by default, is off by default in Angular 8 and higher.
-
-To use CSS grid with IE10/11, you must explicitly enable it using the `autoplace` option.
-To do this, add the following to the top of the global styles file (or within a specific css selector scope):
-
-```
-/* autoprefixer grid: autoplace /
-```
-or
-```
-/ autoprefixer grid: no-autoplace */
-```
-
-For more information, see [Autoprefixer documentation](https://autoprefixer.github.io/).
-
+</div>
 
 {@a proxy}
 
@@ -328,7 +315,7 @@ For more information, see [Autoprefixer documentation](https://autoprefixer.gith
 You can use the [proxying support](https://webpack.js.org/configuration/dev-server/#devserver-proxy) in the `webpack` dev server to divert certain URLs to a backend server, by passing a file to the `--proxy-config` build option.
 For example, to divert all calls for `http://localhost:4200/api` to a server running on `http://localhost:3000/api`, take the following steps.
 
-1. Create a file `proxy.conf.json` in your project's `src/` folder.
+1. Create a file `proxy.conf.json` in the projects `src/` folder, in the same directory as `package.json`.
 
 1. Add the following content to the new proxy file:
     ```
@@ -411,7 +398,7 @@ Proxy log levels are `info` (the default), `debug`, `warn`, `error`, and `silent
 
 ### Proxy multiple entries
 
-You can proxy multiple entries to the same target by defining the configuration in JavaScript.
+You can  proxy multiple entries to the same target by defining the configuration in JavaScript.
 
 Set the proxy configuration file to `proxy.conf.js` (instead of `proxy.conf.json`), and specify configuration files as in the following example.
 

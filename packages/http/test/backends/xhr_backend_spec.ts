@@ -6,7 +6,6 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {ɵgetDOM as getDOM} from '@angular/common';
 import {Injectable} from '@angular/core';
 import {AsyncTestCompleter, SpyObject, afterEach, beforeEach, beforeEachProviders, describe, expect, inject, it} from '@angular/core/testing/src/testing_internal';
 import {BrowserXhr} from '@angular/http/src/backends/browser_xhr';
@@ -19,7 +18,7 @@ import {XSRFStrategy} from '@angular/http/src/interfaces';
 import {Request} from '@angular/http/src/static_request';
 import {Response} from '@angular/http/src/static_response';
 import {URLSearchParams} from '@angular/http/src/url_search_params';
-import {setCookie} from '@angular/platform-browser/testing/src/browser_util';
+import {ɵgetDOM as getDOM} from '@angular/platform-browser';
 
 let abortSpy: any;
 let sendSpy: any;
@@ -126,12 +125,12 @@ class MockBrowserXHR extends BrowserXhr {
     if (getDOM().supportsCookies()) {
       describe('XSRF support', () => {
         it('sets an XSRF header by default', () => {
-          setCookie('XSRF-TOKEN', 'magic XSRF value');
+          getDOM().setCookie('XSRF-TOKEN', 'magic XSRF value');
           backend.createConnection(sampleRequest);
           expect(sampleRequest.headers.get('X-XSRF-TOKEN')).toBe('magic XSRF value');
         });
         it('should allow overwriting of existing headers', () => {
-          setCookie('XSRF-TOKEN', 'magic XSRF value');
+          getDOM().setCookie('XSRF-TOKEN', 'magic XSRF value');
           sampleRequest.headers.set('X-XSRF-TOKEN', 'already set');
           backend.createConnection(sampleRequest);
           expect(sampleRequest.headers.get('X-XSRF-TOKEN')).toBe('magic XSRF value');
@@ -144,7 +143,7 @@ class MockBrowserXHR extends BrowserXhr {
                               }]);
 
           it('uses the configured names', () => {
-            setCookie('my cookie', 'XSRF value');
+            getDOM().setCookie('my cookie', 'XSRF value');
             backend.createConnection(sampleRequest);
             expect(sampleRequest.headers.get('X-MY-HEADER')).toBe('XSRF value');
           });

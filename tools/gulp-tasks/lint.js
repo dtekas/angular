@@ -42,9 +42,6 @@ module.exports = (gulp) => () => {
         // TODO(JiaLiPassion): add zone.js back later
         '!packages/zone.js/**/*.js',
         '!packages/zone.js/**/*.ts',
-
-        // Ignore test files
-        '!packages/localize/**/test_files/**',
       ])
       .pipe(tslint({
         configuration: path.resolve(__dirname, '../../tslint.json'),

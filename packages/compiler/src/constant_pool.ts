@@ -200,13 +200,13 @@ export class ConstantPool {
   public propertyNameOf(kind: DefinitionKind): string {
     switch (kind) {
       case DefinitionKind.Component:
-        return 'ɵcmp';
+        return 'ngComponentDef';
       case DefinitionKind.Directive:
-        return 'ɵdir';
+        return 'ngDirectiveDef';
       case DefinitionKind.Injector:
-        return 'ɵinj';
+        return 'ngInjectorDef';
       case DefinitionKind.Pipe:
-        return 'ɵpipe';
+        return 'ngPipeDef';
     }
     error(`Unknown definition kind ${kind}`);
     return '<unknown>';
@@ -271,7 +271,6 @@ class KeyVisitor implements o.ExpressionVisitor {
   visitReadPropExpr = invalid;
   visitReadKeyExpr = invalid;
   visitCommaExpr = invalid;
-  visitLocalizedString = invalid;
 }
 
 function invalid<T>(this: o.ExpressionVisitor, arg: o.Expression | o.Statement): never {

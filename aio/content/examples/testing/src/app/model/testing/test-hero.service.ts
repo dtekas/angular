@@ -42,9 +42,9 @@ export class TestHeroService extends HeroService {
 
   getHero(id: number | string): Observable<Hero> {
     if (typeof id === 'string') {
-      id = parseInt(id, 10);
+      id = parseInt(id as string, 10);
     }
-    const hero = this.heroes.find(h => h.id === id);
+    let hero = this.heroes.find(h => h.id === id);
     return this.lastResult = asyncData(hero);
   }
 

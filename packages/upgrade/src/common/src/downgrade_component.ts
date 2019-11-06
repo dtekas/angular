@@ -11,9 +11,12 @@ import {ComponentFactory, ComponentFactoryResolver, Injector, NgZone, Type} from
 import {IAnnotatedFunction, IAttributes, IAugmentedJQuery, ICompileService, IDirective, IInjectorService, INgModelController, IParseService, IScope} from './angular1';
 import {$COMPILE, $INJECTOR, $PARSE, INJECTOR_KEY, LAZY_MODULE_REF, REQUIRE_INJECTOR, REQUIRE_NG_MODEL} from './constants';
 import {DowngradeComponentAdapter} from './downgrade_component_adapter';
-import {SyncPromise, Thenable} from './promise_util';
-import {LazyModuleRef, UpgradeAppType, controllerKey, getDowngradedModuleCount, getTypeName, getUpgradeAppType, validateInjectionKey} from './util';
+import {LazyModuleRef, UpgradeAppType, controllerKey, getDowngradedModuleCount, getTypeName, getUpgradeAppType, isFunction, validateInjectionKey} from './util';
 
+
+interface Thenable<T> {
+  then(callback: (value: T) => any): any;
+}
 
 /**
  * @description
@@ -196,12 +199,12 @@ export function downgradeComponent(info: {
               wrapCallback(() => doDowngrade(pInjector, mInjector))();
             };
 
-        // NOTE:
-        // Not using `ParentInjectorPromise.all()` (which is inherited from `SyncPromise`), because
-        // Closure Compiler (or some related tool) complains:
-        // `TypeError: ...$src$downgrade_component_ParentInjectorPromise.all is not a function`
-        SyncPromise.all([finalParentInjector, finalModuleInjector])
-            .then(([pInjector, mInjector]) => downgradeFn(pInjector, mInjector));
+        if (isThenable(finalParentInjector) || isThenable(finalModuleInjector)) {
+          Promise.all([finalParentInjector, finalModuleInjector])
+              .then(([pInjector, mInjector]) => downgradeFn(pInjector, mInjector));
+        } else {
+          downgradeFn(finalParentInjector, finalModuleInjector);
+        }
 
         ranAsync = true;
       }
@@ -215,26 +218,42 @@ export function downgradeComponent(info: {
 
 /**
  * Synchronous promise-like object to wrap parent injectors,
- * to preserve the synchronous nature of AngularJS's `$compile`.
+ * to preserve the synchronous nature of Angular 1's $compile.
  */
-class ParentInjectorPromise extends SyncPromise<Injector> {
+class ParentInjectorPromise {
+  // TODO(issue/24571): remove '!'.
+  private injector !: Injector;
   private injectorKey: string = controllerKey(INJECTOR_KEY);
+  private callbacks: ((injector: Injector) => any)[] = [];
 
   constructor(private element: IAugmentedJQuery) {
-    super();
-
     // Store the promise on the element.
     element.data !(this.injectorKey, this);
   }
 
-  resolve(injector: Injector): void {
+  then(callback: (injector: Injector) => any) {
+    if (this.injector) {
+      callback(this.injector);
+    } else {
+      this.callbacks.push(callback);
+    }
+  }
+
+  resolve(injector: Injector) {
+    this.injector = injector;
+
     // Store the real injector on the element.
     this.element.data !(this.injectorKey, injector);
 
     // Release the element to prevent memory leaks.
     this.element = null !;
 
-    // Resolve the promise.
-    super.resolve(injector);
+    // Run the queued callbacks.
+    this.callbacks.forEach(callback => callback(injector));
+    this.callbacks.length = 0;
   }
+}
+
+function isThenable<T>(obj: object): obj is Thenable<T> {
+  return isFunction((obj as any).then);
 }

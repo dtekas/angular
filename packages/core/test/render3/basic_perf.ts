@@ -33,11 +33,10 @@ describe('iv perf test', () => {
 
       it(`${iteration}. create ${count} divs in Render3`, () => {
         class Component {
-          static ɵfac = () => new Component;
-          static ɵcmp = ɵɵdefineComponent({
+          static ngComponentDef = ɵɵdefineComponent({
             type: Component,
             selectors: [['div']],
-            decls: 1,
+            consts: 1,
             vars: 0,
             template: function Template(rf: RenderFlags, ctx: any) {
               if (rf & RenderFlags.Create) {
@@ -60,7 +59,8 @@ describe('iv perf test', () => {
                 }
                 ɵɵcontainerRefreshEnd();
               }
-            }
+            },
+            factory: () => new Component
           });
         }
 

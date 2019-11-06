@@ -21,13 +21,13 @@ describe('outputs', () => {
     change = new EventEmitter();
     resetStream = new EventEmitter();
 
-    static ɵfac = () => buttonToggle = new ButtonToggle();
-    static ɵcmp = ɵɵdefineComponent({
+    static ngComponentDef = ɵɵdefineComponent({
       type: ButtonToggle,
       selectors: [['button-toggle']],
       template: function(rf: RenderFlags, ctx: any) {},
-      decls: 0,
+      consts: 0,
       vars: 0,
+      factory: () => buttonToggle = new ButtonToggle(),
       outputs: {change: 'change', resetStream: 'reset'}
     });
   }
@@ -37,9 +37,12 @@ describe('outputs', () => {
   class OtherDir {
     changeStream = new EventEmitter();
 
-    static ɵfac = () => otherDir = new OtherDir;
-    static ɵdir = ɵɵdefineDirective(
-        {type: OtherDir, selectors: [['', 'otherDir', '']], outputs: {changeStream: 'change'}});
+    static ngDirectiveDef = ɵɵdefineDirective({
+      type: OtherDir,
+      selectors: [['', 'otherDir', '']],
+      factory: () => otherDir = new OtherDir,
+      outputs: {changeStream: 'change'}
+    });
   }
 
 
@@ -80,7 +83,7 @@ describe('outputs', () => {
             ɵɵembeddedViewEnd();
           } else {
             if (ɵɵembeddedViewStart(1, 1, 0)) {
-              ɵɵelementStart(0, 'div', 0);
+              ɵɵelementStart(0, 'div', ['otherDir', '']);
               {
                 ɵɵlistener('change', function() { return ctx.onChange(); });
               }
@@ -95,14 +98,13 @@ describe('outputs', () => {
 
     let counter = 0;
     const ctx = {condition: true, onChange: () => counter++, onClick: () => {}};
-    const attrs = [['otherDir', '']];
-    renderToHtml(Template, ctx, 3, 0, deps, null, null, false, attrs);
+    renderToHtml(Template, ctx, 3, 0, deps);
 
     buttonToggle !.change.next();
     expect(counter).toEqual(1);
 
     ctx.condition = false;
-    renderToHtml(Template, ctx, 3, 0, deps, null, null, false, attrs);
+    renderToHtml(Template, ctx, 3, 0, deps);
     expect(counter).toEqual(1);
 
     otherDir !.changeStream.next();

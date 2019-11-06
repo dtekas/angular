@@ -19,7 +19,6 @@
   ],
 
   "angularCompilerOptions": {
-    "skipMetadataEmit" : true,
-    "enableIvy": false,
+    "skipMetadataEmit" : true
  }
 }

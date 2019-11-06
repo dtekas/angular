@@ -7,9 +7,8 @@
  */
 
 import {ɵɵdefineComponent} from '../../src/render3/definition';
-import {ɵɵcontainer, ɵɵcontainerRefreshEnd, ɵɵcontainerRefreshStart, ɵɵelement, ɵɵelementEnd, ɵɵelementStart, ɵɵembeddedViewEnd, ɵɵembeddedViewStart, ɵɵselect, ɵɵtext, ɵɵtextInterpolate} from '../../src/render3/instructions/all';
+import {ɵɵcontainer, ɵɵcontainerRefreshEnd, ɵɵcontainerRefreshStart, ɵɵelement, ɵɵelementEnd, ɵɵelementStart, ɵɵembeddedViewEnd, ɵɵembeddedViewStart, ɵɵselect, ɵɵtext, ɵɵtextBinding} from '../../src/render3/instructions/all';
 import {RenderFlags} from '../../src/render3/interfaces/definition';
-
 import {ComponentFixture, TemplateFixture, createComponent} from './render_util';
 
 describe('JS control flow', () => {
@@ -33,7 +32,7 @@ describe('JS control flow', () => {
               }
               if (rf1 & RenderFlags.Update) {
                 ɵɵselect(1);
-                ɵɵtextInterpolate(ctx.message);
+                ɵɵtextBinding(ctx.message);
               }
             }
             ɵɵembeddedViewEnd();
@@ -346,7 +345,7 @@ describe('JS control flow', () => {
               }
               if (rf1 & RenderFlags.Update) {
                 ɵɵselect(1);
-                ɵɵtextInterpolate(data[i]);
+                ɵɵtextBinding(data[i]);
               }
             }
             ɵɵembeddedViewEnd();
@@ -411,7 +410,7 @@ describe('JS control flow', () => {
                     }
                     if (rf2 & RenderFlags.Update) {
                       ɵɵselect(0);
-                      ɵɵtextInterpolate(data[0][i] + value);
+                      ɵɵtextBinding(data[0][i] + value);
                     }
                     ɵɵembeddedViewEnd();
                   });
@@ -479,7 +478,7 @@ describe('JS control flow', () => {
               }
               if (rf1 & RenderFlags.Update) {
                 ɵɵselect(1);
-                ɵɵtextInterpolate(cafes[i].name);
+                ɵɵtextBinding(cafes[i].name);
                 ɵɵcontainerRefreshStart(2);
                 {
                   for (let j = 0; j < cafes[i].entrees.length; j++) {
@@ -489,7 +488,7 @@ describe('JS control flow', () => {
                     }
                     if (rf2 & RenderFlags.Update) {
                       ɵɵselect(0);
-                      ɵɵtextInterpolate(cafes[i].entrees[j]);
+                      ɵɵtextBinding(cafes[i].entrees[j]);
                     }
                     ɵɵembeddedViewEnd();
                   }
@@ -576,7 +575,7 @@ describe('JS control flow', () => {
               }
               if (rf1 & RenderFlags.Update) {
                 ɵɵselect(1);
-                ɵɵtextInterpolate(cafes[i].name);
+                ɵɵtextBinding(cafes[i].name);
                 ɵɵcontainerRefreshStart(2);
                 {
                   for (let j = 0; j < cafes[i].entrees.length; j++) {
@@ -590,7 +589,7 @@ describe('JS control flow', () => {
                       }
                       if (rf1 & RenderFlags.Update) {
                         ɵɵselect(1);
-                        ɵɵtextInterpolate(cafes[i].entrees[j].name);
+                        ɵɵtextBinding(cafes[i].entrees[j].name);
                         ɵɵcontainerRefreshStart(2);
                         {
                           for (let k = 0; k < cafes[i].entrees[j].foods.length; k++) {
@@ -600,7 +599,7 @@ describe('JS control flow', () => {
                             }
                             if (rf2 & RenderFlags.Update) {
                               ɵɵselect(0);
-                              ɵɵtextInterpolate(cafes[i].entrees[j].foods[k]);
+                              ɵɵtextBinding(cafes[i].entrees[j].foods[k]);
                             }
                             ɵɵembeddedViewEnd();
                           }
@@ -691,19 +690,17 @@ describe('JS control flow', () => {
     let log: string[] = [];
 
     // Intentionally duplicating the templates in test below so we are
-    // testing the behavior on firstCreatePass for each of these tests
+    // testing the behavior on firstTemplatePass for each of these tests
     class Comp {
-      static ɵfac =
-          () => {
-            log.push('comp!');
-            return new Comp();
-          }
-
-      static ɵcmp = ɵɵdefineComponent({
+      static ngComponentDef = ɵɵdefineComponent({
         type: Comp,
         selectors: [['comp']],
-        decls: 0,
+        consts: 0,
         vars: 0,
+        factory: () => {
+          log.push('comp!');
+          return new Comp();
+        },
         template: function(rf: RenderFlags, ctx: Comp) {}
       });
     }
@@ -712,11 +709,11 @@ describe('JS control flow', () => {
       condition = true;
       condition2 = true;
 
-      static ɵfac = () => new App();
-      static ɵcmp = ɵɵdefineComponent({
+      static ngComponentDef = ɵɵdefineComponent({
         type: App,
         selectors: [['app']],
-        decls: 3,
+        factory: () => new App(),
+        consts: 3,
         vars: 0,
         template: function(rf: RenderFlags, ctx: any) {
           if (rf & RenderFlags.Create) {
@@ -761,19 +758,17 @@ describe('JS control flow', () => {
     let log: string[] = [];
 
     // Intentionally duplicating the templates from above so we are
-    // testing the behavior on firstCreatePass for each of these tests
+    // testing the behavior on firstTemplatePass for each of these tests
     class Comp {
-      static ɵfac =
-          () => {
-            log.push('comp!');
-            return new Comp();
-          }
-
-      static ɵcmp = ɵɵdefineComponent({
+      static ngComponentDef = ɵɵdefineComponent({
         type: Comp,
         selectors: [['comp']],
-        decls: 0,
+        consts: 0,
         vars: 0,
+        factory: () => {
+          log.push('comp!');
+          return new Comp();
+        },
         template: function(rf: RenderFlags, ctx: Comp) {}
       });
     }
@@ -782,11 +777,11 @@ describe('JS control flow', () => {
       condition = false;
       condition2 = true;
 
-      static ɵfac = () => new App();
-      static ɵcmp = ɵɵdefineComponent({
+      static ngComponentDef = ɵɵdefineComponent({
         type: App,
         selectors: [['app']],
-        decls: 3,
+        factory: () => new App(),
+        consts: 3,
         vars: 0,
         template: function(rf: RenderFlags, ctx: any) {
           if (rf & RenderFlags.Create) {
@@ -861,7 +856,7 @@ describe('JS for loop', () => {
             }
             if (rf2 & RenderFlags.Update) {
               ɵɵselect(0);
-              ɵɵtextInterpolate(config.data1[i]);
+              ɵɵtextBinding(config.data1[i]);
             }
             ɵɵembeddedViewEnd();
           }
@@ -872,7 +867,7 @@ describe('JS for loop', () => {
             }
             if (rf2 & RenderFlags.Update) {
               ɵɵselect(0);
-              ɵɵtextInterpolate(config.data2[j]);
+              ɵɵtextBinding(config.data2[j]);
             }
             ɵɵembeddedViewEnd();
           }
@@ -911,7 +906,7 @@ describe('function calls', () => {
       }
       if (rf & RenderFlags.Update) {
         ɵɵselect(1);
-        ɵɵtextInterpolate(message);
+        ɵɵtextBinding(message);
       }
     }
 

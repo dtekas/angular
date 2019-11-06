@@ -18,8 +18,7 @@ function findAstAt(ast: AST, position: number, excludeEmpty: boolean = false): A
   const path: AST[] = [];
   const visitor = new class extends NullAstVisitor {
     visit(ast: AST) {
-      if ((!excludeEmpty || ast.sourceSpan.start < ast.sourceSpan.end) &&
-          inSpan(position, ast.sourceSpan)) {
+      if ((!excludeEmpty || ast.span.start < ast.span.end) && inSpan(position, ast.span)) {
         path.push(ast);
         visitAstChildren(ast, this);
       }

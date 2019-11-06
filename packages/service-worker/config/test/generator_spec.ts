@@ -35,6 +35,8 @@ describe('Generator', () => {
             '/**/*.html',
             '/**/*.?s',
             '!/ignored/**',
+          ],
+          versionedFiles: [
             '/**/*.txt',
           ],
           urls: [

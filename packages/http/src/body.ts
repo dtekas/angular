@@ -25,7 +25,7 @@ export abstract class Body {
    */
   json(): any {
     if (typeof this._body === 'string') {
-      return JSON.parse(this._body);
+      return JSON.parse(<string>this._body);
     }
 
     if (this._body instanceof ArrayBuffer) {
@@ -57,9 +57,9 @@ export abstract class Body {
     if (this._body instanceof ArrayBuffer) {
       switch (encodingHint) {
         case 'legacy':
-          return String.fromCharCode.apply(null, new Uint16Array(this._body));
+          return String.fromCharCode.apply(null, new Uint16Array(this._body as ArrayBuffer));
         case 'iso-8859':
-          return String.fromCharCode.apply(null, new Uint8Array(this._body));
+          return String.fromCharCode.apply(null, new Uint8Array(this._body as ArrayBuffer));
         default:
           throw new Error(`Invalid value for encodingHint: ${encodingHint}`);
       }
@@ -81,7 +81,7 @@ export abstract class Body {
    */
   arrayBuffer(): ArrayBuffer {
     if (this._body instanceof ArrayBuffer) {
-      return this._body;
+      return <ArrayBuffer>this._body;
     }
 
     return stringToArrayBuffer(this.text());
@@ -92,7 +92,7 @@ export abstract class Body {
     */
   blob(): Blob {
     if (this._body instanceof Blob) {
-      return this._body;
+      return <Blob>this._body;
     }
 
     if (this._body instanceof ArrayBuffer) {

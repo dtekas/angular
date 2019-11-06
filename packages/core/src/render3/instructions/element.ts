@@ -10,20 +10,20 @@ import {assertDataInRange, assertDefined, assertEqual} from '../../util/assert';
 import {assertHasParent} from '../assert';
 import {attachPatchData} from '../context_discovery';
 import {registerPostOrderHooks} from '../hooks';
-import {TAttributes, TNode, TNodeFlags, TNodeType} from '../interfaces/node';
+import {TAttributes, TNodeFlags, TNodeType} from '../interfaces/node';
 import {RElement} from '../interfaces/renderer';
-import {StylingMapArray, TStylingContext} from '../interfaces/styling';
-import {isContentQueryHost, isDirectiveHost} from '../interfaces/type_checks';
-import {HEADER_OFFSET, LView, RENDERER, TVIEW, T_HOST} from '../interfaces/view';
+import {isContentQueryHost} from '../interfaces/type_checks';
+import {BINDING_INDEX, HEADER_OFFSET, LView, RENDERER, TVIEW, T_HOST} from '../interfaces/view';
 import {assertNodeType} from '../node_assert';
 import {appendChild} from '../node_manipulation';
-import {decreaseElementDepthCount, getBindingIndex, getElementDepthCount, getIsParent, getLView, getNamespace, getPreviousOrParentTNode, getSelectedIndex, increaseElementDepthCount, setIsNotParent, setPreviousOrParentTNode} from '../state';
+import {decreaseElementDepthCount, getElementDepthCount, getIsParent, getLView, getPreviousOrParentTNode, getSelectedIndex, increaseElementDepthCount, setIsNotParent, setPreviousOrParentTNode} from '../state';
+import {registerInitialStylingOnTNode} from '../styling_next/instructions';
+import {StylingMapArray, TStylingContext} from '../styling_next/interfaces';
+import {getInitialStylingValue, hasClassInput, hasStyleInput} from '../styling_next/util';
 import {setUpAttributes} from '../util/attrs_utils';
-import {getInitialStylingValue, hasClassInput, hasStyleInput, selectClassBasedInputName} from '../util/styling_utils';
-import {getConstant, getNativeByTNode, getTNode} from '../util/view_utils';
+import {getNativeByTNode, getTNode} from '../util/view_utils';
 
-import {createDirectivesInstances, elementCreate, executeContentQueries, getOrCreateTNode, matchingSchemas, renderInitialStyling, resolveDirectives, saveResolvedLocalsInData, setInputsForProperty} from './shared';
-import {registerInitialStylingOnTNode} from './styling';
+import {createDirectivesAndLocals, elementCreate, executeContentQueries, getOrCreateTNode, initializeTNodeInputs, renderInitialStyling, resolveDirectives, setInputsForProperty} from './shared';
 
 
 
@@ -32,8 +32,9 @@ import {registerInitialStylingOnTNode} from './styling';
  *
  * @param index Index of the element in the LView array
  * @param name Name of the DOM Node
- * @param attrsIndex Index of the element's attributes in the `consts` array.
- * @param localRefsIndex Index of the element's local references in the `consts` array.
+ * @param attrs Statically bound set of attributes, classes, and styles to be written into the DOM
+ *              element on creation. Use [AttributeMarker] to denote the meaning of this array.
+ * @param localRefs A set of local reference bindings on the element.
  *
  * Attributes and localRefs are passed as an array of strings where elements with an even index
  * hold an attribute name and elements with an odd index hold an attribute value, ex.:
@@ -42,31 +43,28 @@ import {registerInitialStylingOnTNode} from './styling';
  * @codeGenApi
  */
 export function ɵɵelementStart(
-    index: number, name: string, attrsIndex?: number | null, localRefsIndex?: number): void {
+    index: number, name: string, attrs?: TAttributes | null, localRefs?: string[] | null): void {
   const lView = getLView();
   const tView = lView[TVIEW];
-  const tViewConsts = tView.consts;
-  const attrs = getConstant(tViewConsts, attrsIndex) as TAttributes;
-  const localRefs = getConstant(tViewConsts, localRefsIndex) as string[];
   ngDevMode && assertEqual(
-                   getBindingIndex(), tView.bindingStartIndex,
-                   'elements should be created before any bindings');
+                   lView[BINDING_INDEX], tView.bindingStartIndex,
+                   'elements should be created before any bindings ');
+
   ngDevMode && ngDevMode.rendererCreateElement++;
   ngDevMode && assertDataInRange(lView, index + HEADER_OFFSET);
+  const native = lView[index + HEADER_OFFSET] = elementCreate(name);
   const renderer = lView[RENDERER];
-  const native = lView[index + HEADER_OFFSET] = elementCreate(name, renderer, getNamespace());
-  const tNode = getOrCreateTNode(tView, lView[T_HOST], index, TNodeType.Element, name, attrs);
+  const tNode =
+      getOrCreateTNode(tView, lView[T_HOST], index, TNodeType.Element, name, attrs || null);
 
   if (attrs != null) {
-    const lastAttrIndex = setUpAttributes(renderer, native, attrs);
-    if (tView.firstCreatePass) {
+    const lastAttrIndex = setUpAttributes(native, attrs);
+    if (tView.firstTemplatePass) {
       registerInitialStylingOnTNode(tNode, attrs, lastAttrIndex);
     }
   }
 
-  if ((tNode.flags & TNodeFlags.hasInitialStyling) === TNodeFlags.hasInitialStyling) {
-    renderInitialStyling(renderer, native, tNode, false);
-  }
+  renderInitialStyling(renderer, native, tNode);
 
   appendChild(native, tNode, lView);
 
@@ -82,23 +80,26 @@ export function ɵɵelementStart(
   // flow through that (except for `[class.prop]` bindings). This also includes initial
   // static class values as well. (Note that this will be fixed once map-based `[style]`
   // and `[class]` bindings work for multiple directives.)
-  if (tView.firstCreatePass) {
-    ngDevMode && ngDevMode.firstCreatePass++;
-    const hasDirectives = resolveDirectives(tView, lView, tNode, localRefs);
-    ngDevMode && validateElement(lView, native, tNode, hasDirectives);
+  if (tView.firstTemplatePass) {
+    ngDevMode && ngDevMode.firstTemplatePass++;
+    resolveDirectives(tView, lView, tNode, localRefs || null);
+
+    const inputData = initializeTNodeInputs(tNode);
+    if (inputData && inputData.hasOwnProperty('class')) {
+      tNode.flags |= TNodeFlags.hasClassInput;
+    }
+
+    if (inputData && inputData.hasOwnProperty('style')) {
+      tNode.flags |= TNodeFlags.hasStyleInput;
+    }
 
     if (tView.queries !== null) {
       tView.queries.elementStart(tView, tNode);
     }
   }
 
-  if (isDirectiveHost(tNode)) {
-    createDirectivesInstances(tView, lView, tNode);
-    executeContentQueries(tView, tNode, lView);
-  }
-  if (localRefs != null) {
-    saveResolvedLocalsInData(lView, tNode);
-  }
+  createDirectivesAndLocals(tView, lView, tNode);
+  executeContentQueries(tView, tNode, lView);
 }
 
 /**
@@ -123,21 +124,19 @@ export function ɵɵelementEnd(): void {
   const lView = getLView();
   const tView = lView[TVIEW];
 
+  registerPostOrderHooks(tView, previousOrParentTNode);
   decreaseElementDepthCount();
 
-  if (tView.firstCreatePass) {
-    registerPostOrderHooks(tView, previousOrParentTNode);
-    if (isContentQueryHost(previousOrParentTNode)) {
-      tView.queries !.elementEnd(previousOrParentTNode);
-    }
+  if (tView.firstTemplatePass && tView.queries !== null &&
+      isContentQueryHost(previousOrParentTNode)) {
+    tView.queries !.elementEnd(previousOrParentTNode);
   }
 
-  if (hasClassInput(tNode)) {
-    const inputName: string = selectClassBasedInputName(tNode.inputs !);
-    setDirectiveStylingInput(tNode.classes, lView, tNode.inputs ![inputName]);
+  if (hasClassInput(tNode) && tNode.classes) {
+    setDirectiveStylingInput(tNode.classes, lView, tNode.inputs !['class']);
   }
 
-  if (hasStyleInput(tNode)) {
+  if (hasStyleInput(tNode) && tNode.styles) {
     setDirectiveStylingInput(tNode.styles, lView, tNode.inputs !['style']);
   }
 }
@@ -148,14 +147,15 @@ export function ɵɵelementEnd(): void {
  *
  * @param index Index of the element in the data array
  * @param name Name of the DOM Node
- * @param attrsIndex Index of the element's attributes in the `consts` array.
- * @param localRefsIndex Index of the element's local references in the `consts` array.
+ * @param attrs Statically bound set of attributes, classes, and styles to be written into the DOM
+ *              element on creation. Use [AttributeMarker] to denote the meaning of this array.
+ * @param localRefs A set of local reference bindings on the element.
  *
  * @codeGenApi
  */
 export function ɵɵelement(
-    index: number, name: string, attrsIndex?: number | null, localRefsIndex?: number): void {
-  ɵɵelementStart(index, name, attrsIndex, localRefsIndex);
+    index: number, name: string, attrs?: TAttributes | null, localRefs?: string[] | null): void {
+  ɵɵelementStart(index, name, attrs, localRefs);
   ɵɵelementEnd();
 }
 
@@ -209,8 +209,8 @@ export function ɵɵelementHostAttrs(attrs: TAttributes) {
   // errors...
   if (tNode.type === TNodeType.Element) {
     const native = getNativeByTNode(tNode, lView) as RElement;
-    const lastAttrIndex = setUpAttributes(lView[RENDERER], native, attrs);
-    if (tView.firstCreatePass) {
+    const lastAttrIndex = setUpAttributes(native, attrs);
+    if (tView.firstTemplatePass) {
       const stylingNeedsToBeRendered = registerInitialStylingOnTNode(tNode, attrs, lastAttrIndex);
 
       // this is only called during the first template pass in the
@@ -223,52 +223,21 @@ export function ɵɵelementHostAttrs(attrs: TAttributes) {
       // attribute values to the element.
       if (stylingNeedsToBeRendered) {
         const renderer = lView[RENDERER];
-        renderInitialStyling(renderer, native, tNode, true);
+        renderInitialStyling(renderer, native, tNode);
       }
     }
   }
 }
 
 function setDirectiveStylingInput(
-    context: TStylingContext | StylingMapArray | null, lView: LView,
-    stylingInputs: (string | number)[]) {
+    context: TStylingContext | StylingMapArray, lView: LView, stylingInputs: (string | number)[]) {
   // older versions of Angular treat the input as `null` in the
   // event that the value does not exist at all. For this reason
   // we can't have a styling value be an empty string.
-  const value = (context && getInitialStylingValue(context)) || null;
+  const value = getInitialStylingValue(context) || null;
 
   // Ivy does an extra `[class]` write with a falsy value since the value
   // is applied during creation mode. This is a deviation from VE and should
   // be (Jira Issue = FW-1467).
   setInputsForProperty(lView, stylingInputs, value);
-}
-
-function validateElement(
-    hostView: LView, element: RElement, tNode: TNode, hasDirectives: boolean): void {
-  const tagName = tNode.tagName;
-
-  // If the element matches any directive, it's considered as valid.
-  if (!hasDirectives && tagName !== null) {
-    // The element is unknown if it's an instance of HTMLUnknownElement or it isn't registered
-    // as a custom element. Note that unknown elements with a dash in their name won't be instances
-    // of HTMLUnknownElement in browsers that support web components.
-    const isUnknown =
-        (typeof HTMLUnknownElement === 'function' && element instanceof HTMLUnknownElement) ||
-        (typeof customElements !== 'undefined' && tagName.indexOf('-') > -1 &&
-         !customElements.get(tagName));
-
-    if (isUnknown && !matchingSchemas(hostView, tagName)) {
-      let errorMessage = `'${tagName}' is not a known element:\n`;
-      errorMessage +=
-          `1. If '${tagName}' is an Angular component, then verify that it is part of this module.\n`;
-      if (tagName && tagName.indexOf('-') > -1) {
-        errorMessage +=
-            `2. If '${tagName}' is a Web Component then add 'CUSTOM_ELEMENTS_SCHEMA' to the '@NgModule.schemas' of this component to suppress this message.`;
-      } else {
-        errorMessage +=
-            `2. To allow any element add 'NO_ERRORS_SCHEMA' to the '@NgModule.schemas' of this component.`;
-      }
-      throw new Error(errorMessage);
-    }
-  }
 }

@@ -225,9 +225,6 @@ describe('extract_i18n command line', () => {
         "moduleResolution": "node",
         "lib": ["es6", "dom"],
         "typeRoots": ["node_modules/@types"]
-      },
-      "angularCompilerOptions": {
-        "enableIvy": false
       }
     }`);
   });

@@ -176,13 +176,7 @@ export class AbsoluteModuleStrategy implements ReferenceEmitStrategy {
       return null;
     }
     const exportMap = new Map<ts.Declaration, string>();
-    exports.forEach((declaration, name) => {
-      // It's okay to skip inline declarations, since by definition they're not target-able with a
-      // ts.Declaration anyway.
-      if (declaration.node !== null) {
-        exportMap.set(declaration.node, name);
-      }
-    });
+    exports.forEach((declaration, name) => { exportMap.set(declaration.node, name); });
     return exportMap;
   }
 }
@@ -196,7 +190,7 @@ export class AbsoluteModuleStrategy implements ReferenceEmitStrategy {
  * Instead, `LogicalProjectPath`s are used.
  */
 export class LogicalProjectStrategy implements ReferenceEmitStrategy {
-  constructor(private reflector: ReflectionHost, private logicalFs: LogicalFileSystem) {}
+  constructor(private checker: ts.TypeChecker, private logicalFs: LogicalFileSystem) {}
 
   emit(ref: Reference<ts.Node>, context: ts.SourceFile): Expression|null {
     const destSf = getSourceFile(ref.node);
@@ -220,7 +214,7 @@ export class LogicalProjectStrategy implements ReferenceEmitStrategy {
       return null;
     }
 
-    const name = findExportedNameOfNode(ref.node, destSf, this.reflector);
+    const name = findExportedNameOfNode(ref.node, destSf, this.checker);
     if (name === null) {
       // The target declaration isn't exported from the file it's declared in. This is an issue!
       return null;
@@ -237,11 +231,11 @@ export class LogicalProjectStrategy implements ReferenceEmitStrategy {
  * A `ReferenceEmitStrategy` which uses a `FileToModuleHost` to generate absolute import references.
  */
 export class FileToModuleStrategy implements ReferenceEmitStrategy {
-  constructor(private reflector: ReflectionHost, private fileToModuleHost: FileToModuleHost) {}
+  constructor(private checker: ts.TypeChecker, private fileToModuleHost: FileToModuleHost) {}
 
   emit(ref: Reference<ts.Node>, context: ts.SourceFile): Expression|null {
     const destSf = getSourceFile(ref.node);
-    const name = findExportedNameOfNode(ref.node, destSf, this.reflector);
+    const name = findExportedNameOfNode(ref.node, destSf, this.checker);
     if (name === null) {
       return null;
     }

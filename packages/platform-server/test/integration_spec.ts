@@ -7,12 +7,13 @@
  */
 
 import {AnimationBuilder, animate, state, style, transition, trigger} from '@angular/animations';
-import {DOCUMENT, PlatformLocation, isPlatformServer, ɵgetDOM as getDOM} from '@angular/common';
+import {DOCUMENT, PlatformLocation, isPlatformServer} from '@angular/common';
 import {HTTP_INTERCEPTORS, HttpClient, HttpClientModule, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest} from '@angular/common/http';
 import {HttpClientTestingModule, HttpTestingController} from '@angular/common/http/testing';
 import {ApplicationRef, CompilerFactory, Component, HostListener, Inject, Injectable, Input, NgModule, NgZone, PLATFORM_ID, PlatformRef, ViewEncapsulation, destroyPlatform, getPlatform} from '@angular/core';
 import {async, inject} from '@angular/core/testing';
 import {BrowserModule, Title, TransferState, makeStateKey} from '@angular/platform-browser';
+import {getDOM} from '@angular/platform-browser/src/dom/dom_adapter';
 import {BEFORE_APP_SERIALIZED, INITIAL_CONFIG, PlatformState, ServerModule, ServerTransferStateModule, platformDynamicServer, renderModule, renderModuleFactory} from '@angular/platform-server';
 import {ivyEnabled, modifiedInIvy} from '@angular/private/testing';
 import {Observable} from 'rxjs';
@@ -408,10 +409,10 @@ class HiddenModule {
            expect(isPlatformServer(moduleRef.injector.get(PLATFORM_ID))).toBe(true);
            const doc = moduleRef.injector.get(DOCUMENT);
 
-           expect(doc.head).toBe(doc.querySelector('head') !);
-           expect(doc.body).toBe(doc.querySelector('body') !);
+           expect(doc.head).toBe(getDOM().querySelector(doc, 'head'));
+           expect(doc.body).toBe(getDOM().querySelector(doc, 'body'));
 
-           expect(doc.documentElement.textContent).toEqual('Works!');
+           expect(getDOM().getText(doc.documentElement)).toEqual('Works!');
 
            platform.destroy();
          });
@@ -427,13 +428,13 @@ class HiddenModule {
 
          platform.bootstrapModule(ExampleModule).then((moduleRef) => {
            const doc = moduleRef.injector.get(DOCUMENT);
-           expect(doc.documentElement.textContent).toEqual('Works!');
+           expect(getDOM().getText(doc.documentElement)).toEqual('Works!');
            platform.destroy();
          });
 
          platform2.bootstrapModule(ExampleModule2).then((moduleRef) => {
            const doc = moduleRef.injector.get(DOCUMENT);
-           expect(doc.documentElement.textContent).toEqual('Works too!');
+           expect(getDOM().getText(doc.documentElement)).toEqual('Works too!');
            platform2.destroy();
          });
        }));
@@ -447,8 +448,8 @@ class HiddenModule {
          platform.bootstrapModule(TitleAppModule).then(ref => {
            const state = ref.injector.get(PlatformState);
            const doc = ref.injector.get(DOCUMENT);
-           const title = doc.querySelector('title') !;
-           expect(title.textContent).toBe('Test App Title');
+           const title = getDOM().querySelector(doc, 'title');
+           expect(getDOM().getText(title)).toBe('Test App Title');
            expect(state.renderToString()).toContain('<title>Test App Title</title>');
          });
        }));
@@ -473,11 +474,11 @@ class HiddenModule {
          }]);
          platform.bootstrapModule(ExampleStylesModule).then(ref => {
            const doc = ref.injector.get(DOCUMENT);
-           const head = doc.getElementsByTagName('head')[0];
+           const head = getDOM().getElementsByTagName(doc, 'head')[0];
            const styles: any[] = head.children as any;
            expect(styles.length).toBe(1);
-           expect(styles[0].textContent).toContain('color: red');
-           expect(styles[0].getAttribute('ng-transition')).toBe('example-styles');
+           expect(getDOM().getText(styles[0])).toContain('color: red');
+           expect(getDOM().getAttribute(styles[0], 'ng-transition')).toBe('example-styles');
          });
        }));
 
@@ -487,7 +488,7 @@ class HiddenModule {
          platform.bootstrapModule(ImageExampleModule).then(ref => {
            const appRef: ApplicationRef = ref.injector.get(ApplicationRef);
            const app = appRef.components[0].location.nativeElement;
-           const img = app.getElementsByTagName('img')[0] as any;
+           const img = getDOM().getElementsByTagName(app, 'img')[0] as any;
            expect(img.attributes['src'].value).toEqual('link');
          });
        }));
@@ -628,7 +629,7 @@ class HiddenModule {
       it('using renderModuleFactory should work',
          async(inject([PlatformRef], (defaultPlatform: PlatformRef) => {
            const compilerFactory: CompilerFactory =
-               defaultPlatform.injector.get(CompilerFactory, null) !;
+               defaultPlatform.injector.get(CompilerFactory, null);
            const moduleFactory =
                compilerFactory.createCompiler().compileModuleSync(AsyncServerModule);
            renderModuleFactory(moduleFactory, {document: doc}).then(output => {
@@ -775,7 +776,7 @@ class HiddenModule {
              const mock = ref.injector.get(HttpTestingController) as HttpTestingController;
              const http = ref.injector.get(HttpClient);
              ref.injector.get<NgZone>(NgZone).run(() => {
-               http.get<string>('http://localhost/testing').subscribe((body: string) => {
+               http.get('http://localhost/testing').subscribe((body: string) => {
                  NgZone.assertInAngularZone();
                  expect(body).toEqual('success!');
                });
@@ -790,8 +791,8 @@ class HiddenModule {
            platform.bootstrapModule(HttpClientExampleModule).then(ref => {
              const mock = ref.injector.get(HttpTestingController) as HttpTestingController;
              const http = ref.injector.get(HttpClient);
-             ref.injector.get(NgZone).run(() => {
-               http.get<string>('http://localhost/testing').subscribe((body: string) => {
+             ref.injector.get<NgZone>(NgZone).run(() => {
+               http.get('http://localhost/testing').subscribe((body: string) => {
                  expect(body).toEqual('success!');
                });
                expect(ref.injector.get<NgZone>(NgZone).hasPendingMacrotasks).toBeTruthy();
@@ -807,8 +808,8 @@ class HiddenModule {
         platform.bootstrapModule(HttpInterceptorExampleModule).then(ref => {
           const mock = ref.injector.get(HttpTestingController) as HttpTestingController;
           const http = ref.injector.get(HttpClient);
-          ref.injector.get(NgZone).run(() => {
-            http.get<string>('http://localhost/testing').subscribe((body: string) => {
+          ref.injector.get<NgZone>(NgZone).run(() => {
+            http.get('http://localhost/testing').subscribe((body: string) => {
               NgZone.assertInAngularZone();
               expect(body).toEqual('success!');
             });
@@ -836,7 +837,7 @@ class HiddenModule {
       it('adds transfer script tag when using renderModuleFactory',
          async(inject([PlatformRef], (defaultPlatform: PlatformRef) => {
            const compilerFactory: CompilerFactory =
-               defaultPlatform.injector.get(CompilerFactory, null) !;
+               defaultPlatform.injector.get(CompilerFactory, null);
            const moduleFactory =
                compilerFactory.createCompiler().compileModuleSync(TransferStoreModule);
            renderModuleFactory(moduleFactory, {document: '<app></app>'}).then(output => {

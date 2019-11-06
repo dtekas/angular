@@ -118,7 +118,7 @@ export interface KeyValueDifferFactory {
  */
 export class KeyValueDiffers {
   /** @nocollapse */
-  static ɵprov = ɵɵdefineInjectable({
+  static ngInjectableDef = ɵɵdefineInjectable({
     token: KeyValueDiffers,
     providedIn: 'root',
     factory: () => new KeyValueDiffers([new DefaultKeyValueDifferFactory()])

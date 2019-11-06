@@ -1,4 +1,4 @@
 import {platformBrowser} from '@angular/platform-browser';
-import {AppModule} from './app.module';
+import {AppModuleNgFactory} from './app.module.ngfactory';
 
-platformBrowser().bootstrapModule(AppModule);
+platformBrowser().bootstrapModuleFactory(AppModuleNgFactory);

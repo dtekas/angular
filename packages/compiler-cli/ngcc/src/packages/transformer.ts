@@ -6,7 +6,6 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import * as ts from 'typescript';
-
 import {FileSystem} from '../../../src/ngtsc/file_system';
 import {DecorationAnalyzer} from '../analysis/decoration_analyzer';
 import {ModuleWithProvidersAnalyses, ModuleWithProvidersAnalyzer} from '../analysis/module_with_providers_analyzer';
@@ -28,16 +27,7 @@ import {Renderer} from '../rendering/renderer';
 import {RenderingFormatter} from '../rendering/rendering_formatter';
 import {UmdRenderingFormatter} from '../rendering/umd_rendering_formatter';
 import {FileToWrite} from '../rendering/utils';
-
 import {EntryPointBundle} from './entry_point_bundle';
-
-export type TransformResult = {
-  success: true; diagnostics: ts.Diagnostic[]; transformedFiles: FileToWrite[];
-} |
-{
-  success: false;
-  diagnostics: ts.Diagnostic[];
-};
 
 /**
  * A Package is stored in a directory on disk and that directory can contain one or more package
@@ -68,22 +58,17 @@ export class Transformer {
    * @param bundle the bundle to transform.
    * @returns information about the files that were transformed.
    */
-  transform(bundle: EntryPointBundle): TransformResult {
+  transform(bundle: EntryPointBundle): FileToWrite[] {
     const reflectionHost = this.getHost(bundle);
 
     // Parse and analyze the files.
     const {decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses,
-           moduleWithProvidersAnalyses, diagnostics} = this.analyzeProgram(reflectionHost, bundle);
-
-    // Bail if the analysis produced any errors.
-    if (hasErrors(diagnostics)) {
-      return {success: false, diagnostics};
-    }
+           moduleWithProvidersAnalyses} = this.analyzeProgram(reflectionHost, bundle);
 
     // Transform the source files and source maps.
     const srcFormatter = this.getRenderingFormatter(reflectionHost, bundle);
 
-    const renderer = new Renderer(reflectionHost, srcFormatter, this.fs, this.logger, bundle);
+    const renderer = new Renderer(srcFormatter, this.fs, this.logger, bundle);
     let renderedFiles = renderer.renderProgram(
         decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses);
 
@@ -96,7 +81,7 @@ export class Transformer {
       renderedFiles = renderedFiles.concat(renderedDtsFiles);
     }
 
-    return {success: true, diagnostics, transformedFiles: renderedFiles};
+    return renderedFiles;
   }
 
   getHost(bundle: EntryPointBundle): NgccReflectionHost {
@@ -142,10 +127,8 @@ export class Transformer {
         new SwitchMarkerAnalyzer(reflectionHost, bundle.entryPoint.package);
     const switchMarkerAnalyses = switchMarkerAnalyzer.analyzeProgram(bundle.src.program);
 
-    const diagnostics: ts.Diagnostic[] = [];
-    const decorationAnalyzer = new DecorationAnalyzer(
-        this.fs, bundle, reflectionHost, referencesRegistry,
-        diagnostic => diagnostics.push(diagnostic));
+    const decorationAnalyzer =
+        new DecorationAnalyzer(this.fs, bundle, reflectionHost, referencesRegistry);
     const decorationAnalyses = decorationAnalyzer.analyzeProgram();
 
     const moduleWithProvidersAnalyzer =
@@ -159,18 +142,14 @@ export class Transformer {
         privateDeclarationsAnalyzer.analyzeProgram(bundle.src.program);
 
     return {decorationAnalyses, switchMarkerAnalyses, privateDeclarationsAnalyses,
-            moduleWithProvidersAnalyses, diagnostics};
+            moduleWithProvidersAnalyses};
   }
 }
 
-export function hasErrors(diagnostics: ts.Diagnostic[]) {
-  return diagnostics.some(d => d.category === ts.DiagnosticCategory.Error);
-}
 
 interface ProgramAnalyses {
   decorationAnalyses: Map<ts.SourceFile, CompiledFile>;
   switchMarkerAnalyses: SwitchMarkerAnalyses;
   privateDeclarationsAnalyses: ExportInfo[];
   moduleWithProvidersAnalyses: ModuleWithProvidersAnalyses|null;
-  diagnostics: ts.Diagnostic[];
 }

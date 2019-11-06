@@ -9,11 +9,8 @@
 import {DepGraph} from 'dependency-graph';
 import {AbsoluteFsPath, FileSystem, resolve} from '../../../src/ngtsc/file_system';
 import {Logger} from '../logging/logger';
-import {EntryPoint, EntryPointFormat, SUPPORTED_FORMAT_PROPERTIES, getEntryPointFormat} from '../packages/entry_point';
-import {PartiallyOrderedList} from '../utils';
+import {EntryPoint, EntryPointFormat, EntryPointJsonProperty, getEntryPointFormat} from '../packages/entry_point';
 import {DependencyHost, DependencyInfo} from './dependency_host';
-
-const builtinNodeJsModules = new Set<string>(require('module').builtinModules);
 
 /**
  * Holds information about entry points that are removed because
@@ -53,28 +50,15 @@ export interface DependencyDiagnostics {
 }
 
 /**
- * Represents a partially ordered list of entry-points.
- *
- * The entry-points' order/precedence is such that dependent entry-points always come later than
- * their dependencies in the list.
- *
- * See `DependencyResolver#sortEntryPointsByDependency()`.
- */
-export type PartiallyOrderedEntryPoints = PartiallyOrderedList<EntryPoint>;
-
-/**
- * A list of entry-points, sorted by their dependencies, and the dependency graph.
+ * A list of entry-points, sorted by their dependencies.
  *
  * The `entryPoints` array will be ordered so that no entry point depends upon an entry point that
  * appears later in the array.
  *
- * Some entry points or their dependencies may have been ignored. These are captured for
+ * Some entry points or their dependencies may be have been ignored. These are captured for
  * diagnostic purposes in `invalidEntryPoints` and `ignoredDependencies` respectively.
  */
-export interface SortedEntryPointsInfo extends DependencyDiagnostics {
-  entryPoints: PartiallyOrderedEntryPoints;
-  graph: DepGraph<EntryPoint>;
-}
+export interface SortedEntryPointsInfo extends DependencyDiagnostics { entryPoints: EntryPoint[]; }
 
 /**
  * A class that resolves dependencies between entry-points.
@@ -97,7 +81,7 @@ export class DependencyResolver {
 
     let sortedEntryPointNodes: string[];
     if (target) {
-      if (target.compiledByAngular && graph.hasNode(target.path)) {
+      if (target.compiledByAngular) {
         sortedEntryPointNodes = graph.dependenciesOf(target.path);
         sortedEntryPointNodes.push(target.path);
       } else {
@@ -108,9 +92,7 @@ export class DependencyResolver {
     }
 
     return {
-      entryPoints: (sortedEntryPointNodes as PartiallyOrderedList<string>)
-                       .map(path => graph.getNodeData(path)),
-      graph,
+      entryPoints: sortedEntryPointNodes.map(path => graph.getNodeData(path)),
       invalidEntryPoints,
       ignoredDependencies,
     };
@@ -146,12 +128,10 @@ export class DependencyResolver {
     angularEntryPoints.forEach(entryPoint => {
       const {dependencies, missing, deepImports} = this.getEntryPointDependencies(entryPoint);
 
-      const missingDependencies = Array.from(missing).filter(dep => !builtinNodeJsModules.has(dep));
-
-      if (missingDependencies.length > 0 && !entryPoint.ignoreMissingDependencies) {
+      if (missing.size > 0) {
         // This entry point has dependencies that are missing
         // so remove it from the graph.
-        removeNodes(entryPoint, missingDependencies);
+        removeNodes(entryPoint, Array.from(missing));
       } else {
         dependencies.forEach(dependencyPath => {
           if (!graph.hasNode(entryPoint.path)) {
@@ -193,16 +173,16 @@ export class DependencyResolver {
 
   private getEntryPointFormatInfo(entryPoint: EntryPoint):
       {format: EntryPointFormat, path: AbsoluteFsPath} {
-    for (const property of SUPPORTED_FORMAT_PROPERTIES) {
-      const formatPath = entryPoint.packageJson[property];
-      if (formatPath === undefined) continue;
-
+    const properties = Object.keys(entryPoint.packageJson);
+    for (let i = 0; i < properties.length; i++) {
+      const property = properties[i] as EntryPointJsonProperty;
       const format = getEntryPointFormat(this.fs, entryPoint, property);
-      if (format === undefined) continue;
 
-      return {format, path: resolve(entryPoint.path, formatPath)};
+      if (format === 'esm2015' || format === 'esm5' || format === 'umd' || format === 'commonjs') {
+        const formatPath = entryPoint.packageJson[property] !;
+        return {format, path: resolve(entryPoint.path, formatPath)};
+      }
     }
-
     throw new Error(
         `There is no appropriate source code format in '${entryPoint.path}' entry-point.`);
   }

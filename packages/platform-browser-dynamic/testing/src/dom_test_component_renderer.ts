@@ -6,9 +6,10 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {DOCUMENT, ɵgetDOM as getDOM} from '@angular/common';
+import {DOCUMENT} from '@angular/common';
 import {Inject, Injectable} from '@angular/core';
 import {TestComponentRenderer} from '@angular/core/testing';
+import {ɵgetDOM as getDOM} from '@angular/platform-browser';
 
 /**
  * A DOM based implementation of the TestComponentRenderer.
@@ -18,23 +19,14 @@ export class DOMTestComponentRenderer extends TestComponentRenderer {
   constructor(@Inject(DOCUMENT) private _doc: any) { super(); }
 
   insertRootElement(rootElId: string) {
-    const template = getDOM().getDefaultDocument().createElement('template');
-    template.innerHTML = `<div id="${rootElId}"></div>`;
-    const rootEl = <HTMLElement>getContent(template).firstChild;
+    const rootEl = <HTMLElement>getDOM().firstChild(
+        getDOM().content(getDOM().createTemplate(`<div id="${rootElId}"></div>`)));
 
     // TODO(juliemr): can/should this be optional?
-    const oldRoots = this._doc.querySelectorAll('[id^=root]');
+    const oldRoots = getDOM().querySelectorAll(this._doc, '[id^=root]');
     for (let i = 0; i < oldRoots.length; i++) {
       getDOM().remove(oldRoots[i]);
     }
-    this._doc.body.appendChild(rootEl);
-  }
-}
-
-function getContent(node: Node): Node {
-  if ('content' in node) {
-    return (<any>node).content;
-  } else {
-    return node;
+    getDOM().appendChild(this._doc.body, rootEl);
   }
 }

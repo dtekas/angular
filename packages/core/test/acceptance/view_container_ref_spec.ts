@@ -7,17 +7,23 @@
  */
 
 import {CommonModule, DOCUMENT} from '@angular/common';
-import {computeMsgId} from '@angular/compiler';
-import {Compiler, Component, ComponentFactoryResolver, Directive, DoCheck, ElementRef, EmbeddedViewRef, ErrorHandler, NO_ERRORS_SCHEMA, NgModule, OnInit, Pipe, PipeTransform, QueryList, RendererFactory2, RendererType2, Sanitizer, TemplateRef, ViewChild, ViewChildren, ViewContainerRef} from '@angular/core';
+import {Compiler, Component, ComponentFactoryResolver, Directive, DoCheck, ElementRef, EmbeddedViewRef, ErrorHandler, NO_ERRORS_SCHEMA, NgModule, OnInit, Pipe, PipeTransform, QueryList, RendererFactory2, RendererType2, Sanitizer, TemplateRef, ViewChild, ViewChildren, ViewContainerRef, ɵi18nConfigureLocalize} from '@angular/core';
 import {Input} from '@angular/core/src/metadata';
 import {ngDevModeResetPerfCounters} from '@angular/core/src/util/ng_dev_mode';
 import {TestBed, TestComponentRenderer} from '@angular/core/testing';
-import {clearTranslations, loadTranslations} from '@angular/localize';
-import {By, DomSanitizer} from '@angular/platform-browser';
+import {By} from '@angular/platform-browser';
 import {expect} from '@angular/platform-browser/testing/src/matchers';
 import {ivyEnabled, onlyInIvy} from '@angular/private/testing';
 
 describe('ViewContainerRef', () => {
+
+  const TRANSLATIONS: any = {
+    'Bar': 'o',
+    '{$startTagBefore}{$closeTagBefore}{$startTagDiv}{$startTagInside}{$closeTagInside}{$closeTagDiv}{$startTagAfter}{$closeTagAfter}':
+        'F{$startTagDiv}{$closeTagDiv}o',
+    '{$startTagBefore}{$closeTagBefore}{$startTagDiv}{$startTagIn}{$closeTagIn}{$closeTagDiv}{$startTagAfter}{$closeTagAfter}':
+        '{$startTagDiv}{$closeTagDiv}{$startTagBefore}{$closeTagBefore}'
+  };
 
   /**
    * Gets the inner HTML of the given element with all HTML comments and Angular internal
@@ -29,6 +35,7 @@ describe('ViewContainerRef', () => {
   }
 
   beforeEach(() => {
+    ɵi18nConfigureLocalize({translations: TRANSLATIONS});
     TestBed.configureTestingModule({
       declarations: [
         StructDir, ViewContainerRefComp, ViewContainerRefApp, DestroyCasesComp, ConstructorDir,
@@ -36,8 +43,6 @@ describe('ViewContainerRef', () => {
       ]
     });
   });
-
-  afterEach(() => clearTranslations());
 
   describe('create', () => {
 
@@ -54,22 +59,6 @@ describe('ViewContainerRef', () => {
          const fixture = TestBed.createComponent(ConstructorAppWithQueries);
          fixture.detectChanges();
          expect(fixture.componentInstance.foo).toBeAnInstanceOf(TemplateRef);
-       });
-
-    it('should construct proper TNode / DOM tree when embedded views are created in a directive constructor',
-       () => {
-         @Component({
-           selector: 'view-insertion-test-cmpt',
-           template:
-               `<div>before<ng-template constructorDir><span>|middle|</span></ng-template>after</div>`
-         })
-         class ViewInsertionTestCmpt {
-         }
-
-         TestBed.configureTestingModule({declarations: [ViewInsertionTestCmpt, ConstructorDir]});
-
-         const fixture = TestBed.createComponent(ViewInsertionTestCmpt);
-         expect(fixture.nativeElement).toHaveText('before|middle|after');
        });
 
     it('should use comment node of host ng-container as insertion marker', () => {
@@ -141,7 +130,7 @@ describe('ViewContainerRef', () => {
         `
       })
       class TestComp {
-        @ViewChild('container', {read: ViewContainerRef}) vcRef !: ViewContainerRef;
+        @ViewChild('container', {read: ViewContainerRef, static: false}) vcRef !: ViewContainerRef;
 
         constructor(public cfr: ComponentFactoryResolver) {}
 
@@ -345,12 +334,6 @@ describe('ViewContainerRef', () => {
 
     onlyInIvy('Ivy i18n logic')
         .it('when ViewContainerRef is on an element inside a ng-container with i18n', () => {
-          loadTranslations({
-            [computeMsgId('Bar')]: 'o',
-            [computeMsgId(
-                '{$START_TAG_BEFORE}{$CLOSE_TAG_BEFORE}{$START_TAG_DIV}{$START_TAG_INSIDE}{$CLOSE_TAG_INSIDE}{$CLOSE_TAG_DIV}{$START_TAG_AFTER}{$CLOSE_TAG_AFTER}')]:
-                'F{$START_TAG_DIV}{$CLOSE_TAG_DIV}o',
-          });
           executeTest(`
       <ng-template #foo>
         <span i18n>Bar</span>
@@ -370,17 +353,11 @@ describe('ViewContainerRef', () => {
         });
 
     onlyInIvy('Ivy i18n logic')
-        .it('when ViewContainerRef is on an element, and i18n is on the parent ViewContainerRef', () => {
-          loadTranslations({
-            [computeMsgId(
-                '{$START_TAG_BEFORE}{$CLOSE_TAG_BEFORE}{$START_TAG_DIV}{$START_TAG_IN}{$CLOSE_TAG_IN}{$CLOSE_TAG_DIV}{$START_TAG_AFTER}{$CLOSE_TAG_AFTER}')]:
-                '{$START_TAG_DIV}{$CLOSE_TAG_DIV}{$START_TAG_BEFORE}oo{$CLOSE_TAG_BEFORE}',
-            [computeMsgId('{VAR_SELECT, select, other {|{INTERPOLATION}|}}')]:
-                '{VAR_SELECT, select, other {|{INTERPOLATION}|}}',
-          });
-          executeTest(`
+        .it('when ViewContainerRef is on an element, and i18n is on the parent ViewContainerRef',
+            () => {
+              executeTest(`
       <ng-template #foo>
-        <span>F</span>
+        <span>Foo</span>
       </ng-template>
 
       <ng-template structDir i18n>
@@ -390,7 +367,7 @@ describe('ViewContainerRef', () => {
         </div>
         <after></after>
       </ng-template>`);
-        });
+            });
   });
 
   describe('length', () => {
@@ -596,7 +573,7 @@ describe('ViewContainerRef', () => {
     beforeEach(() => {
       TestBed.configureTestingModule({declarations: [EmbeddedViewInsertionComp, VCRefDirective]});
 
-      const _origRendererFactory = TestBed.inject(RendererFactory2);
+      const _origRendererFactory = TestBed.get(RendererFactory2) as RendererFactory2;
       const _origCreateRenderer = _origRendererFactory.createRenderer;
 
       _origRendererFactory.createRenderer = function(element: any, type: RendererType2|null) {
@@ -950,9 +927,9 @@ describe('ViewContainerRef', () => {
           {provide: String, useValue: 'root_module'},
           // We need to provide the following tokens because otherwise view engine
           // will throw when creating a component factory in debug mode.
-          {provide: Sanitizer, useValue: TestBed.inject(DomSanitizer)},
-          {provide: ErrorHandler, useValue: TestBed.inject(ErrorHandler)},
-          {provide: RendererFactory2, useValue: TestBed.inject(RendererFactory2)},
+          {provide: Sanitizer, useValue: TestBed.get(Sanitizer)},
+          {provide: ErrorHandler, useValue: TestBed.get(ErrorHandler)},
+          {provide: RendererFactory2, useValue: TestBed.get(RendererFactory2)},
         ]
       })
       class MyAppModule {
@@ -964,7 +941,7 @@ describe('ViewContainerRef', () => {
 
       // Compile test modules in order to be able to pass the NgModuleRef or the
       // module injector to the ViewContainerRef create component method.
-      const compiler = TestBed.inject(Compiler);
+      const compiler = TestBed.get(Compiler) as Compiler;
       const appModuleFactory = compiler.compileModuleSync(MyAppModule);
       const someModuleFactory = compiler.compileModuleSync(SomeModule);
       const appModuleRef = appModuleFactory.create(null);
@@ -1282,178 +1259,6 @@ describe('ViewContainerRef', () => {
               '</loop-comp>');
     });
 
-    it('should insert elements in the proper order when template root is an ng-container', () => {
-      @Component({
-        template: `
-          <ng-container *ngFor="let item of items">|{{ item }}|</ng-container>
-        `
-      })
-      class App {
-        items = ['one', 'two', 'three'];
-      }
-
-      TestBed.configureTestingModule({imports: [CommonModule], declarations: [App]});
-      const fixture = TestBed.createComponent(App);
-      fixture.detectChanges();
-
-      expect(fixture.nativeElement.textContent).toBe('|one||two||three|');
-
-      fixture.componentInstance.items.unshift('zero');
-      fixture.detectChanges();
-
-      expect(fixture.nativeElement.textContent).toBe('|zero||one||two||three|');
-
-      fixture.componentInstance.items.push('four');
-      fixture.detectChanges();
-
-      expect(fixture.nativeElement.textContent).toBe('|zero||one||two||three||four|');
-
-      fixture.componentInstance.items.splice(3, 0, 'two point five');
-      fixture.detectChanges();
-
-      expect(fixture.nativeElement.textContent)
-          .toBe('|zero||one||two||two point five||three||four|');
-    });
-
-    it('should insert elements in the proper order when template root is an ng-container and is wrapped by an ng-container',
-       () => {
-         @Component({
-           template: `
-              <ng-container>
-                <ng-container *ngFor="let item of items">|{{ item }}|</ng-container>
-              </ng-container>
-            `
-         })
-         class App {
-           items = ['one', 'two', 'three'];
-         }
-
-         TestBed.configureTestingModule({imports: [CommonModule], declarations: [App]});
-         const fixture = TestBed.createComponent(App);
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|one||two||three|');
-
-         fixture.componentInstance.items.unshift('zero');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|zero||one||two||three|');
-
-         fixture.componentInstance.items.push('four');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|zero||one||two||three||four|');
-
-         fixture.componentInstance.items.splice(3, 0, 'two point five');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent)
-             .toBe('|zero||one||two||two point five||three||four|');
-       });
-
-    it('should insert elements in the proper order when template root is an ng-container and first node is a ng-container',
-       () => {
-         @Component({
-           template: `
-            <ng-container *ngFor="let item of items"><ng-container>|{{ item }}|</ng-container></ng-container>
-          `
-         })
-         class App {
-           items = ['one', 'two', 'three'];
-         }
-
-         TestBed.configureTestingModule({imports: [CommonModule], declarations: [App]});
-         const fixture = TestBed.createComponent(App);
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|one||two||three|');
-
-         fixture.componentInstance.items.unshift('zero');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|zero||one||two||three|');
-
-         fixture.componentInstance.items.push('four');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|zero||one||two||three||four|');
-
-         fixture.componentInstance.items.splice(3, 0, 'two point five');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent)
-             .toBe('|zero||one||two||two point five||three||four|');
-       });
-
-    it('should insert elements in the proper order when template root is an ng-container, wrapped in an ng-container with the root node as an ng-container',
-       () => {
-         @Component({
-           template: `
-            <ng-container>
-              <ng-container *ngFor="let item of items"><ng-container>|{{ item }}|</ng-container></ng-container>
-            </ng-container>
-          `
-         })
-         class App {
-           items = ['one', 'two', 'three'];
-         }
-
-         TestBed.configureTestingModule({imports: [CommonModule], declarations: [App]});
-         const fixture = TestBed.createComponent(App);
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|one||two||three|');
-
-         fixture.componentInstance.items.unshift('zero');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|zero||one||two||three|');
-
-         fixture.componentInstance.items.push('four');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|zero||one||two||three||four|');
-
-         fixture.componentInstance.items.splice(3, 0, 'two point five');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent)
-             .toBe('|zero||one||two||two point five||three||four|');
-       });
-
-    it('should insert elements in the proper order when the first child node is an ICU expression',
-       () => {
-         @Component({
-           template: `
-          <ng-container *ngFor="let item of items">{count, select, other {|{{ item }}|}}</ng-container>
-        `
-         })
-         class App {
-           items = ['one', 'two', 'three'];
-         }
-
-         TestBed.configureTestingModule({imports: [CommonModule], declarations: [App]});
-         const fixture = TestBed.createComponent(App);
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|one||two||three|');
-
-         fixture.componentInstance.items.unshift('zero');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|zero||one||two||three|');
-
-         fixture.componentInstance.items.push('four');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent).toBe('|zero||one||two||three||four|');
-
-         fixture.componentInstance.items.splice(3, 0, 'two point five');
-         fixture.detectChanges();
-
-         expect(fixture.nativeElement.textContent)
-             .toBe('|zero||one||two||two point five||three||four|');
-       });
   });
 
   describe('lifecycle hooks', () => {
@@ -2128,7 +1933,7 @@ class ViewContainerRefComp {
   `
 })
 class ViewContainerRefApp {
-  @ViewChild(ViewContainerRefComp) vcrComp !: ViewContainerRefComp;
+  @ViewChild(ViewContainerRefComp, {static: false}) vcrComp !: ViewContainerRefComp;
 }
 
 @Directive({selector: '[structDir]'})

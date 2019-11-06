@@ -29,7 +29,7 @@ export function sha1Binary(buffer: ArrayBuffer): string {
 }
 
 function _sha1(words32: number[], len: number): string {
-  const w: number[] = [];
+  const w = new Array(80);
   let [a, b, c, d, e]: number[] = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
 
   words32[len >> 5] |= 0x80 << (24 - len % 32);
@@ -113,10 +113,9 @@ function fk(index: number, b: number, c: number, d: number): [number, number] {
 
 
 function stringToWords32(str: string, endian: Endian): number[] {
-  const size = (str.length + 3) >>> 2;
-  const words32 = [];
+  const words32 = Array((str.length + 3) >>> 2);
 
-  for (let i = 0; i < size; i++) {
+  for (let i = 0; i < words32.length; i++) {
     words32[i] = wordAt(str, i * 4, endian);
   }
 
@@ -124,10 +123,9 @@ function stringToWords32(str: string, endian: Endian): number[] {
 }
 
 function arrayBufferToWords32(buffer: ArrayBuffer, endian: Endian): number[] {
-  const size = (buffer.byteLength + 3) >>> 2;
-  const words32: number[] = [];
+  const words32 = Array((buffer.byteLength + 3) >>> 2);
   const view = new Uint8Array(buffer);
-  for (let i = 0; i < size; i++) {
+  for (let i = 0; i < words32.length; i++) {
     words32[i] = wordAt(view, i * 4, endian);
   }
   return words32;

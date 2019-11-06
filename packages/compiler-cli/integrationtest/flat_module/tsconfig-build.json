@@ -2,8 +2,7 @@
   "angularCompilerOptions": {
     "flatModuleId": "flat_module",
     "flatModuleOutFile": "index.js",
-    "skipTemplateCodegen": true,
-    "enableIvy": false
+    "skipTemplateCodegen": true
   },
 
   "compilerOptions": {
@@ -15,8 +14,7 @@
     "noImplicitAny": true,
     "outDir": "../node_modules/flat_module",
     "rootDir": "",
-    "target": "es5",
-    "typeRoots": ["../node_modules/@types"]
+    "target": "es5"
  },
 
  "files": ["public-api.ts"]

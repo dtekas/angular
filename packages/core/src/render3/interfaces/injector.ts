@@ -10,7 +10,7 @@ import {InjectionToken} from '../../di/injection_token';
 import {InjectFlags} from '../../di/interface/injector';
 import {Type} from '../../interface/type';
 
-import {TDirectiveHostNode} from './node';
+import {TElementNode} from './node';
 import {LView, TData} from './view';
 
 export const TNODE = 8;
@@ -230,7 +230,7 @@ export class NodeInjectorFactory {
            /**
             * The TNode of the same element injector.
             */
-           tNode: TDirectiveHostNode) => any,
+           tNode: TElementNode) => any,
       /**
        * Set to `true` if the token is declared in `viewProviders` (or if it is component).
        */
@@ -242,7 +242,9 @@ export class NodeInjectorFactory {
 }
 
 export function isFactory(obj: any): obj is NodeInjectorFactory {
-  return obj instanceof NodeInjectorFactory;
+  // See: https://jsperf.com/instanceof-vs-getprototypeof
+  return obj !== null && typeof obj == 'object' &&
+      Object.getPrototypeOf(obj) == NodeInjectorFactory.prototype;
 }
 
 // Note: This hack is necessary so we don't erroneously get a circular dependency

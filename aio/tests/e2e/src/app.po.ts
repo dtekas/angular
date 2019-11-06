@@ -59,13 +59,8 @@ export class SitePage {
     return browser.executeScript('return window.pageYOffset');
   }
 
-  scrollTo(y: 'top' | 'bottom' | number) {
-    const yExpr = (y === 'top') ? '0' : (y === 'bottom') ? 'document.body.scrollHeight' : y;
-
-    return browser.executeScript(`
-      window.scrollTo(0, ${yExpr});
-      window.dispatchEvent(new Event('scroll'));
-    `);
+  scrollToBottom() {
+    return browser.executeScript('window.scrollTo(0, document.body.scrollHeight)');
   }
 
   click(elementFinder: ElementFinder) {

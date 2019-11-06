@@ -34,13 +34,13 @@ import {el} from '../../testing/src/browser_util';
         styles: [],
         data: {'animation': animationTriggers}
       };
-      return (TestBed.inject(RendererFactory2) as AnimationRendererFactory)
+      return (TestBed.get(RendererFactory2) as AnimationRendererFactory)
           .createRenderer(element, type);
     }
 
     it('should hook into the engine\'s insert operations when appending children', () => {
       const renderer = makeRenderer();
-      const engine = TestBed.inject(AnimationEngine) as MockAnimationEngine;
+      const engine = TestBed.get(AnimationEngine) as MockAnimationEngine;
       const container = el('<div></div>');
 
       renderer.appendChild(container, element);
@@ -50,7 +50,7 @@ import {el} from '../../testing/src/browser_util';
     it('should hook into the engine\'s insert operations when inserting a child before another',
        () => {
          const renderer = makeRenderer();
-         const engine = TestBed.inject(AnimationEngine) as MockAnimationEngine;
+         const engine = TestBed.get(AnimationEngine) as MockAnimationEngine;
          const container = el('<div></div>');
          const element2 = el('<div></div>');
          container.appendChild(element2);
@@ -61,7 +61,7 @@ import {el} from '../../testing/src/browser_util';
 
     it('should hook into the engine\'s insert operations when removing children', () => {
       const renderer = makeRenderer();
-      const engine = TestBed.inject(AnimationEngine) as MockAnimationEngine;
+      const engine = TestBed.get(AnimationEngine) as MockAnimationEngine;
       const container = el('<div></div>');
 
       renderer.removeChild(container, element);
@@ -70,7 +70,7 @@ import {el} from '../../testing/src/browser_util';
 
     it('should hook into the engine\'s setProperty call if the property begins with `@`', () => {
       const renderer = makeRenderer();
-      const engine = TestBed.inject(AnimationEngine) as MockAnimationEngine;
+      const engine = TestBed.get(AnimationEngine) as MockAnimationEngine;
 
       renderer.setProperty(element, 'prop', 'value');
       expect(engine.captures['setProperty']).toBeFalsy();
@@ -79,20 +79,10 @@ import {el} from '../../testing/src/browser_util';
       expect(engine.captures['setProperty'].pop()).toEqual([element, 'prop', 'value']);
     });
 
-    // https://github.com/angular/angular/issues/32794
-    it('should support nested animation triggers', () => {
-      makeRenderer([[trigger('myAnimation', [])]]);
-
-      const {triggers} = TestBed.inject(AnimationEngine) as MockAnimationEngine;
-
-      expect(triggers.length).toEqual(1);
-      expect(triggers[0].name).toEqual('myAnimation');
-    });
-
     describe('listen', () => {
       it('should hook into the engine\'s listen call if the property begins with `@`', () => {
         const renderer = makeRenderer();
-        const engine = TestBed.inject(AnimationEngine) as MockAnimationEngine;
+        const engine = TestBed.get(AnimationEngine) as MockAnimationEngine;
 
         const cb = (event: any): boolean => { return true; };
 
@@ -106,7 +96,7 @@ import {el} from '../../testing/src/browser_util';
       it('should resolve the body|document|window nodes given their values as strings as input',
          () => {
            const renderer = makeRenderer();
-           const engine = TestBed.inject(AnimationEngine) as MockAnimationEngine;
+           const engine = TestBed.get(AnimationEngine) as MockAnimationEngine;
 
            const cb = (event: any): boolean => { return true; };
 
@@ -150,7 +140,7 @@ import {el} from '../../testing/src/browser_util';
           declarations: [Cmp]
         });
 
-        const engine = TestBed.inject(AnimationEngine);
+        const engine = TestBed.get(AnimationEngine);
         const fixture = TestBed.createComponent(Cmp);
         const cmp = fixture.componentInstance;
         cmp.exp = 'state';
@@ -178,7 +168,7 @@ import {el} from '../../testing/src/browser_util';
            })
            class Cmp {
              exp: any;
-             @ViewChild('elm') public element: any;
+             @ViewChild('elm', {static: false}) public element: any;
            }
 
            TestBed.configureTestingModule({
@@ -223,11 +213,11 @@ import {el} from '../../testing/src/browser_util';
              exp2: any = true;
              exp3: any = true;
 
-             @ViewChild('elm1') public elm1: any;
+             @ViewChild('elm1', {static: false}) public elm1: any;
 
-             @ViewChild('elm2') public elm2: any;
+             @ViewChild('elm2', {static: false}) public elm2: any;
 
-             @ViewChild('elm3') public elm3: any;
+             @ViewChild('elm3', {static: false}) public elm3: any;
            }
 
            TestBed.configureTestingModule({
@@ -235,7 +225,7 @@ import {el} from '../../testing/src/browser_util';
              declarations: [Cmp]
            });
 
-           const engine = TestBed.inject(AnimationEngine);
+           const engine = TestBed.get(AnimationEngine);
            const fixture = TestBed.createComponent(Cmp);
            const cmp = fixture.componentInstance;
 
@@ -305,7 +295,7 @@ import {el} from '../../testing/src/browser_util';
         declarations: [Cmp]
       });
 
-      const renderer = TestBed.inject(RendererFactory2) as ExtendedAnimationRendererFactory;
+      const renderer = TestBed.get(RendererFactory2) as ExtendedAnimationRendererFactory;
       const fixture = TestBed.createComponent(Cmp);
       const cmp = fixture.componentInstance;
 
@@ -330,10 +320,8 @@ class MockAnimationEngine extends InjectableAnimationEngine {
     data.push(args);
   }
 
-  registerTrigger(
-      componentId: string, namespaceId: string, hostElement: any, name: string,
-      metadata: AnimationTriggerMetadata): void {
-    this.triggers.push(metadata);
+  registerTrigger(componentId: string, namespaceId: string, trigger: AnimationTriggerMetadata) {
+    this.triggers.push(trigger);
   }
 
   onInsert(namespaceId: string, element: any): void { this._capture('onInsert', [element]); }

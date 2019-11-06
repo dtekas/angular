@@ -11,21 +11,18 @@ import localeEsUS from '@angular/common/locales/es-US';
 import localeFr from '@angular/common/locales/fr';
 import localeAr from '@angular/common/locales/ar';
 import localeDeAt from '@angular/common/locales/de-AT';
-import {ɵunregisterLocaleData, ɵregisterLocaleData} from '@angular/core';
-import {CurrencyPipe, DecimalPipe, PercentPipe} from '@angular/common';
+import {registerLocaleData, CurrencyPipe, DecimalPipe, PercentPipe, formatNumber} from '@angular/common';
 import {beforeEach, describe, expect, it} from '@angular/core/testing/src/testing_internal';
 
 {
   describe('Number pipes', () => {
     beforeAll(() => {
-      ɵregisterLocaleData(localeEn);
-      ɵregisterLocaleData(localeEsUS);
-      ɵregisterLocaleData(localeFr);
-      ɵregisterLocaleData(localeAr);
-      ɵregisterLocaleData(localeDeAt);
+      registerLocaleData(localeEn);
+      registerLocaleData(localeEsUS);
+      registerLocaleData(localeFr);
+      registerLocaleData(localeAr);
+      registerLocaleData(localeDeAt);
     });
-
-    afterAll(() => ɵunregisterLocaleData());
 
     describe('DecimalPipe', () => {
       describe('transform', () => {

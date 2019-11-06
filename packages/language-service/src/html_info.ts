@@ -374,6 +374,14 @@ const SCHEMA: string[] = [
   ':svg:cursor^:svg:|',
 ];
 
+const attrToPropMap: {[name: string]: string} = <any>{
+  'class': 'className',
+  'formaction': 'formAction',
+  'innerHtml': 'innerHTML',
+  'readonly': 'readOnly',
+  'tabindex': 'tabIndex'
+};
+
 const EVENT = 'event';
 const BOOLEAN = 'boolean';
 const NUMBER = 'number';
@@ -399,7 +407,7 @@ export class SchemaInformation {
         }
       }
       properties.forEach((property: string) => {
-        if (property === '') {
+        if (property == '') {
         } else if (property.startsWith('*')) {
           type[property.substring(1)] = EVENT;
         } else if (property.startsWith('!')) {

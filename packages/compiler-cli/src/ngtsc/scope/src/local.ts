@@ -6,17 +6,16 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {ExternalExpr, SchemaMetadata} from '@angular/compiler';
+import {ExternalExpr} from '@angular/compiler';
 import * as ts from 'typescript';
 
 import {ErrorCode, makeDiagnostic} from '../../diagnostics';
-import {AliasingHost, Reexport, Reference, ReferenceEmitter} from '../../imports';
-import {DirectiveMeta, MetadataReader, MetadataRegistry, NgModuleMeta, PipeMeta} from '../../metadata';
+import {AliasGenerator, Reexport, Reference, ReferenceEmitter} from '../../imports';
+import {DirectiveMeta, LocalMetadataRegistry, MetadataReader, MetadataRegistry, NgModuleMeta, PipeMeta} from '../../metadata';
 import {ClassDeclaration} from '../../reflection';
 import {identifierOfNode, nodeNameForError} from '../../util/src/typescript';
 
 import {ExportScope, ScopeData} from './api';
-import {ComponentScopeReader, ComponentScopeRegistry, NoopComponentScopeRegistry} from './component_scope';
 import {DtsModuleScopeResolver} from './dependency';
 
 export interface LocalNgModuleData {
@@ -28,7 +27,6 @@ export interface LocalNgModuleData {
 export interface LocalModuleScope extends ExportScope {
   compilation: ScopeData;
   reexports: Reexport[]|null;
-  schemas: SchemaMetadata[];
 }
 
 /**
@@ -60,7 +58,7 @@ export interface CompilationScope extends ScopeData {
  * The `LocalModuleScopeRegistry` is also capable of producing `ts.Diagnostic` errors when Angular
  * semantics are violated.
  */
-export class LocalModuleScopeRegistry implements MetadataRegistry, ComponentScopeReader {
+export class LocalModuleScopeRegistry implements MetadataRegistry {
   /**
    * Tracks whether the registry has been asked to produce scopes for a module or component. Once
    * this is true, the registry cannot accept registrations of new directives/pipes/modules as it
@@ -91,7 +89,7 @@ export class LocalModuleScopeRegistry implements MetadataRegistry, ComponentScop
    * Tracks whether a given component requires "remote scoping".
    *
    * Remote scoping is when the set of directives which apply to a given component is set in the
-   * NgModule's file instead of directly on the component def (which is sometimes needed to get
+   * NgModule's file instead of directly on the ngComponentDef (which is sometimes needed to get
    * around cyclic import issues). This is not used in calculation of `LocalModuleScope`s, but is
    * tracked here for convenience.
    */
@@ -104,8 +102,7 @@ export class LocalModuleScopeRegistry implements MetadataRegistry, ComponentScop
 
   constructor(
       private localReader: MetadataReader, private dependencyScopeReader: DtsModuleScopeResolver,
-      private refEmitter: ReferenceEmitter, private aliasingHost: AliasingHost|null,
-      private componentScopeRegistry: ComponentScopeRegistry = new NoopComponentScopeRegistry()) {}
+      private refEmitter: ReferenceEmitter, private aliasGenerator: AliasGenerator|null) {}
 
   /**
    * Add an NgModule's data to the registry.
@@ -123,13 +120,10 @@ export class LocalModuleScopeRegistry implements MetadataRegistry, ComponentScop
   registerPipeMetadata(pipe: PipeMeta): void {}
 
   getScopeForComponent(clazz: ClassDeclaration): LocalModuleScope|null {
-    const scope = !this.declarationToModule.has(clazz) ?
-        null :
-        this.getScopeOfModule(this.declarationToModule.get(clazz) !);
-    if (scope !== null) {
-      this.componentScopeRegistry.registerComponentScope(clazz, scope);
+    if (!this.declarationToModule.has(clazz)) {
+      return null;
     }
-    return scope;
+    return this.getScopeOfModule(this.declarationToModule.get(clazz) !);
   }
 
   /**
@@ -215,6 +209,7 @@ export class LocalModuleScopeRegistry implements MetadataRegistry, ComponentScop
     const compilationPipes = new Map<ts.Declaration, PipeMeta>();
 
     const declared = new Set<ts.Declaration>();
+    const sourceFile = ref.node.getSourceFile();
 
     // Directives and pipes exported to any importing NgModules.
     const exportDirectives = new Map<ts.Declaration, DirectiveMeta>();
@@ -318,7 +313,39 @@ export class LocalModuleScopeRegistry implements MetadataRegistry, ComponentScop
       pipes: Array.from(exportPipes.values()),
     };
 
-    const reexports = this.getReexports(ngModule, ref, declared, exported, diagnostics);
+    let reexports: Reexport[]|null = null;
+    if (this.aliasGenerator !== null) {
+      reexports = [];
+      const addReexport = (ref: Reference<ClassDeclaration>) => {
+        if (!declared.has(ref.node) && ref.node.getSourceFile() !== sourceFile) {
+          const exportName = this.aliasGenerator !.aliasSymbolName(ref.node, sourceFile);
+          if (ref.alias && ref.alias instanceof ExternalExpr) {
+            reexports !.push({
+              fromModule: ref.alias.value.moduleName !,
+              symbolName: ref.alias.value.name !,
+              asAlias: exportName,
+            });
+          } else {
+            const expr = this.refEmitter.emit(ref.cloneWithNoIdentifiers(), sourceFile);
+            if (!(expr instanceof ExternalExpr) || expr.value.moduleName === null ||
+                expr.value.name === null) {
+              throw new Error('Expected ExternalExpr');
+            }
+            reexports !.push({
+              fromModule: expr.value.moduleName,
+              symbolName: expr.value.name,
+              asAlias: exportName,
+            });
+          }
+        }
+      };
+      for (const {ref} of exported.directives) {
+        addReexport(ref);
+      }
+      for (const {ref} of exported.pipes) {
+        addReexport(ref);
+      }
+    }
 
     // Check if this scope had any errors during production.
     if (diagnostics.length > 0) {
@@ -341,7 +368,6 @@ export class LocalModuleScopeRegistry implements MetadataRegistry, ComponentScop
       },
       exported,
       reexports,
-      schemas: ngModule.schemas,
     };
     this.cache.set(ref.node, scope);
     return scope;
@@ -357,7 +383,6 @@ export class LocalModuleScopeRegistry implements MetadataRegistry, ComponentScop
    */
   setComponentAsRequiringRemoteScoping(node: ClassDeclaration): void {
     this.remoteScoping.add(node);
-    this.componentScopeRegistry.setComponentAsRequiringRemoteScoping(node);
   }
 
   /**
@@ -392,66 +417,6 @@ export class LocalModuleScopeRegistry implements MetadataRegistry, ComponentScop
       // The NgModule is declared locally in the current program. Resolve it from the registry.
       return this.getScopeOfModuleReference(ref);
     }
-  }
-
-  private getReexports(
-      ngModule: NgModuleMeta, ref: Reference<ClassDeclaration>, declared: Set<ts.Declaration>,
-      exported: {directives: DirectiveMeta[], pipes: PipeMeta[]},
-      diagnostics: ts.Diagnostic[]): Reexport[]|null {
-    let reexports: Reexport[]|null = null;
-    const sourceFile = ref.node.getSourceFile();
-    if (this.aliasingHost === null) {
-      return null;
-    }
-    reexports = [];
-    // Track re-exports by symbol name, to produce diagnostics if two alias re-exports would share
-    // the same name.
-    const reexportMap = new Map<string, Reference<ClassDeclaration>>();
-    // Alias ngModuleRef added for readability below.
-    const ngModuleRef = ref;
-    const addReexport = (exportRef: Reference<ClassDeclaration>) => {
-      if (exportRef.node.getSourceFile() === sourceFile) {
-        return;
-      }
-      const isReExport = !declared.has(exportRef.node);
-      const exportName = this.aliasingHost !.maybeAliasSymbolAs(
-          exportRef, sourceFile, ngModule.ref.node.name.text, isReExport);
-      if (exportName === null) {
-        return;
-      }
-      if (!reexportMap.has(exportName)) {
-        if (exportRef.alias && exportRef.alias instanceof ExternalExpr) {
-          reexports !.push({
-            fromModule: exportRef.alias.value.moduleName !,
-            symbolName: exportRef.alias.value.name !,
-            asAlias: exportName,
-          });
-        } else {
-          const expr = this.refEmitter.emit(exportRef.cloneWithNoIdentifiers(), sourceFile);
-          if (!(expr instanceof ExternalExpr) || expr.value.moduleName === null ||
-              expr.value.name === null) {
-            throw new Error('Expected ExternalExpr');
-          }
-          reexports !.push({
-            fromModule: expr.value.moduleName,
-            symbolName: expr.value.name,
-            asAlias: exportName,
-          });
-        }
-        reexportMap.set(exportName, exportRef);
-      } else {
-        // Another re-export already used this name. Produce a diagnostic.
-        const prevRef = reexportMap.get(exportName) !;
-        diagnostics.push(reexportCollision(ngModuleRef.node, prevRef, exportRef));
-      }
-    };
-    for (const {ref} of exported.directives) {
-      addReexport(ref);
-    }
-    for (const {ref} of exported.pipes) {
-      addReexport(ref);
-    }
-    return reexports;
   }
 
   private assertCollecting(): void {
@@ -496,26 +461,4 @@ function invalidReexport(clazz: ts.Declaration, decl: Reference<ts.Declaration>)
   return makeDiagnostic(
       ErrorCode.NGMODULE_INVALID_REEXPORT, identifierOfNode(decl.node) || decl.node,
       `Present in the NgModule.exports of ${nodeNameForError(clazz)} but neither declared nor imported`);
-}
-
-/**
- * Produce a `ts.Diagnostic` for a collision in re-export names between two directives/pipes.
- */
-function reexportCollision(
-    module: ClassDeclaration, refA: Reference<ClassDeclaration>,
-    refB: Reference<ClassDeclaration>): ts.Diagnostic {
-  const childMessageText =
-      `This directive/pipe is part of the exports of '${module.name.text}' and shares the same name as another exported directive/pipe.`;
-  return makeDiagnostic(
-      ErrorCode.NGMODULE_REEXPORT_NAME_COLLISION, module.name, `
-    There was a name collision between two classes named '${refA.node.name.text}', which are both part of the exports of '${module.name.text}'.
-
-    Angular generates re-exports of an NgModule's exported directives/pipes from the module's source file in certain cases, using the declared name of the class. If two classes of the same name are exported, this automatic naming does not work.
-
-    To fix this problem please re-export one or both classes directly from this file.
-  `.trim(),
-      [
-        {node: refA.node.name, messageText: childMessageText},
-        {node: refB.node.name, messageText: childMessageText},
-      ]);
 }

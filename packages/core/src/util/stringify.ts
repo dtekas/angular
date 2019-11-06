@@ -11,7 +11,7 @@ export function stringify(token: any): string {
     return token;
   }
 
-  if (Array.isArray(token)) {
+  if (token instanceof Array) {
     return '[' + token.map(stringify).join(', ') + ']';
   }
 

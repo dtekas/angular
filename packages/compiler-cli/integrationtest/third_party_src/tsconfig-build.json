@@ -1,7 +1,6 @@
 {
   "angularCompilerOptions": {
-    "skipTemplateCodegen": true,
-    "enableIvy": false
+    "skipTemplateCodegen": true
   },
 
   "compilerOptions": {
@@ -13,7 +12,6 @@
     "noImplicitAny": true,
     "outDir": "../node_modules/third_party",
     "rootDir": "",
-    "target": "es5",
-    "typeRoots": ["../node_modules/@types"]
+    "target": "es5"
  }
 }

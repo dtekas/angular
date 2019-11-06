@@ -6,18 +6,15 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import * as ts from 'typescript';
-
 import {ErrorCode, FatalDiagnosticError} from '../../../src/ngtsc/diagnostics';
-import {AbsoluteFsPath} from '../../../src/ngtsc/file_system';
 import {MetadataReader} from '../../../src/ngtsc/metadata';
 import {PartialEvaluator} from '../../../src/ngtsc/partial_evaluator';
 import {ClassDeclaration, Decorator} from '../../../src/ngtsc/reflection';
-import {DecoratorHandler, HandlerFlags} from '../../../src/ngtsc/transform';
+import {DecoratorHandler} from '../../../src/ngtsc/transform';
 import {NgccReflectionHost} from '../host/ngcc_host';
 import {MigrationHost} from '../migrations/migration';
-
 import {AnalyzedClass, AnalyzedFile} from './types';
-import {analyzeDecorators, isWithinPackage} from './util';
+import {analyzeDecorators} from './util';
 
 /**
  * The standard implementation of `MigrationHost`, which is created by the
@@ -27,12 +24,11 @@ export class DefaultMigrationHost implements MigrationHost {
   constructor(
       readonly reflectionHost: NgccReflectionHost, readonly metadata: MetadataReader,
       readonly evaluator: PartialEvaluator, private handlers: DecoratorHandler<any, any>[],
-      private entryPointPath: AbsoluteFsPath, private analyzedFiles: AnalyzedFile[]) {}
+      private analyzedFiles: AnalyzedFile[]) {}
 
-  injectSyntheticDecorator(clazz: ClassDeclaration, decorator: Decorator, flags?: HandlerFlags):
-      void {
+  injectSyntheticDecorator(clazz: ClassDeclaration, decorator: Decorator): void {
     const classSymbol = this.reflectionHost.getClassSymbol(clazz) !;
-    const newAnalyzedClass = analyzeDecorators(classSymbol, [decorator], this.handlers, flags);
+    const newAnalyzedClass = analyzeDecorators(classSymbol, [decorator], this.handlers);
     if (newAnalyzedClass === null) {
       return;
     }
@@ -44,25 +40,6 @@ export class DefaultMigrationHost implements MigrationHost {
     } else {
       mergeAnalyzedClasses(oldAnalyzedClass, newAnalyzedClass);
     }
-  }
-
-  getAllDecorators(clazz: ClassDeclaration): Decorator[]|null {
-    const sourceFile = clazz.getSourceFile();
-    const analyzedFile = this.analyzedFiles.find(file => file.sourceFile === sourceFile);
-    if (analyzedFile === undefined) {
-      return null;
-    }
-
-    const analyzedClass = analyzedFile.analyzedClasses.find(c => c.declaration === clazz);
-    if (analyzedClass === undefined) {
-      return null;
-    }
-
-    return analyzedClass.decorators;
-  }
-
-  isInScope(clazz: ClassDeclaration): boolean {
-    return isWithinPackage(this.entryPointPath, clazz.getSourceFile());
   }
 }
 

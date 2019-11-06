@@ -6,10 +6,9 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {CompileDirectiveMetadata, NgAnalyzedModules, StaticSymbol} from '@angular/compiler';
+import {CompileDirectiveMetadata, CompileMetadataResolver, CompilePipeSummary, NgAnalyzedModules, StaticSymbol} from '@angular/compiler';
 import {BuiltinType, DeclarationKind, Definition, PipeInfo, Pipes, Signature, Span, Symbol, SymbolDeclaration, SymbolQuery, SymbolTable} from '@angular/compiler-cli/src/language_services';
-
-import {AstResult} from './common';
+import {AstResult, TemplateInfo} from './common';
 
 export {
   BuiltinType,
@@ -19,7 +18,6 @@ export {
   Pipes,
   Signature,
   Span,
-  StaticSymbol,
   Symbol,
   SymbolDeclaration,
   SymbolQuery,
@@ -41,6 +39,16 @@ export interface TemplateSource {
   readonly source: string;
 
   /**
+   * The version of the source. As files are modified the version should change. That is, if the
+   * `LanguageService` requesting template information for a source file and that file has changed
+   * since the last time the host was asked for the file then this version string should be
+   * different. No assumptions are made about the format of this string.
+   *
+   * The version can change more often than the source but should not change less often.
+   */
+  readonly version: string;
+
+  /**
    * The span of the template within the source file.
    */
   readonly span: Span;
@@ -59,11 +67,6 @@ export interface TemplateSource {
    * A `SymbolQuery` for the context of the template.
    */
   readonly query: SymbolQuery;
-
-  /**
-   * Name of the file that contains the template. Could be `.html` or `.ts`.
-   */
-  readonly fileName: string;
 }
 
 /**
@@ -74,6 +77,7 @@ export interface TemplateSource {
  * @publicApi
  */
 export type TemplateSources = TemplateSource[] | undefined;
+
 
 /**
  * Error information found getting declaration information
@@ -169,10 +173,22 @@ export type Declarations = Declaration[];
  */
 export interface LanguageServiceHost {
   /**
+   * The resolver to use to find compiler metadata.
+   */
+  readonly resolver: CompileMetadataResolver;
+
+  /**
+   * Returns the template information for templates in `fileName` at the given location. If
+   * `fileName` refers to a template file then the `position` should be ignored. If the `position`
+   * is not in a template literal string then this method should return `undefined`.
+   */
+  getTemplateAt(fileName: string, position: number): TemplateSource|undefined;
+
+  /**
    * Return the template source information for all templates in `fileName` or for `fileName` if
    * it is a template file.
    */
-  getTemplates(fileName: string): TemplateSource[];
+  getTemplates(fileName: string): TemplateSources;
 
   /**
    * Returns the Angular declarations in the given file.
@@ -192,12 +208,12 @@ export interface LanguageServiceHost {
   /**
    * Return the AST for both HTML and template for the contextFile.
    */
-  getTemplateAst(template: TemplateSource): AstResult|Diagnostic;
+  getTemplateAst(template: TemplateSource, contextFile: string): AstResult;
 
   /**
    * Return the template AST for the node that corresponds to the position.
    */
-  getTemplateAstAtPosition(fileName: string, position: number): AstResult|undefined;
+  getTemplateAstAtPosition(fileName: string, position: number): TemplateInfo|undefined;
 }
 
 /**
@@ -227,9 +243,9 @@ export interface Completion {
 /**
  * A sequence of completions.
  *
- * @deprecated
+ * @publicApi
  */
-export type Completions = Completion[];
+export type Completions = Completion[] | undefined;
 
 /**
  * A file and span.
@@ -250,39 +266,6 @@ export enum DiagnosticKind {
 }
 
 /**
- * The type of Angular directive. Used for QuickInfo in template.
- */
-export enum DirectiveKind {
-  COMPONENT = 'component',
-  DIRECTIVE = 'directive',
-  EVENT = 'event',
-}
-
-/**
- * ScriptElementKind for completion.
- */
-export enum CompletionKind {
-  ANGULAR_ELEMENT = 'angular element',
-  ATTRIBUTE = 'attribute',
-  COMPONENT = 'component',
-  ELEMENT = 'element',
-  ENTITY = 'entity',
-  HTML_ATTRIBUTE = 'html attribute',
-  HTML_ELEMENT = 'html element',
-  KEY = 'key',
-  METHOD = 'method',
-  PIPE = 'pipe',
-  PROPERTY = 'property',
-  REFERENCE = 'reference',
-  TYPE = 'type',
-  VARIABLE = 'variable',
-}
-
-export type CompletionEntry = Omit<ts.CompletionEntry, 'kind'>& {
-  kind: CompletionKind,
-};
-
-/**
  * A template diagnostics message chain. This is similar to the TypeScript
  * DiagnosticMessageChain. The messages are intended to be formatted as separate
  * sentence fragments and indented.
@@ -301,7 +284,7 @@ export interface DiagnosticMessageChain {
   /**
    * The next message in the chain.
    */
-  next?: DiagnosticMessageChain[];
+  next?: DiagnosticMessageChain;
 }
 
 /**
@@ -329,7 +312,7 @@ export interface Diagnostic {
 /**
  * A sequence of diagnostic message.
  *
- * @deprecated
+ * @publicApi
  */
 export type Diagnostics = Diagnostic[];
 
@@ -396,25 +379,30 @@ export interface LanguageService {
   /**
    * Returns a list of all the external templates referenced by the project.
    */
-  getTemplateReferences(): string[];
+  getTemplateReferences(): string[]|undefined;
 
   /**
    * Returns a list of all error for all templates in the given file.
    */
-  getDiagnostics(fileName: string): ts.Diagnostic[];
+  getDiagnostics(fileName: string): Diagnostics|undefined;
 
   /**
    * Return the completions at the given position.
    */
-  getCompletionsAt(fileName: string, position: number): ts.CompletionInfo|undefined;
+  getCompletionsAt(fileName: string, position: number): Completions|undefined;
 
   /**
    * Return the definition location for the symbol at position.
    */
-  getDefinitionAt(fileName: string, position: number): ts.DefinitionInfoAndBoundSpan|undefined;
+  getDefinitionAt(fileName: string, position: number): Definition|undefined;
 
   /**
    * Return the hover information for the symbol at position.
    */
-  getHoverAt(fileName: string, position: number): ts.QuickInfo|undefined;
+  getHoverAt(fileName: string, position: number): Hover|undefined;
+
+  /**
+   * Return the pipes that are available at the given position.
+   */
+  getPipesAt(fileName: string, position: number): CompilePipeSummary[];
 }

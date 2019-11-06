@@ -14,7 +14,7 @@ import {LContext, MONKEY_PATCH_KEY_NAME} from './interfaces/context';
 import {TNode, TNodeFlags} from './interfaces/node';
 import {RElement, RNode} from './interfaces/renderer';
 import {CONTEXT, HEADER_OFFSET, HOST, LView, TVIEW} from './interfaces/view';
-import {getComponentLViewByIndex, getNativeByTNodeOrNull, readPatchedData, unwrapRNode} from './util/view_utils';
+import {getComponentViewByIndex, getNativeByTNodeOrNull, readPatchedData, unwrapRNode} from './util/view_utils';
 
 
 
@@ -157,14 +157,14 @@ export function getComponentViewByInstance(componentInstance: {}): LView {
 
   if (Array.isArray(lView)) {
     const nodeIndex = findViaComponent(lView, componentInstance);
-    view = getComponentLViewByIndex(nodeIndex, lView);
+    view = getComponentViewByIndex(nodeIndex, lView);
     const context = createLContext(lView, nodeIndex, view[HOST] as RElement);
     context.component = componentInstance;
     attachPatchData(componentInstance, context);
     attachPatchData(context.native, context);
   } else {
     const context = lView as any as LContext;
-    view = getComponentLViewByIndex(context.nodeIndex, context.lView);
+    view = getComponentViewByIndex(context.nodeIndex, context.lView);
   }
   return view;
 }
@@ -178,11 +178,11 @@ export function attachPatchData(target: any, data: LView | LContext) {
 }
 
 export function isComponentInstance(instance: any): boolean {
-  return instance && instance.constructor && instance.constructor.ɵcmp;
+  return instance && instance.constructor && instance.constructor.ngComponentDef;
 }
 
 export function isDirectiveInstance(instance: any): boolean {
-  return instance && instance.constructor && instance.constructor.ɵdir;
+  return instance && instance.constructor && instance.constructor.ngDirectiveDef;
 }
 
 /**
@@ -228,13 +228,13 @@ function findViaComponent(lView: LView, componentInstance: {}): number {
   if (componentIndices) {
     for (let i = 0; i < componentIndices.length; i++) {
       const elementComponentIndex = componentIndices[i];
-      const componentView = getComponentLViewByIndex(elementComponentIndex, lView);
+      const componentView = getComponentViewByIndex(elementComponentIndex, lView);
       if (componentView[CONTEXT] === componentInstance) {
         return elementComponentIndex;
       }
     }
   } else {
-    const rootComponentView = getComponentLViewByIndex(HEADER_OFFSET, lView);
+    const rootComponentView = getComponentViewByIndex(HEADER_OFFSET, lView);
     const rootComponent = rootComponentView[CONTEXT];
     if (rootComponent === componentInstance) {
       // we are dealing with the root element here therefore we know that the
@@ -282,14 +282,14 @@ export function getDirectivesAtNodeIndex(
   let directiveStartIndex = tNode.directiveStart;
   if (directiveStartIndex == 0) return EMPTY_ARRAY;
   const directiveEndIndex = tNode.directiveEnd;
-  if (!includeComponents && tNode.flags & TNodeFlags.isComponentHost) directiveStartIndex++;
+  if (!includeComponents && tNode.flags & TNodeFlags.isComponent) directiveStartIndex++;
   return lView.slice(directiveStartIndex, directiveEndIndex);
 }
 
 export function getComponentAtNodeIndex(nodeIndex: number, lView: LView): {}|null {
   const tNode = lView[TVIEW].data[nodeIndex] as TNode;
   let directiveStartIndex = tNode.directiveStart;
-  return tNode.flags & TNodeFlags.isComponentHost ? lView[directiveStartIndex] : null;
+  return tNode.flags & TNodeFlags.isComponent ? lView[directiveStartIndex] : null;
 }
 
 /**

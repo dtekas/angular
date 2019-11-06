@@ -8,13 +8,12 @@
 
 import {ɵAnimationEngine, ɵNoopAnimationStyleNormalizer} from '@angular/animations/browser';
 import {MockAnimationDriver} from '@angular/animations/browser/testing';
-import {ɵgetDOM as getDOM} from '@angular/common';
 import {NgZone, RendererFactory2, RendererType2} from '@angular/core';
 import {NoopNgZone} from '@angular/core/src/zone/ng_zone';
 import {EventManager, ɵDomRendererFactory2, ɵDomSharedStylesHost} from '@angular/platform-browser';
 import {ɵAnimationRendererFactory} from '@angular/platform-browser/animations';
+import {getDOM} from '@angular/platform-browser/src/dom/dom_adapter';
 import {EventManagerPlugin} from '@angular/platform-browser/src/dom/events/event_manager';
-import {isTextNode} from '@angular/platform-browser/testing/src/browser_util';
 
 export class SimpleDomEventsPlugin extends EventManagerPlugin {
   constructor(doc: any) { super(doc); }
@@ -100,7 +99,7 @@ export function patchLoggingRenderer2(rendererFactory: RendererFactory2, log: Re
       origSetProperty.call(renderer, el, name, value);
     };
     renderer.setValue = function(node: any, value: string): void {
-      if (isTextNode(node)) {
+      if (getDOM().isTextNode(node)) {
         log.setText(node, value);
       }
       origSetValue.call(renderer, node, value);

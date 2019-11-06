@@ -218,25 +218,6 @@ describe('NgTemplateOutlet', () => {
     }).not.toThrow();
   });
 
-  it('should not throw when switching from template to null and back to template', async(() => {
-       const template = `<tpl-refs #refs="tplRefs"><ng-template>foo</ng-template></tpl-refs>` +
-           `<ng-container [ngTemplateOutlet]="currentTplRef"></ng-container>`;
-       fixture = createTestComponent(template);
-       fixture.detectChanges();
-       const refs = fixture.debugElement.children[0].references !['refs'];
-
-       setTplRef(refs.tplRefs.first);
-       detectChangesAndExpectText('foo');
-
-       setTplRef(null);
-       detectChangesAndExpectText('');
-
-       expect(() => {
-         setTplRef(refs.tplRefs.first);
-         detectChangesAndExpectText('foo');
-       }).not.toThrow();
-     }));
-
 });
 
 @Injectable()

@@ -20,8 +20,6 @@ export const NAMESPACE_URIS: {[ns: string]: string} = {
 };
 
 const COMPONENT_REGEX = /%COMP%/g;
-const NG_DEV_MODE = typeof ngDevMode === 'undefined' || !!ngDevMode;
-
 export const COMPONENT_VARIABLE = '%COMP%';
 export const HOST_ATTR = `_nghost-${COMPONENT_VARIABLE}`;
 export const CONTENT_ATTR = `_ngcontent-${COMPONENT_VARIABLE}`;
@@ -51,20 +49,12 @@ export function flattenStyles(
 
 function decoratePreventDefault(eventHandler: Function): Function {
   return (event: any) => {
-    // Ivy uses `Function` as a special token that allows us to unwrap the function
-    // so that it can be invoked programmatically by `DebugNode.triggerEventHandler`.
-    if (event === Function) {
-      return eventHandler;
-    }
-
     const allowDefaultBehavior = eventHandler(event);
     if (allowDefaultBehavior === false) {
       // TODO(tbosch): move preventDefault into event plugins...
       event.preventDefault();
       event.returnValue = false;
     }
-
-    return undefined;
   };
 }
 
@@ -223,7 +213,7 @@ class DefaultDomRenderer2 implements Renderer2 {
   }
 
   setProperty(el: any, name: string, value: any): void {
-    NG_DEV_MODE && checkNoSyntheticProp(name, 'property');
+    checkNoSyntheticProp(name, 'property');
     el[name] = value;
   }
 
@@ -231,7 +221,7 @@ class DefaultDomRenderer2 implements Renderer2 {
 
   listen(target: 'window'|'document'|'body'|any, event: string, callback: (event: any) => boolean):
       () => void {
-    NG_DEV_MODE && checkNoSyntheticProp(event, 'listener');
+    checkNoSyntheticProp(event, 'listener');
     if (typeof target === 'string') {
       return <() => void>this.eventManager.addGlobalEventListener(
           target, event, decoratePreventDefault(callback));

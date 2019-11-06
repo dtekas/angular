@@ -1,15 +1,18 @@
 [
   {
+    "name": "APP_ROOT"
+  },
+  {
     "name": "CIRCULAR"
   },
   {
     "name": "EMPTY_ARRAY"
   },
   {
-    "name": "INJECTOR"
+    "name": "EmptyErrorImpl"
   },
   {
-    "name": "INJECTOR_SCOPE"
+    "name": "INJECTOR"
   },
   {
     "name": "Inject"
@@ -24,19 +27,10 @@
     "name": "NEW_LINE"
   },
   {
-    "name": "NG_FACTORY_DEF"
-  },
-  {
     "name": "NG_INJECTABLE_DEF"
   },
   {
     "name": "NG_INJECTOR_DEF"
-  },
-  {
-    "name": "NG_INJ_DEF"
-  },
-  {
-    "name": "NG_PROV_DEF"
   },
   {
     "name": "NG_TEMP_TOKEN_PATH"
@@ -55,6 +49,9 @@
   },
   {
     "name": "NullInjector"
+  },
+  {
+    "name": "ObjectUnsubscribedErrorImpl"
   },
   {
     "name": "Optional"
@@ -82,6 +79,9 @@
   },
   {
     "name": "USE_VALUE"
+  },
+  {
+    "name": "UnsubscriptionErrorImpl"
   },
   {
     "name": "__forward_ref__"
@@ -115,9 +115,6 @@
   },
   {
     "name": "getClosureSafeProperty"
-  },
-  {
-    "name": "getFactoryDef"
   },
   {
     "name": "getInheritedInjectableDef"
@@ -159,9 +156,6 @@
     "name": "isFactoryProvider"
   },
   {
-    "name": "isForwardRef"
-  },
-  {
     "name": "isTypeProvider"
   },
   {
@@ -175,9 +169,6 @@
   },
   {
     "name": "makeRecord"
-  },
-  {
-    "name": "newArray"
   },
   {
     "name": "providerToFactory"

@@ -28,7 +28,7 @@ describe('setUpLocationSync', () => {
       ],
     });
 
-    upgradeModule = TestBed.inject(UpgradeModule);
+    upgradeModule = TestBed.get(UpgradeModule);
     upgradeModule.$injector = {
       get: jasmine.createSpy('$injector.get').and.returnValue({'$on': () => undefined})
     };

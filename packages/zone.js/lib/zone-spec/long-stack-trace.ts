@@ -78,16 +78,6 @@ function renderLongStackTrace(frames: LongStackTrace[], stack?: string): string 
   return longTrace.join(NEWLINE);
 }
 
-// if Error.stackTraceLimit is 0, means stack trace
-// is disabled, so we don't need to generate long stack trace
-// this will improve performance in some test(some test will
-// set stackTraceLimit to 0, https://github.com/angular/zone.js/issues/698
-function stackTracesEnabled(): boolean {
-  // Cast through any since this property only exists on Error in the nodejs
-  // typings.
-  return (Error as any).stackTraceLimit > 0;
-}
-
 type LongStackTraceZoneSpec = ZoneSpec & {longStackTraceLimit: number};
 
 (Zone as any)['longStackTraceZoneSpec'] = <LongStackTraceZoneSpec>{
@@ -109,7 +99,11 @@ type LongStackTraceZoneSpec = ZoneSpec & {longStackTraceLimit: number};
 
   onScheduleTask: function(
       parentZoneDelegate: ZoneDelegate, currentZone: Zone, targetZone: Zone, task: Task): any {
-    if (stackTracesEnabled()) {
+    if (Error.stackTraceLimit > 0) {
+      // if Error.stackTraceLimit is 0, means stack trace
+      // is disabled, so we don't need to generate long stack trace
+      // this will improve performance in some test(some test will
+      // set stackTraceLimit to 0, https://github.com/angular/zone.js/issues/698
       const currentTask = Zone.currentTask;
       let trace = currentTask && currentTask.data && (currentTask.data as any)[creationTrace] || [];
       trace = [new LongStackTrace()].concat(trace);
@@ -133,7 +127,11 @@ type LongStackTraceZoneSpec = ZoneSpec & {longStackTraceLimit: number};
 
   onHandleError: function(
       parentZoneDelegate: ZoneDelegate, currentZone: Zone, targetZone: Zone, error: any): boolean {
-    if (stackTracesEnabled()) {
+    if (Error.stackTraceLimit > 0) {
+      // if Error.stackTraceLimit is 0, means stack trace
+      // is disabled, so we don't need to generate long stack trace
+      // this will improve performance in some test(some test will
+      // set stackTraceLimit to 0, https://github.com/angular/zone.js/issues/698
       const parentTask = Zone.currentTask || error.task;
       if (error instanceof Error && parentTask) {
         const longStack =
@@ -156,7 +154,7 @@ function captureStackTraces(stackTraces: string[][], count: number): void {
 }
 
 function computeIgnoreFrames() {
-  if (!stackTracesEnabled()) {
+  if (Error.stackTraceLimit <= 0) {
     return;
   }
   const frames: string[][] = [];

@@ -84,23 +84,25 @@ class ExampleZipper {
     const outputFileName = path.join(outputDirName, relativeDirName, exampleZipName + '.zip');
     let defaultIncludes = ['**/*.ts', '**/*.js', '**/*.es6', '**/*.css', '**/*.html', '**/*.md', '**/*.json', '**/*.png', '**/*.svg'];
     let alwaysIncludes = [
+      'bs-config.json',
+      'e2e/protractor.conf.js',
+      'angular.json',
       '.editorconfig',
       '.gitignore',
-      'angular.json',
-      'browserslist',
-      'bs-config.json',
-      'karma.conf.js',
+      'tslint.json',
       'karma-test-shim.js',
-      'tsconfig.*',
-      'tslint.*',
-      'e2e/protractor.conf.js',
-      'e2e/tsconfig.json',
+      'tsconfig.json',
+      'src/testing/**/*',
+      'src/.babelrc',
+      'src/browserslist',
       'src/favicon.ico',
+      'src/karma.conf.js',
       'src/polyfills.ts',
       'src/test.ts',
       'src/typings.d.ts',
       'src/environments/**/*',
-      'src/testing/**/*',
+      'src/tsconfig.*',
+      'src/tslint.*',
       // Only ignore root package.json
       '!package.json'
     ];

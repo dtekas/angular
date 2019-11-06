@@ -93,7 +93,7 @@ export function createAngularJSTestingModule(angularModules: any[]): string {
                 imports: angularModules,
                 providers: [{provide: $INJECTOR, useValue: $injector}]
               });
-              return TestBed.inject(Injector);
+              return TestBed.get(Injector);
             }
           ])
       .name;

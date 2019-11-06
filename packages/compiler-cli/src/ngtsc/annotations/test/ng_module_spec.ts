@@ -8,11 +8,10 @@
 import {WrappedNodeExpr} from '@angular/compiler';
 import {R3Reference} from '@angular/compiler/src/compiler';
 import * as ts from 'typescript';
-
 import {absoluteFrom} from '../../file_system';
 import {runInEachFileSystem} from '../../file_system/testing';
 import {LocalIdentifierStrategy, NOOP_DEFAULT_IMPORT_RECORDER, ReferenceEmitter} from '../../imports';
-import {CompoundMetadataReader, DtsMetadataReader, LocalMetadataRegistry} from '../../metadata';
+import {DtsMetadataReader, LocalMetadataRegistry} from '../../metadata';
 import {PartialEvaluator} from '../../partial_evaluator';
 import {TypeScriptReflectionHost, isNamedClassDeclaration} from '../../reflection';
 import {LocalModuleScopeRegistry, MetadataDtsModuleScopeResolver} from '../../scope';
@@ -60,7 +59,6 @@ runInEachFileSystem(() => {
       const evaluator = new PartialEvaluator(reflectionHost, checker);
       const referencesRegistry = new NoopReferencesRegistry();
       const metaRegistry = new LocalMetadataRegistry();
-      const metaReader = new CompoundMetadataReader([metaRegistry]);
       const dtsReader = new DtsMetadataReader(checker, reflectionHost);
       const scopeRegistry = new LocalModuleScopeRegistry(
           metaRegistry, new MetadataDtsModuleScopeResolver(dtsReader, null),
@@ -68,8 +66,8 @@ runInEachFileSystem(() => {
       const refEmitter = new ReferenceEmitter([new LocalIdentifierStrategy()]);
 
       const handler = new NgModuleDecoratorHandler(
-          reflectionHost, evaluator, metaReader, metaRegistry, scopeRegistry, referencesRegistry,
-          false, null, refEmitter, NOOP_DEFAULT_IMPORT_RECORDER);
+          reflectionHost, evaluator, metaRegistry, scopeRegistry, referencesRegistry, false, null,
+          refEmitter, NOOP_DEFAULT_IMPORT_RECORDER);
       const TestModule =
           getDeclaration(program, _('/entry.ts'), 'TestModule', isNamedClassDeclaration);
       const detected =
@@ -77,7 +75,7 @@ runInEachFileSystem(() => {
       if (detected === undefined) {
         return fail('Failed to recognize @NgModule');
       }
-      const moduleDef = handler.analyze(TestModule, detected.metadata).analysis !.mod;
+      const moduleDef = handler.analyze(TestModule, detected.metadata).analysis !.ngModuleDef;
 
       expect(getReferenceIdentifierTexts(moduleDef.declarations)).toEqual(['TestComp']);
       expect(getReferenceIdentifierTexts(moduleDef.exports)).toEqual(['TestComp']);

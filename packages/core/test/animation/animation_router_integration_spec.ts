@@ -7,7 +7,6 @@
  */
 import {animate, animateChild, group, query, sequence, style, transition, trigger, ɵAnimationGroupPlayer as AnimationGroupPlayer} from '@angular/animations';
 import {AnimationDriver, ɵAnimationEngine} from '@angular/animations/browser';
-import {TransitionAnimationPlayer} from '@angular/animations/browser/src/render/transition_animation_engine';
 import {MockAnimationDriver, MockAnimationPlayer} from '@angular/animations/browser/testing';
 import {Component, HostBinding} from '@angular/core';
 import {TestBed, fakeAsync, flushMicrotasks, tick} from '@angular/core/testing';
@@ -112,7 +111,7 @@ import {RouterTestingModule} from '@angular/router/testing';
            ])]
          });
 
-         const engine = TestBed.inject(ɵAnimationEngine);
+         const engine = TestBed.get(ɵAnimationEngine);
          const fixture = TestBed.createComponent(ContainerCmp);
          const cmp = fixture.componentInstance;
          cmp.router.initialNavigation();
@@ -131,8 +130,7 @@ import {RouterTestingModule} from '@angular/router/testing';
          engine.flush();
 
          const player = engine.players[0] !;
-         const groupPlayer =
-             (player as TransitionAnimationPlayer).getRealPlayer() as AnimationGroupPlayer;
+         const groupPlayer = player.getRealPlayer() as AnimationGroupPlayer;
          const players = groupPlayer.players as MockAnimationPlayer[];
 
          expect(players.length).toEqual(2);
@@ -220,7 +218,7 @@ import {RouterTestingModule} from '@angular/router/testing';
            ])]
          });
 
-         const engine = TestBed.inject(ɵAnimationEngine);
+         const engine = TestBed.get(ɵAnimationEngine);
          const fixture = TestBed.createComponent(ContainerCmp);
          const cmp = fixture.componentInstance;
          cmp.router.initialNavigation();
@@ -239,8 +237,7 @@ import {RouterTestingModule} from '@angular/router/testing';
          engine.flush();
 
          const player = engine.players[0] !;
-         const groupPlayer =
-             (player as TransitionAnimationPlayer).getRealPlayer() as AnimationGroupPlayer;
+         const groupPlayer = player.getRealPlayer() as AnimationGroupPlayer;
          const players = groupPlayer.players as MockAnimationPlayer[];
 
          expect(players.length).toEqual(2);
@@ -325,7 +322,7 @@ import {RouterTestingModule} from '@angular/router/testing';
            ])]
          });
 
-         const engine = TestBed.inject(ɵAnimationEngine);
+         const engine = TestBed.get(ɵAnimationEngine);
          const fixture = TestBed.createComponent(ContainerCmp);
          const cmp = fixture.componentInstance;
          cmp.router.initialNavigation();
@@ -344,8 +341,7 @@ import {RouterTestingModule} from '@angular/router/testing';
          engine.flush();
 
          const player = engine.players[0] !;
-         const groupPlayer =
-             (player as TransitionAnimationPlayer).getRealPlayer() as AnimationGroupPlayer;
+         const groupPlayer = player.getRealPlayer() as AnimationGroupPlayer;
          const players = groupPlayer.players as MockAnimationPlayer[];
 
          expect(players.length).toEqual(2);
@@ -417,7 +413,7 @@ import {RouterTestingModule} from '@angular/router/testing';
            ])]
          });
 
-         const engine = TestBed.inject(ɵAnimationEngine);
+         const engine = TestBed.get(ɵAnimationEngine);
          const fixture = TestBed.createComponent(ContainerCmp);
          const cmp = fixture.componentInstance;
          cmp.router.initialNavigation();
@@ -441,11 +437,10 @@ import {RouterTestingModule} from '@angular/router/testing';
          expect(players.length).toEqual(1);
          const [p1] = players;
 
-         const innerPlayers =
-             ((p1 as TransitionAnimationPlayer).getRealPlayer() as AnimationGroupPlayer).players;
+         const innerPlayers = p1.getRealPlayer().players;
          expect(innerPlayers.length).toEqual(2);
 
-         const [ip1, ip2] = innerPlayers as any;
+         const [ip1, ip2] = innerPlayers;
          expect(ip1.element.innerText).toEqual('page1');
          expect(ip2.element.innerText).toEqual('page2');
        }));

@@ -1,12 +1,11 @@
 """Re-export of some bazel rules with repository-wide defaults."""
 
-load("@build_bazel_rules_nodejs//:index.bzl", _nodejs_binary = "nodejs_binary", _npm_package = "npm_package", _rollup_bundle = "rollup_bundle")
+load("@build_bazel_rules_nodejs//:defs.bzl", _nodejs_binary = "nodejs_binary", _npm_package = "npm_package")
 load("@npm_bazel_jasmine//:index.bzl", _jasmine_node_test = "jasmine_node_test")
 load("@npm_bazel_karma//:index.bzl", _karma_web_test = "karma_web_test", _karma_web_test_suite = "karma_web_test_suite", _ts_web_test = "ts_web_test", _ts_web_test_suite = "ts_web_test_suite")
 load("@npm_bazel_typescript//:index.bzl", _ts_library = "ts_library")
 load("//packages/bazel:index.bzl", _ng_module = "ng_module", _ng_package = "ng_package")
 load("//packages/bazel/src:ng_rollup_bundle.bzl", _ng_rollup_bundle = "ng_rollup_bundle")
-load("//tools:ng_benchmark.bzl", _ng_benchmark = "ng_benchmark")
 
 _DEFAULT_TSCONFIG_TEST = "//packages:tsconfig-test"
 _INTERNAL_NG_MODULE_API_EXTRACTOR = "//packages/bazel/src/api-extractor:api_extractor"
@@ -188,12 +187,6 @@ def ts_web_test_suite(bootstrap = [], deps = [], runtime_deps = [], **kwargs):
         "//tools/testing:browser",
     ] + runtime_deps
 
-    tags = kwargs.pop("tags", [])
-
-    # rules_webtesting has a required_tag "native" for `chromium-local` browser
-    if not "native" in tags:
-        tags = tags + ["native"]
-
     _ts_web_test_suite(
         runtime_deps = local_runtime_deps,
         bootstrap = bootstrap,
@@ -209,7 +202,6 @@ def ts_web_test_suite(bootstrap = [], deps = [], runtime_deps = [], **kwargs):
             # "@io_bazel_rules_webtesting//browsers:firefox-local",
             # TODO(alexeagle): add remote browsers on SauceLabs
         ],
-        tags = tags,
         **kwargs
     )
 
@@ -221,7 +213,6 @@ def karma_web_test(bootstrap = [], deps = [], data = [], runtime_deps = [], **kw
         "@npm//karma-browserstack-launcher",
         "@npm//:node_modules/tslib/tslib.js",
         "//tools/rxjs:rxjs_umd_modules",
-        "//packages/zone.js:npm_package",
     ] + deps
     local_runtime_deps = [
         "//tools/testing:browser",
@@ -249,12 +240,6 @@ def karma_web_test_suite(bootstrap = [], deps = [], **kwargs):
         "//tools/rxjs:rxjs_umd_modules",
     ] + deps
 
-    tags = kwargs.pop("tags", [])
-
-    # rules_webtesting has a required_tag "native" for `chromium-local` browser
-    if not "native" in tags:
-        tags = tags + ["native"]
-
     _karma_web_test_suite(
         bootstrap = bootstrap,
         deps = local_deps,
@@ -269,13 +254,8 @@ def karma_web_test_suite(bootstrap = [], deps = [], **kwargs):
             # "@io_bazel_rules_webtesting//browsers:firefox-local",
             # TODO(alexeagle): add remote browsers on SauceLabs
         ],
-        tags = tags,
         **kwargs
     )
-
-def ng_benchmark(**kwargs):
-    """Default values for ng_benchmark"""
-    _ng_benchmark(**kwargs)
 
 def nodejs_binary(data = [], **kwargs):
     """Default values for nodejs_binary"""
@@ -313,14 +293,5 @@ def ng_rollup_bundle(deps = [], **kwargs):
     ]
     _ng_rollup_bundle(
         deps = deps,
-        **kwargs
-    )
-
-def rollup_bundle(**kwargs):
-    """Default values for rollup_bundle"""
-    _rollup_bundle(
-        # code-splitting is turned on by default in nodejs rules 0.35.0
-        # we want to default to remain off
-        enable_code_splitting = False,
         **kwargs
     )

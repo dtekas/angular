@@ -17,22 +17,23 @@ import {EmbeddedViewRef as viewEngine_EmbeddedViewRef, ViewRef as viewEngine_Vie
 import {Renderer2} from '../render/api';
 import {addToArray, removeFromArray} from '../util/array_utils';
 import {assertDefined, assertGreaterThan, assertLessThan} from '../util/assert';
-
 import {assertLContainer} from './assert';
 import {NodeInjector, getParentInjectorLocation} from './di';
-import {addToViewTree, createLContainer, createLView, renderView} from './instructions/shared';
+import {addToViewTree, createEmbeddedViewAndNode, createLContainer, renderEmbeddedTemplate} from './instructions/shared';
 import {ACTIVE_INDEX, CONTAINER_HEADER_OFFSET, LContainer, VIEW_REFS} from './interfaces/container';
 import {TContainerNode, TElementContainerNode, TElementNode, TNode, TNodeType, TViewNode} from './interfaces/node';
 import {RComment, RElement, isProceduralRenderer} from './interfaces/renderer';
-import {isComponentHost, isLContainer, isLView, isRootView} from './interfaces/type_checks';
-import {CONTEXT, DECLARATION_LCONTAINER, LView, LViewFlags, QUERIES, RENDERER, TView, T_HOST} from './interfaces/view';
+
+import {isComponent, isLContainer, isLView, isRootView} from './interfaces/type_checks';
+import {CONTEXT, DECLARATION_LCONTAINER, LView, QUERIES, RENDERER, TView, T_HOST} from './interfaces/view';
+
 import {assertNodeOfPossibleTypes} from './node_assert';
 import {addRemoveViewFromContainer, appendChild, detachView, getBeforeNodeForView, insertView, nativeInsertBefore, nativeNextSibling, nativeParentNode, removeView} from './node_manipulation';
 import {getParentInjectorTNode} from './node_util';
 import {getLView, getPreviousOrParentTNode} from './state';
 import {getParentInjectorView, hasParentInjector} from './util/injector_utils';
 import {findComponentView} from './util/view_traversal_utils';
-import {getComponentLViewByIndex, getNativeByTNode, unwrapRNode, viewAttachedToContainer} from './util/view_utils';
+import {getComponentViewByIndex, getNativeByTNode, unwrapRNode, viewAttachedToContainer} from './util/view_utils';
 import {ViewRef} from './view_ref';
 
 
@@ -107,9 +108,9 @@ export function createTemplateRef<T>(
 
       createEmbeddedView(context: T): viewEngine_EmbeddedViewRef<T> {
         const embeddedTView = this._declarationTContainer.tViews as TView;
-        const lView = createLView(
-            this._declarationView, embeddedTView, context, LViewFlags.CheckAlways, null,
-            embeddedTView.node);
+        const lView = createEmbeddedViewAndNode(
+            embeddedTView, context, this._declarationView,
+            this._declarationTContainer.injectorIndex);
 
         const declarationLContainer = this._declarationView[this._declarationTContainer.index];
         ngDevMode && assertLContainer(declarationLContainer);
@@ -120,9 +121,8 @@ export function createTemplateRef<T>(
           lView[QUERIES] = declarationViewLQueries.createEmbeddedView(embeddedTView);
         }
 
-        renderView(lView, embeddedTView, context);
-
-        const viewRef = new ViewRef<T>(lView);
+        renderEmbeddedTemplate(lView, embeddedTView, context);
+        const viewRef = new ViewRef(lView, context, -1);
         viewRef._tViewNode = lView[T_HOST] as TViewNode;
         return viewRef;
       }
@@ -225,13 +225,7 @@ export function createContainerRef(
           ngModuleRef?: viewEngine_NgModuleRef<any>|undefined): viewEngine_ComponentRef<C> {
         const contextInjector = injector || this.parentInjector;
         if (!ngModuleRef && (componentFactory as any).ngModule == null && contextInjector) {
-          // DO NOT REFACTOR. The code here used to have a `value || undefined` expression
-          // which seems to cause internal google apps to fail. This is documented in the
-          // following internal bug issue: go/b/142967802
-          const result = contextInjector.get(viewEngine_NgModuleRef, null);
-          if (result) {
-            ngModuleRef = result;
-          }
+          ngModuleRef = contextInjector.get(viewEngine_NgModuleRef, null);
         }
 
         const componentRef =
@@ -295,7 +289,7 @@ export function createContainerRef(
 
         const wasDetached =
             view && removeFromArray(this._lContainer[VIEW_REFS] !, adjustedIdx) != null;
-        return wasDetached ? new ViewRef(view !) : null;
+        return wasDetached ? new ViewRef(view !, view ![CONTEXT], -1) : null;
       }
 
       private _adjustIndex(index?: number, shift: number = 0) {
@@ -370,27 +364,22 @@ export function injectChangeDetectorRef(isPipe = false): ViewEngine_ChangeDetect
 /**
  * Creates a ViewRef and stores it on the injector as ChangeDetectorRef (public alias).
  *
- * @param tNode The node that is requesting a ChangeDetectorRef
- * @param lView The view to which the node belongs
+ * @param hostTNode The node that is requesting a ChangeDetectorRef
+ * @param hostView The view to which the node belongs
  * @param isPipe Whether the view is being injected into a pipe.
  * @returns The ChangeDetectorRef to use
  */
-function createViewRef(tNode: TNode, lView: LView, isPipe: boolean): ViewEngine_ChangeDetectorRef {
-  // `isComponentView` will be true for Component and Directives (but not for Pipes).
-  // See https://github.com/angular/angular/pull/33072 for proper fix
-  const isComponentView = !isPipe && isComponentHost(tNode);
-  if (isComponentView) {
-    // The LView represents the location where the component is declared.
-    // Instead we want the LView for the component View and so we need to look it up.
-    const componentView = getComponentLViewByIndex(tNode.index, lView);  // look down
-    return new ViewRef(componentView, componentView);
+function createViewRef(
+    hostTNode: TNode, hostView: LView, isPipe: boolean): ViewEngine_ChangeDetectorRef {
+  if (isComponent(hostTNode) && !isPipe) {
+    const componentIndex = hostTNode.directiveStart;
+    const componentView = getComponentViewByIndex(hostTNode.index, hostView);
+    return new ViewRef(componentView, null, componentIndex);
   } else if (
-      tNode.type === TNodeType.Element || tNode.type === TNodeType.Container ||
-      tNode.type === TNodeType.ElementContainer) {
-    // The LView represents the location where the injection is requested from.
-    // We need to locate the containing LView (in case where the `lView` is an embedded view)
-    const hostComponentView = findComponentView(lView);  // look up
-    return new ViewRef(hostComponentView, lView);
+      hostTNode.type === TNodeType.Element || hostTNode.type === TNodeType.Container ||
+      hostTNode.type === TNodeType.ElementContainer) {
+    const hostComponentView = findComponentView(hostView);
+    return new ViewRef(hostComponentView, hostComponentView[CONTEXT], -1);
   }
   return null !;
 }
@@ -411,6 +400,6 @@ export function injectRenderer2(): Renderer2 {
   // DI happens before we've entered its view, `getLView` will return the parent view instead.
   const lView = getLView();
   const tNode = getPreviousOrParentTNode();
-  const nodeAtIndex = getComponentLViewByIndex(tNode.index, lView);
+  const nodeAtIndex = getComponentViewByIndex(tNode.index, lView);
   return getOrCreateRenderer2(isLView(nodeAtIndex) ? nodeAtIndex : lView);
 }
