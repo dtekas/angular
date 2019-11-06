@@ -55,17 +55,18 @@ export class NgTemplateOutlet implements OnChanges {
     const recreateView = this._shouldRecreateView(changes);
 
     if (recreateView) {
-      const viewContainerRef = this._viewContainerRef;
-
       if (this._viewRef) {
-        viewContainerRef.remove(viewContainerRef.indexOf(this._viewRef));
+        this._viewContainerRef.remove(this._viewContainerRef.indexOf(this._viewRef));
       }
 
-      this._viewRef = this.ngTemplateOutlet ?
-          viewContainerRef.createEmbeddedView(this.ngTemplateOutlet, this.ngTemplateOutletContext) :
-          null;
-    } else if (this._viewRef && this.ngTemplateOutletContext) {
-      this._updateExistingContext(this.ngTemplateOutletContext);
+      if (this.ngTemplateOutlet) {
+        this._viewRef = this._viewContainerRef.createEmbeddedView(
+            this.ngTemplateOutlet, this.ngTemplateOutletContext);
+      }
+    } else {
+      if (this._viewRef && this.ngTemplateOutletContext) {
+        this._updateExistingContext(this.ngTemplateOutletContext);
+      }
     }
   }
 
@@ -95,8 +96,9 @@ export class NgTemplateOutlet implements OnChanges {
         }
       }
       return false;
+    } else {
+      return true;
     }
-    return true;
   }
 
   private _updateExistingContext(ctx: Object): void {

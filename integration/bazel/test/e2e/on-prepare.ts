@@ -1,10 +1,9 @@
 import { browser } from 'protractor';
-import {OnPrepareConfig, runServer} from '@bazel/protractor/protractor-utils';
-import * as path from 'path';
+import {OnPrepareConfig, runServer} from '@angular/bazel/protractor-utils';
 
 export = function(config: OnPrepareConfig) {
-  const isProdserver = path.basename(config.server, path.extname(config.server)) === 'prodserver';
-  return runServer(config.workspace, config.server, isProdserver ? '-p' : '-port', [])
+  const portFlag = /prodserver(\.exe)?$/.test(config.server) ? '-p' : '-port';
+  return runServer(config.workspace, config.server, portFlag, [])
     .then(serverSpec => {
       const serverUrl = `http://localhost:${serverSpec.port}`;
       console.log(`Server has been started, starting tests against ${serverUrl}`);

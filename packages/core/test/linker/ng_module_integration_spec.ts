@@ -17,7 +17,7 @@ import {expect} from '@angular/platform-browser/testing/src/matchers';
 import {modifiedInIvy, obsoleteInIvy, onlyInIvy} from '@angular/private/testing';
 
 import {InternalNgModuleRef, NgModuleFactory} from '../../src/linker/ng_module_factory';
-import {clearRegisteredModuleState} from '../../src/linker/ng_module_factory_registration';
+import {clearModulesForTest} from '../../src/linker/ng_module_factory_registration';
 import {stringify} from '../../src/util/stringify';
 
 class Engine {}
@@ -92,6 +92,13 @@ class SomePipe {
 class CompUsingModuleDirectiveAndPipe {
 }
 
+class DummyConsole implements Console {
+  public warnings: string[] = [];
+
+  log(message: string) {}
+  warn(message: string) { this.warnings.push(message); }
+}
+
 {
   if (ivyEnabled) {
     describe('ivy', () => { declareTests(); });
@@ -105,8 +112,12 @@ function declareTests(config?: {useJit: boolean}) {
   describe('NgModule', () => {
     let compiler: Compiler;
     let injector: Injector;
+    let console: DummyConsole;
 
-    beforeEach(() => { TestBed.configureCompiler(config || {}); });
+    beforeEach(() => {
+      console = new DummyConsole();
+      TestBed.configureCompiler({...config, providers: [{provide: Console, useValue: console}]});
+    });
 
     beforeEach(inject([Compiler, Injector], (_compiler: Compiler, _injector: Injector) => {
       compiler = _compiler;
@@ -125,7 +136,7 @@ function declareTests(config?: {useJit: boolean}) {
     }
 
     function createComp<T>(compType: Type<T>, moduleType: Type<any>): ComponentFixture<T> {
-      const componentDef = (compType as any).ɵcmp;
+      const componentDef = (compType as any).ngComponentDef;
       if (componentDef) {
         // Since we avoid Components/Directives/Pipes recompiling in case there are no overrides, we
         // may face a problem where previously compiled defs available to a given
@@ -250,9 +261,9 @@ function declareTests(config?: {useJit: boolean}) {
             expect(() => createModule(SomeModule)).toThrowError(/Can't bind to 'someUnknownProp'/);
           });
 
-      onlyInIvy('Unknown property warning logged, instead of throwing an error')
+      onlyInIvy('Unknown property error thrown during update mode, not creation mode')
           .it('should error on unknown bound properties on custom elements by default', () => {
-            @Component({template: '<div [someUnknownProp]="true"></div>'})
+            @Component({template: '<some-element [someUnknownProp]="true"></some-element>'})
             class ComponentUsingInvalidProperty {
             }
 
@@ -260,10 +271,8 @@ function declareTests(config?: {useJit: boolean}) {
             class SomeModule {
             }
 
-            const spy = spyOn(console, 'warn');
             const fixture = createComp(ComponentUsingInvalidProperty, SomeModule);
-            fixture.detectChanges();
-            expect(spy.calls.mostRecent().args[0]).toMatch(/Can't bind to 'someUnknownProp'/);
+            expect(() => fixture.detectChanges()).toThrowError(/Can't bind to 'someUnknownProp'/);
           });
 
       it('should not error on unknown bound properties on custom elements when using the CUSTOM_ELEMENTS_SCHEMA',
@@ -294,7 +303,7 @@ function declareTests(config?: {useJit: boolean}) {
     describe('id', () => {
       const token = 'myid';
 
-      afterEach(() => clearRegisteredModuleState());
+      afterEach(() => clearModulesForTest());
 
       it('should register loaded modules', () => {
         @NgModule({id: token})
@@ -335,14 +344,14 @@ function declareTests(config?: {useJit: boolean}) {
           .it('should register a module even if not importing the .ngfactory file or calling create()',
               () => {
                 class ChildModule {
-                  static ɵmod = defineNgModule({
+                  static ngModuleDef = defineNgModule({
                     type: ChildModule,
                     id: 'child',
                   });
                 }
 
                 class Module {
-                  static ɵmod = defineNgModule({
+                  static ngModuleDef = defineNgModule({
                     type: Module,
                     id: 'test',
                     imports: [ChildModule],
@@ -1387,7 +1396,7 @@ function declareTests(config?: {useJit: boolean}) {
               }
 
               class Bar {
-                static ɵprov: ɵɵInjectableDef<Bar> = ɵɵdefineInjectable({
+                static ngInjectableDef: ɵɵInjectableDef<Bar> = ɵɵdefineInjectable({
                   token: Bar,
                   factory: () => new Bar(),
                   providedIn: SomeModule,
@@ -1420,7 +1429,7 @@ function declareTests(config?: {useJit: boolean}) {
               }
 
               class Bar {
-                static ɵprov: ɵɵInjectableDef<Bar> = ɵɵdefineInjectable({
+                static ngInjectableDef: ɵɵInjectableDef<Bar> = ɵɵdefineInjectable({
                   token: Bar,
                   factory: () => new Bar(),
                   providedIn: SomeModule,

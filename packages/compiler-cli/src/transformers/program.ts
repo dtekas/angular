@@ -13,9 +13,9 @@ import * as path from 'path';
 import * as ts from 'typescript';
 
 import {TypeCheckHost, translateDiagnostics} from '../diagnostics/translate_diagnostics';
+import {compareVersions} from '../diagnostics/typescript_version';
 import {MetadataCollector, ModuleMetadata, createBundleIndexHost} from '../metadata';
 import {NgtscProgram} from '../ngtsc/program';
-import {verifySupportedTypeScriptVersion} from '../typescript_support';
 
 import {CompilerHost, CompilerOptions, CustomTransformers, DEFAULT_ERROR_CODE, Diagnostic, DiagnosticMessageChain, EmitFlags, LazyRoute, LibrarySummary, Program, SOURCE, TsEmitArguments, TsEmitCallback, TsMergeEmitResultsCallback} from './api';
 import {CodeGenerator, TsCompilerAotCompilerTypeCheckHostAdapter, getOriginalReferences} from './compiler_host';
@@ -27,6 +27,7 @@ import {getAngularEmitterTransformFactory} from './node_emitter_transform';
 import {PartialModuleMetadataTransformer} from './r3_metadata_transform';
 import {StripDecoratorsMetadataTransformer, getDecoratorStripTransformerFactory} from './r3_strip_decorators';
 import {getAngularClassTransformerFactory} from './r3_transform';
+import {TscPassThroughProgram} from './tsc_pass_through';
 import {DTS, GENERATED_FILES, StructureIsReused, TS, createMessageDiagnostic, isInRootDir, ngToTsDiagnostic, tsStructureIsReused, userError} from './util';
 
 
@@ -67,6 +68,19 @@ const defaultEmitCallback: TsEmitCallback =
         program.emit(
             targetSourceFile, writeFile, cancellationToken, emitOnlyDtsFiles, customTransformers);
 
+/**
+ * Minimum supported TypeScript version
+ * ∀ supported typescript version v, v >= MIN_TS_VERSION
+ */
+const MIN_TS_VERSION = '3.4.0';
+
+/**
+ * Supremum of supported TypeScript versions
+ * ∀ supported typescript version v, v < MAX_TS_VERSION
+ * MAX_TS_VERSION is not considered as a supported TypeScript version
+ */
+const MAX_TS_VERSION = '3.6.0';
+
 class AngularCompilerProgram implements Program {
   private rootNames: string[];
   private metadataCache: MetadataCache;
@@ -103,9 +117,7 @@ class AngularCompilerProgram implements Program {
       private host: CompilerHost, oldProgram?: Program) {
     this.rootNames = [...rootNames];
 
-    if (!options.disableTypeScriptVersionCheck) {
-      verifySupportedTypeScriptVersion();
-    }
+    checkVersion(ts.version, MIN_TS_VERSION, MAX_TS_VERSION, options.disableTypeScriptVersionCheck);
 
     this.oldTsProgram = oldProgram ? oldProgram.getTsProgram() : undefined;
     if (oldProgram) {
@@ -131,7 +143,7 @@ class AngularCompilerProgram implements Program {
     }
 
     this.loweringMetadataTransform =
-        new LowerMetadataTransform(options.enableIvy !== false ? R3_LOWER_FIELDS : LOWER_FIELDS);
+        new LowerMetadataTransform(options.enableIvy ? R3_LOWER_FIELDS : LOWER_FIELDS);
     this.metadataCache = this.createMetadataCache([this.loweringMetadataTransform]);
   }
 
@@ -251,7 +263,7 @@ class AngularCompilerProgram implements Program {
     emitCallback?: TsEmitCallback,
     mergeEmitResultsCallback?: TsMergeEmitResultsCallback,
   } = {}): ts.EmitResult {
-    if (this.options.enableIvy !== false) {
+    if (this.options.enableIvy) {
       throw new Error('Cannot run legacy compiler in ngtsc mode');
     }
     return this._emitRender2(parameters);
@@ -853,17 +865,45 @@ class AngularCompilerProgram implements Program {
   }
 }
 
+/**
+ * Checks whether a given version ∈ [minVersion, maxVersion[
+ * An error will be thrown if the following statements are simultaneously true:
+ * - the given version ∉ [minVersion, maxVersion[,
+ * - the result of the version check is not meant to be bypassed (the parameter disableVersionCheck
+ * is false)
+ *
+ * @param version The version on which the check will be performed
+ * @param minVersion The lower bound version. A valid version needs to be greater than minVersion
+ * @param maxVersion The upper bound version. A valid version needs to be strictly less than
+ * maxVersion
+ * @param disableVersionCheck Indicates whether version check should be bypassed
+ *
+ * @throws Will throw an error if the following statements are simultaneously true:
+ * - the given version ∉ [minVersion, maxVersion[,
+ * - the result of the version check is not meant to be bypassed (the parameter disableVersionCheck
+ * is false)
+ */
+export function checkVersion(
+    version: string, minVersion: string, maxVersion: string,
+    disableVersionCheck: boolean | undefined) {
+  if ((compareVersions(version, minVersion) < 0 || compareVersions(version, maxVersion) >= 0) &&
+      !disableVersionCheck) {
+    throw new Error(
+        `The Angular Compiler requires TypeScript >=${minVersion} and <${maxVersion} but ${version} was found instead.`);
+  }
+}
 
 export function createProgram({rootNames, options, host, oldProgram}: {
   rootNames: ReadonlyArray<string>,
   options: CompilerOptions,
   host: CompilerHost, oldProgram?: Program
 }): Program {
-  if (options.enableIvy !== false) {
+  if (options.enableIvy === true) {
     return new NgtscProgram(rootNames, options, host, oldProgram as NgtscProgram);
-  } else {
-    return new AngularCompilerProgram(rootNames, options, host, oldProgram);
+  } else if (options.enableIvy === 'tsc') {
+    return new TscPassThroughProgram(rootNames, options, host, oldProgram);
   }
+  return new AngularCompilerProgram(rootNames, options, host, oldProgram);
 }
 
 // Compute the AotCompiler options
@@ -1071,7 +1111,7 @@ function diagnosticChainFromFormattedDiagnosticChain(chain: FormattedMessageChai
     DiagnosticMessageChain {
   return {
     messageText: chain.message,
-    next: chain.next && chain.next.map(diagnosticChainFromFormattedDiagnosticChain),
+    next: chain.next && diagnosticChainFromFormattedDiagnosticChain(chain.next),
     position: chain.position
   };
 }

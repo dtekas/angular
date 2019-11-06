@@ -6,12 +6,12 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {CUSTOM_ELEMENTS_SCHEMA, Expression, ExternalExpr, InvokeFunctionExpr, LiteralArrayExpr, LiteralExpr, NO_ERRORS_SCHEMA, R3Identifiers, R3InjectorMetadata, R3NgModuleMetadata, R3Reference, STRING_TYPE, SchemaMetadata, Statement, WrappedNodeExpr, compileInjector, compileNgModule} from '@angular/compiler';
+import {Expression, ExternalExpr, InvokeFunctionExpr, LiteralArrayExpr, LiteralExpr, R3Identifiers, R3InjectorMetadata, R3NgModuleMetadata, R3Reference, STRING_TYPE, Statement, WrappedNodeExpr, compileInjector, compileNgModule} from '@angular/compiler';
 import * as ts from 'typescript';
 
 import {ErrorCode, FatalDiagnosticError} from '../../diagnostics';
 import {DefaultImportRecorder, Reference, ReferenceEmitter} from '../../imports';
-import {MetadataReader, MetadataRegistry} from '../../metadata';
+import {MetadataRegistry} from '../../metadata';
 import {PartialEvaluator, ResolvedValue} from '../../partial_evaluator';
 import {ClassDeclaration, Decorator, ReflectionHost, reflectObjectLiteral, typeNodeToValueExpr} from '../../reflection';
 import {NgModuleRouteAnalyzer} from '../../routing';
@@ -24,8 +24,8 @@ import {ReferencesRegistry} from './references_registry';
 import {combineResolvers, findAngularDecorator, forwardRefResolver, getValidConstructorDependencies, isExpressionForwardReference, toR3Reference, unwrapExpression} from './util';
 
 export interface NgModuleAnalysis {
-  mod: R3NgModuleMetadata;
-  inj: R3InjectorMetadata;
+  ngModuleDef: R3NgModuleMetadata;
+  ngInjectorDef: R3InjectorMetadata;
   metadataStmt: Statement|null;
   declarations: Reference<ClassDeclaration>[];
   exports: Reference<ClassDeclaration>[];
@@ -40,8 +40,7 @@ export interface NgModuleAnalysis {
 export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalysis, Decorator> {
   constructor(
       private reflector: ReflectionHost, private evaluator: PartialEvaluator,
-      private metaReader: MetadataReader, private metaRegistry: MetadataRegistry,
-      private scopeRegistry: LocalModuleScopeRegistry,
+      private metaRegistry: MetadataRegistry, private scopeRegistry: LocalModuleScopeRegistry,
       private referencesRegistry: ReferencesRegistry, private isCore: boolean,
       private routeAnalyzer: NgModuleRouteAnalyzer|null, private refEmitter: ReferenceEmitter,
       private defaultImportRecorder: DefaultImportRecorder, private localeId?: string) {}
@@ -67,7 +66,7 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
     const name = node.name.text;
     if (decorator.args === null || decorator.args.length > 1) {
       throw new FatalDiagnosticError(
-          ErrorCode.DECORATOR_ARITY_WRONG, Decorator.nodeForError(decorator),
+          ErrorCode.DECORATOR_ARITY_WRONG, decorator.node,
           `Incorrect number of arguments to @NgModule decorator`);
     }
 
@@ -122,45 +121,6 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
       bootstrapRefs = this.resolveTypeList(expr, bootstrapMeta, name, 'bootstrap');
     }
 
-    const schemas: SchemaMetadata[] = [];
-    if (ngModule.has('schemas')) {
-      const rawExpr = ngModule.get('schemas') !;
-      const result = this.evaluator.evaluate(rawExpr);
-      if (!Array.isArray(result)) {
-        throw new FatalDiagnosticError(
-            ErrorCode.VALUE_HAS_WRONG_TYPE, rawExpr, `NgModule.schemas must be an array`);
-      }
-
-      for (const schemaRef of result) {
-        if (!(schemaRef instanceof Reference)) {
-          throw new FatalDiagnosticError(
-              ErrorCode.VALUE_HAS_WRONG_TYPE, rawExpr,
-              'NgModule.schemas must be an array of schemas');
-        }
-        const id = schemaRef.getIdentityIn(schemaRef.node.getSourceFile());
-        if (id === null || schemaRef.ownedByModuleGuess !== '@angular/core') {
-          throw new FatalDiagnosticError(
-              ErrorCode.VALUE_HAS_WRONG_TYPE, rawExpr,
-              'NgModule.schemas must be an array of schemas');
-        }
-        // Since `id` is the `ts.Identifer` within the schema ref's declaration file, it's safe to
-        // use `id.text` here to figure out which schema is in use. Even if the actual reference was
-        // renamed when the user imported it, these names will match.
-        switch (id.text) {
-          case 'CUSTOM_ELEMENTS_SCHEMA':
-            schemas.push(CUSTOM_ELEMENTS_SCHEMA);
-            break;
-          case 'NO_ERRORS_SCHEMA':
-            schemas.push(NO_ERRORS_SCHEMA);
-            break;
-          default:
-            throw new FatalDiagnosticError(
-                ErrorCode.VALUE_HAS_WRONG_TYPE, rawExpr,
-                `'${schemaRef.debugName}' is not a valid NgModule schema`);
-        }
-      }
-    }
-
     const id: Expression|null =
         ngModule.has('id') ? new WrappedNodeExpr(ngModule.get('id') !) : null;
 
@@ -169,10 +129,9 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
     // computation.
     this.metaRegistry.registerNgModuleMetadata({
       ref: new Reference(node),
-      schemas,
       declarations: declarationRefs,
       imports: importRefs,
-      exports: exportRefs,
+      exports: exportRefs
     });
 
     const valueContext = node.getSourceFile();
@@ -198,8 +157,6 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
 
     const ngModuleDef: R3NgModuleMetadata = {
       type: new WrappedNodeExpr(node.name),
-      internalType: new WrappedNodeExpr(this.reflector.getInternalNameOfClass(node)),
-      adjacentType: new WrappedNodeExpr(this.reflector.getAdjacentNameOfClass(node)),
       bootstrap,
       declarations,
       exports,
@@ -229,7 +186,6 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
     const ngInjectorDef: R3InjectorMetadata = {
       name,
       type: new WrappedNodeExpr(node.name),
-      internalType: new WrappedNodeExpr(this.reflector.getInternalNameOfClass(node)),
       deps: getValidConstructorDependencies(
           node, this.reflector, this.defaultImportRecorder, this.isCore),
       providers,
@@ -239,8 +195,8 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
     return {
       analysis: {
         id,
-        mod: ngModuleDef,
-        inj: ngInjectorDef,
+        ngModuleDef,
+        ngInjectorDef,
         declarations: declarationRefs,
         exports: exportRefs,
         metadataStmt: generateSetClassMetadataCall(
@@ -254,23 +210,13 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
     const scope = this.scopeRegistry.getScopeOfModule(node);
     const diagnostics = this.scopeRegistry.getDiagnosticsOfModule(node) || undefined;
 
+    // Using the scope information, extend the injector's imports using the modules that are
+    // specified as module exports.
     if (scope !== null) {
-      // Using the scope information, extend the injector's imports using the modules that are
-      // specified as module exports.
       const context = getSourceFile(node);
       for (const exportRef of analysis.exports) {
         if (isNgModule(exportRef.node, scope.compilation)) {
-          analysis.inj.imports.push(this.refEmitter.emit(exportRef, context));
-        }
-      }
-
-      for (const decl of analysis.declarations) {
-        const metadata = this.metaReader.getDirectiveMetadata(decl);
-
-        if (metadata !== null && metadata.selector === null) {
-          throw new FatalDiagnosticError(
-              ErrorCode.DIRECTIVE_MISSING_SELECTOR, decl.node,
-              `Directive ${decl.node.name.text} has no selector, please add it!`);
+          analysis.ngInjectorDef.imports.push(this.refEmitter.emit(exportRef, context));
         }
       }
     }
@@ -286,8 +232,8 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
   }
 
   compile(node: ClassDeclaration, analysis: NgModuleAnalysis): CompileResult[] {
-    const ngInjectorDef = compileInjector(analysis.inj);
-    const ngModuleDef = compileNgModule(analysis.mod);
+    const ngInjectorDef = compileInjector(analysis.ngInjectorDef);
+    const ngModuleDef = compileNgModule(analysis.ngModuleDef);
     const ngModuleStatements = ngModuleDef.additionalStatements;
     if (analysis.metadataStmt !== null) {
       ngModuleStatements.push(analysis.metadataStmt);
@@ -314,13 +260,13 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
     }
     const res: CompileResult[] = [
       {
-        name: 'ɵmod',
+        name: 'ngModuleDef',
         initializer: ngModuleDef.expression,
         statements: ngModuleStatements,
         type: ngModuleDef.type,
       },
       {
-        name: 'ɵinj',
+        name: 'ngInjectorDef',
         initializer: ngInjectorDef.expression,
         statements: ngInjectorDef.statements,
         type: ngInjectorDef.type,
@@ -329,7 +275,7 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
 
     if (this.localeId) {
       res.push({
-        name: 'ɵloc',
+        name: 'ngLocaleIdDef',
         initializer: new LiteralExpr(this.localeId),
         statements: [],
         type: STRING_TYPE
@@ -363,7 +309,7 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
                                                   ts.FunctionExpression): ts.Expression|null {
     const type = node.type || null;
     return type &&
-        (this._reflectModuleFromTypeParam(type, node) || this._reflectModuleFromLiteralType(type));
+        (this._reflectModuleFromTypeParam(type) || this._reflectModuleFromLiteralType(type));
   }
 
   /**
@@ -372,9 +318,7 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
    * @param type The type to reflect on.
    * @returns the identifier of the NgModule type if found, or null otherwise.
    */
-  private _reflectModuleFromTypeParam(
-      type: ts.TypeNode,
-      node: ts.FunctionDeclaration|ts.MethodDeclaration|ts.FunctionExpression): ts.Expression|null {
+  private _reflectModuleFromTypeParam(type: ts.TypeNode): ts.Expression|null {
     // Examine the type of the function to see if it's a ModuleWithProviders reference.
     if (!ts.isTypeReferenceNode(type)) {
       return null;
@@ -402,15 +346,7 @@ export class NgModuleDecoratorHandler implements DecoratorHandler<NgModuleAnalys
 
     // If there's no type parameter specified, bail.
     if (type.typeArguments === undefined || type.typeArguments.length !== 1) {
-      const parent =
-          ts.isMethodDeclaration(node) && ts.isClassDeclaration(node.parent) ? node.parent : null;
-      const symbolName = (parent && parent.name ? parent.name.getText() + '.' : '') +
-          (node.name ? node.name.getText() : 'anonymous');
-      throw new FatalDiagnosticError(
-          ErrorCode.NGMODULE_MODULE_WITH_PROVIDERS_MISSING_GENERIC, type,
-          `${symbolName} returns a ModuleWithProviders type without a generic type argument. ` +
-              `Please add a generic type argument to the ModuleWithProviders type. If this ` +
-              `occurrence is in library code you don't control, please contact the library authors.`);
+      return null;
     }
 
     const arg = type.typeArguments[0];

@@ -10,7 +10,7 @@
 /// <reference lib="es2017"/>
 
 import {format, parseTsconfig} from '@bazel/typescript';
-import {Extractor, ExtractorConfig, IConfigFile, IExtractorConfigPrepareOptions, IExtractorInvokeOptions} from '@microsoft/api-extractor';
+import {Extractor, ExtractorValidationRulePolicy, IExtractorConfig, IExtractorOptions} from '@microsoft/api-extractor';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -55,46 +55,51 @@ export function runMain(
     });
   }
 
-  const extractorOptions: IExtractorInvokeOptions = {
+  const extractorOptions: IExtractorOptions = {
     localBuild: acceptApiUpdates,
+    customLogger: DEBUG ? undefined : {
+      // don't log verbose messages when not in debug mode
+      logVerbose: _message => {}
+    }
   };
 
-  const configObject: IConfigFile = {
+  const extractorConfig: IExtractorConfig = {
     compiler: {
+      configType: 'tsconfig',
       overrideTsconfig: parsedTsConfig,
+      rootFolder: path.resolve(path.dirname(tsConfig))
     },
-    projectFolder: path.resolve(path.dirname(tsConfig)),
-    mainEntryPointFilePath: path.resolve(entryPoint),
-    apiReport: {
+    project: {
+      entryPointSourceFile: path.resolve(entryPoint),
+    },
+    apiReviewFile: {
       enabled: !!apiReviewFolder,
-      // TODO(alan-agius4): remove this folder name when the below issue is solved upstream
-      // See: https://github.com/microsoft/web-build-tools/issues/1470
-      reportFileName: apiReviewFolder && path.resolve(apiReviewFolder) || 'invalid',
+      apiReviewFolder: apiReviewFolder && path.resolve(apiReviewFolder),
     },
-    docModel: {
+    apiJsonFile: {
       enabled: false,
+    },
+    policies: {
+      namespaceSupport: 'permissive',
+    },
+    validationRules: {
+      missingReleaseTags: ExtractorValidationRulePolicy.allow,
     },
     dtsRollup: {
       enabled: !!dtsBundleOut,
-      untrimmedFilePath: dtsBundleOut && path.resolve(dtsBundleOut),
+      publishFolder: dtsBundleOut && path.resolve(path.dirname(dtsBundleOut)),
+      mainDtsRollupPath: dtsBundleOut && path.basename(dtsBundleOut),
     },
     tsdocMetadata: {
       enabled: false,
     }
   };
 
-  const options: IExtractorConfigPrepareOptions = {
-    configObject,
-    packageJson: undefined,
-    packageJsonFullPath: pkgJson,
-    configObjectFullPath: undefined,
-  };
-
-  const extractorConfig = ExtractorConfig.prepare(options);
-  const {succeeded} = Extractor.invoke(extractorConfig, extractorOptions);
+  const extractor = new Extractor(extractorConfig, extractorOptions);
+  const isSuccessful = extractor.processProject();
 
   // API extractor errors are emitted by it's logger.
-  return succeeded ? 0 : 1;
+  return isSuccessful ? 0 : 1;
 }
 
 // Entry point

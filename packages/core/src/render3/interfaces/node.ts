@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import {StylingMapArray, TStylingContext} from '../interfaces/styling';
+import {StylingMapArray, TStylingContext} from '../styling_next/interfaces';
 import {CssSelector} from './projection';
 import {RNode} from './renderer';
 import {LView, TView} from './view';
@@ -45,41 +45,23 @@ export const enum TNodeType {
  * Corresponds to the TNode.flags property.
  */
 export const enum TNodeFlags {
-  /** Bit #1 - This bit is set if the node is a host for any directive (including a component) */
-  isDirectiveHost = 0x1,
+  /** This bit is set if the node is a component */
+  isComponent = 0b000001,
 
-  /**
-   * Bit #2 - This bit is set if the node is a host for a component.
-   *
-   * Setting this bit implies that the `isDirectiveHost` bit is set as well.
-   * */
-  isComponentHost = 0x2,
+  /** This bit is set if the node has been projected */
+  isProjected = 0b000010,
 
-  /** Bit #3 - This bit is set if the node has been projected */
-  isProjected = 0x4,
+  /** This bit is set if any directive on this node has content queries */
+  hasContentQuery = 0b000100,
 
-  /** Bit #4 - This bit is set if any directive on this node has content queries */
-  hasContentQuery = 0x8,
+  /** This bit is set if the node has any "class" inputs */
+  hasClassInput = 0b001000,
 
-  /** Bit #5 - This bit is set if the node has any "class" inputs */
-  hasClassInput = 0x10,
+  /** This bit is set if the node has any "style" inputs */
+  hasStyleInput = 0b010000,
 
-  /** Bit #6 - This bit is set if the node has any "style" inputs */
-  hasStyleInput = 0x20,
-
-  /** Bit #7 - This bit is set if the node has initial styling */
-  hasInitialStyling = 0x40,
-
-  /** Bit #8 - This bit is set if the node has been detached by i18n */
-  isDetached = 0x80,
-
-  /**
-   * Bit #9 - This bit is set if the node has directives with host bindings.
-   *
-   * This flags allows us to guard host-binding logic and invoke it only on nodes
-   * that actually have directives with host bindings.
-   */
-  hasHostBindings = 0x100,
+  /** This bit is set if the node has been detached by i18n */
+  isDetached = 0b100000,
 }
 
 /**
@@ -228,13 +210,6 @@ export const enum AttributeMarker {
 export type TAttributes = (string | AttributeMarker | CssSelector)[];
 
 /**
- * Constants that are associated with a view. Includes:
- * - Attribute arrays.
- * - Local definition arrays.
- */
-export type TConstants = (TAttributes | string)[];
-
-/**
  * Binding data (flyweight) for a particular node that is shared between all templates
  * of a specific type.
  *
@@ -285,13 +260,19 @@ export interface TNode {
   directiveEnd: number;
 
   /**
-   * Stores indexes of property bindings. This field is only set in the ngDevMode and holds indexes
-   * of property bindings so TestBed can get bound property metadata for a given node.
+   * Stores the first index where property binding metadata is stored for
+   * this node.
    */
-  propertyBindings: number[]|null;
+  propertyMetadataStartIndex: number;
 
   /**
-   * Stores if Node isComponent, isProjected, hasContentQuery, hasClassInput and hasStyleInput etc.
+   * Stores the exclusive final index where property binding metadata is
+   * stored for this node.
+   */
+  propertyMetadataEndIndex: number;
+
+  /**
+   * Stores if Node isComponent, isProjected, hasContentQuery, hasClassInput and hasStyleInput
    */
   flags: TNodeFlags;
 
@@ -611,11 +592,6 @@ export interface TProjectionNode extends TNode {
   /** Index of the projection node. (See TNode.projection for more info.) */
   projection: number;
 }
-
-/**
- * A union type representing all TNode types that can host a directive.
- */
-export type TDirectiveHostNode = TElementNode | TContainerNode | TElementContainerNode;
 
 /**
  * This mapping is necessary so we can set input properties and output listeners

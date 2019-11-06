@@ -1,8 +1,7 @@
 {
   "angularCompilerOptions": {
     "debug": true,
-    "enableSummariesForJit": true,
-    "enableIvy": false
+    "enableSummariesForJit": true
   },
 
   "compilerOptions": {
@@ -15,8 +14,7 @@
     "outDir": "./xi18n-out",
     "rootDir": "",
     "skipLibCheck": true,
-    "target": "es5",
-    "typeRoots": ["node_modules/@types"]
+    "target": "es5"
   },
 
   "files": [

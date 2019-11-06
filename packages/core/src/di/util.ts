@@ -10,7 +10,6 @@ import {Type} from '../interface/type';
 import {ReflectionCapabilities} from '../reflection/reflection_capabilities';
 import {getClosureSafeProperty} from '../util/property';
 
-import {resolveForwardRef} from './forward_ref';
 import {injectArgs, ɵɵinject} from './injector_compatibility';
 import {ClassSansProvider, ConstructorSansProvider, ExistingSansProvider, FactorySansProvider, StaticClassSansProvider, ValueProvider, ValueSansProvider} from './interface/provider';
 
@@ -33,7 +32,7 @@ export function convertInjectableProviderToFactory(
     return () => valueProvider.useValue;
   } else if ((provider as ExistingSansProvider).useExisting) {
     const existingProvider = (provider as ExistingSansProvider);
-    return () => ɵɵinject(resolveForwardRef(existingProvider.useExisting));
+    return () => ɵɵinject(existingProvider.useExisting);
   } else if ((provider as FactorySansProvider).useFactory) {
     const factoryProvider = (provider as FactorySansProvider);
     return () => factoryProvider.useFactory(...injectArgs(factoryProvider.deps || EMPTY_ARRAY));
@@ -44,7 +43,7 @@ export function convertInjectableProviderToFactory(
       const reflectionCapabilities = new ReflectionCapabilities();
       deps = reflectionCapabilities.parameters(type);
     }
-    return () => new (resolveForwardRef(classProvider.useClass))(...injectArgs(deps));
+    return () => new classProvider.useClass(...injectArgs(deps));
   } else {
     let deps = (provider as ConstructorSansProvider).deps;
     if (!deps) {

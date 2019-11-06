@@ -21,7 +21,7 @@ export class Pane {
   `
 })
 export class Tab {
-  @ContentChild(Pane) pane !: Pane;
+  @ContentChild(Pane, {static: false}) pane !: Pane;
 }
 
 @Component({

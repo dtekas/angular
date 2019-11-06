@@ -142,7 +142,7 @@ Begin by adding `HostListener` to the list of imported symbols.
 
 <code-example path="attribute-directives/src/app/highlight.directive.2.ts" header="src/app/highlight.directive.ts (imports)" region="imports"></code-example>
 
-Then add two event handlers that respond when the mouse enters or leaves,
+Then add two eventhandlers that respond when the mouse enters or leaves,
 each adorned by the `HostListener` decorator.
 
 <code-example path="attribute-directives/src/app/highlight.directive.2.ts" header="src/app/highlight.directive.ts (mouse-methods)" region="mouse-methods"></code-example>
@@ -175,10 +175,8 @@ Here's the updated directive in full:
 Run the app and confirm that the background color appears when
 the mouse hovers over the `p` and disappears as it moves out.
 
-<figure class="lightbox">
-  <div class="card">
-    <img src="generated/images/guide/attribute-directives/highlight-directive-anim.gif" alt="Second Highlight">
-  </div>
+<figure>
+  <img src="generated/images/guide/attribute-directives/highlight-directive-anim.gif" alt="Second Highlight">
 </figure>
 
 {@a bindings}
@@ -249,7 +247,7 @@ You get the best of both worlds: the property name you want and the binding synt
 <code-example path="attribute-directives/src/app/app.component.html" header="src/app/app.component.html (color)" region="color"></code-example>
 
 Now that you're binding via the alias to the `highlightColor`, modify the `onMouseEnter()` method to use that property.
-If someone neglects to bind to `appHighlight`, highlight the host element in red:
+If someone neglects to bind to `appHighlightColor`, highlight the host element in red:
 
 <code-example path="attribute-directives/src/app/highlight.directive.3.ts" header="src/app/highlight.directive.ts (mouse enter)" region="mouse-enter"></code-example>
 
@@ -273,10 +271,8 @@ Revise the `AppComponent.color` so that it has no initial value.
 
 Here are the harness and directive in action.
 
-<figure class="lightbox">
-  <div class="card">
-    <img src="generated/images/guide/attribute-directives/highlight-directive-v2-anim.gif" alt="Highlight v.2">
-  </div>
+<figure>
+  <img src="generated/images/guide/attribute-directives/highlight-directive-v2-anim.gif" alt="Highlight v.2">
 </figure>
 
 {@a second-property}
@@ -311,10 +307,8 @@ because you made it _public_ with the `@Input` decorator.
 
 Here's how the harness should work when you're done coding.
 
-<figure class="lightbox">
-  <div class="card">
-    <img src="generated/images/guide/attribute-directives/highlight-directive-final-anim.gif" alt="Final Highlight">
-  </div>
+<figure>
+  <img src="generated/images/guide/attribute-directives/highlight-directive-final-anim.gif" alt="Final Highlight">
 </figure>
 
 ## Summary

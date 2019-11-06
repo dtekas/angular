@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {ConstantPool, EMPTY_SOURCE_SPAN, Expression, Identifiers, ParseError, ParsedHostBindings, R3DependencyMetadata, R3DirectiveMetadata, R3FactoryTarget, R3QueryMetadata, Statement, WrappedNodeExpr, compileDirectiveFromMetadata, makeBindingParser, parseHostBindings, verifyHostBindings} from '@angular/compiler';
+import {ConstantPool, EMPTY_SOURCE_SPAN, Expression, ParseError, ParsedHostBindings, R3DirectiveMetadata, R3QueryMetadata, Statement, WrappedNodeExpr, compileDirectiveFromMetadata, makeBindingParser, parseHostBindings, verifyHostBindings} from '@angular/compiler';
 import * as ts from 'typescript';
 
 import {ErrorCode, FatalDiagnosticError} from '../../diagnostics';
@@ -15,28 +15,19 @@ import {MetadataRegistry} from '../../metadata';
 import {extractDirectiveGuards} from '../../metadata/src/util';
 import {DynamicValue, EnumValue, PartialEvaluator} from '../../partial_evaluator';
 import {ClassDeclaration, ClassMember, ClassMemberKind, Decorator, ReflectionHost, filterToMembersWithDecorator, reflectObjectLiteral} from '../../reflection';
-import {AnalysisOutput, CompileResult, DecoratorHandler, DetectResult, HandlerFlags, HandlerPrecedence} from '../../transform';
+import {AnalysisOutput, CompileResult, DecoratorHandler, DetectResult, HandlerPrecedence} from '../../transform';
 
-import {compileNgFactoryDefField} from './factory';
 import {generateSetClassMetadataCall} from './metadata';
-import {findAngularDecorator, getConstructorDependencies, isAngularDecorator, readBaseClass, unwrapConstructorDependencies, unwrapExpression, unwrapForwardRef, validateConstructorDependencies} from './util';
+import {findAngularDecorator, getValidConstructorDependencies, readBaseClass, unwrapExpression, unwrapForwardRef} from './util';
 
 const EMPTY_OBJECT: {[key: string]: string} = {};
-const FIELD_DECORATORS = [
-  'Input', 'Output', 'ViewChild', 'ViewChildren', 'ContentChild', 'ContentChildren', 'HostBinding',
-  'HostListener'
-];
-const LIFECYCLE_HOOKS = new Set([
-  'ngOnChanges', 'ngOnInit', 'ngOnDestroy', 'ngDoCheck', 'ngAfterViewInit', 'ngAfterViewChecked',
-  'ngAfterContentInit', 'ngAfterContentChecked'
-]);
 
 export interface DirectiveHandlerData {
   meta: R3DirectiveMetadata;
   metadataStmt: Statement|null;
 }
 export class DirectiveDecoratorHandler implements
-    DecoratorHandler<DirectiveHandlerData, Decorator|null> {
+    DecoratorHandler<DirectiveHandlerData, Decorator> {
   constructor(
       private reflector: ReflectionHost, private evaluator: PartialEvaluator,
       private metaRegistry: MetadataRegistry, private defaultImportRecorder: DefaultImportRecorder,
@@ -44,59 +35,46 @@ export class DirectiveDecoratorHandler implements
 
   readonly precedence = HandlerPrecedence.PRIMARY;
 
-  detect(node: ClassDeclaration, decorators: Decorator[]|null):
-      DetectResult<Decorator|null>|undefined {
-    // Compiling declaration files is invalid.
-    if (node.getSourceFile().isDeclarationFile) {
+  detect(node: ClassDeclaration, decorators: Decorator[]|null): DetectResult<Decorator>|undefined {
+    if (!decorators) {
       return undefined;
     }
-    // If the class is undecorated, check if any of the fields have Angular decorators or lifecycle
-    // hooks, and if they do, label the class as an abstract directive.
-    if (!decorators) {
-      const angularField = this.reflector.getMembersOfClass(node).find(member => {
-        if (!member.isStatic && member.kind === ClassMemberKind.Method &&
-            LIFECYCLE_HOOKS.has(member.name)) {
-          return true;
-        }
-        if (member.decorators) {
-          return member.decorators.some(
-              decorator => FIELD_DECORATORS.some(
-                  decoratorName => isAngularDecorator(decorator, decoratorName, this.isCore)));
-        }
-        return false;
-      });
-      return angularField ? {trigger: angularField.node, metadata: null} : undefined;
+    const decorator = findAngularDecorator(decorators, 'Directive', this.isCore);
+    if (decorator !== undefined) {
+      return {
+        trigger: decorator.node,
+        metadata: decorator,
+      };
     } else {
-      const decorator = findAngularDecorator(decorators, 'Directive', this.isCore);
-      return decorator ? {trigger: decorator.node, metadata: decorator} : undefined;
+      return undefined;
     }
   }
 
-  analyze(node: ClassDeclaration, decorator: Decorator|null, flags = HandlerFlags.NONE):
-      AnalysisOutput<DirectiveHandlerData> {
+  analyze(node: ClassDeclaration, decorator: Decorator): AnalysisOutput<DirectiveHandlerData> {
     const directiveResult = extractDirectiveMetadata(
-        node, decorator, this.reflector, this.evaluator, this.defaultImportRecorder, this.isCore,
-        flags);
+        node, decorator, this.reflector, this.evaluator, this.defaultImportRecorder, this.isCore);
     const analysis = directiveResult && directiveResult.metadata;
+
+    // If the directive has a selector, it should be registered with the `SelectorScopeRegistry` so
+    // when this directive appears in an `@NgModule` scope, its selector can be determined.
+    if (analysis && analysis.selector !== null) {
+      const ref = new Reference(node);
+      this.metaRegistry.registerDirectiveMetadata({
+        ref,
+        name: node.name.text,
+        selector: analysis.selector,
+        exportAs: analysis.exportAs,
+        inputs: analysis.inputs,
+        outputs: analysis.outputs,
+        queries: analysis.queries.map(query => query.propertyName),
+        isComponent: false, ...extractDirectiveGuards(node, this.reflector),
+        baseClass: readBaseClass(node, this.reflector, this.evaluator),
+      });
+    }
 
     if (analysis === undefined) {
       return {};
     }
-
-    // Register this directive's information with the `MetadataRegistry`. This ensures that
-    // the information about the directive is available during the compile() phase.
-    const ref = new Reference(node);
-    this.metaRegistry.registerDirectiveMetadata({
-      ref,
-      name: node.name.text,
-      selector: analysis.selector,
-      exportAs: analysis.exportAs,
-      inputs: analysis.inputs,
-      outputs: analysis.outputs,
-      queries: analysis.queries.map(query => query.propertyName),
-      isComponent: false, ...extractDirectiveGuards(node, this.reflector),
-      baseClass: readBaseClass(node, this.reflector, this.evaluator),
-    });
 
     return {
       analysis: {
@@ -108,54 +86,43 @@ export class DirectiveDecoratorHandler implements
   }
 
   compile(node: ClassDeclaration, analysis: DirectiveHandlerData, pool: ConstantPool):
-      CompileResult[] {
-    const meta = analysis.meta;
-    const res = compileDirectiveFromMetadata(meta, pool, makeBindingParser());
-    const factoryRes = compileNgFactoryDefField(
-        {...meta, injectFn: Identifiers.directiveInject, target: R3FactoryTarget.Directive});
+      CompileResult {
+    const res = compileDirectiveFromMetadata(analysis.meta, pool, makeBindingParser());
+    const statements = res.statements;
     if (analysis.metadataStmt !== null) {
-      factoryRes.statements.push(analysis.metadataStmt);
+      statements.push(analysis.metadataStmt);
     }
-    return [
-      factoryRes, {
-        name: 'ɵdir',
-        initializer: res.expression,
-        statements: [],
-        type: res.type,
-      }
-    ];
+    return {
+      name: 'ngDirectiveDef',
+      initializer: res.expression,
+      statements: statements,
+      type: res.type,
+    };
   }
 }
 
 /**
- * Helper function to extract metadata from a `Directive` or `Component`. `Directive`s without a
- * selector are allowed to be used for abstract base classes. These abstract directives should not
- * appear in the declarations of an `NgModule` and additional verification is done when processing
- * the module.
+ * Helper function to extract metadata from a `Directive` or `Component`.
  */
 export function extractDirectiveMetadata(
-    clazz: ClassDeclaration, decorator: Decorator | null, reflector: ReflectionHost,
+    clazz: ClassDeclaration, decorator: Decorator, reflector: ReflectionHost,
     evaluator: PartialEvaluator, defaultImportRecorder: DefaultImportRecorder, isCore: boolean,
-    flags: HandlerFlags, defaultSelector: string | null = null): {
+    defaultSelector: string | null = null): {
   decorator: Map<string, ts.Expression>,
   metadata: R3DirectiveMetadata,
+  decoratedElements: ClassMember[],
 }|undefined {
-  let directive: Map<string, ts.Expression>;
-  if (decorator === null || decorator.args === null || decorator.args.length === 0) {
-    directive = new Map<string, ts.Expression>();
-  } else if (decorator.args.length !== 1) {
+  if (decorator.args === null || decorator.args.length !== 1) {
     throw new FatalDiagnosticError(
-        ErrorCode.DECORATOR_ARITY_WRONG, Decorator.nodeForError(decorator),
+        ErrorCode.DECORATOR_ARITY_WRONG, decorator.node,
         `Incorrect number of arguments to @${decorator.name} decorator`);
-  } else {
-    const meta = unwrapExpression(decorator.args[0]);
-    if (!ts.isObjectLiteralExpression(meta)) {
-      throw new FatalDiagnosticError(
-          ErrorCode.DECORATOR_ARG_NOT_LITERAL, meta,
-          `@${decorator.name} argument must be literal.`);
-    }
-    directive = reflectObjectLiteral(meta);
   }
+  const meta = unwrapExpression(decorator.args[0]);
+  if (!ts.isObjectLiteralExpression(meta)) {
+    throw new FatalDiagnosticError(
+        ErrorCode.DECORATOR_ARG_NOT_LITERAL, meta, `@${decorator.name} argument must be literal.`);
+  }
+  const directive = reflectObjectLiteral(meta);
 
   if (directive.has('jit')) {
     // The only allowed value is true, so there's no need to expand further.
@@ -221,11 +188,9 @@ export function extractDirectiveMetadata(
     }
     // use default selector in case selector is an empty string
     selector = resolved === '' ? defaultSelector : resolved;
-    if (!selector) {
-      throw new FatalDiagnosticError(
-          ErrorCode.DIRECTIVE_MISSING_SELECTOR, expr,
-          `Directive ${clazz.name.text} has no selector, please add it!`);
-    }
+  }
+  if (!selector) {
+    throw new Error(`Directive ${clazz.name.text} has no selector, please add it!`);
   }
 
   const host = extractHostBindings(decoratedElements, evaluator, coreModule, directive);
@@ -250,35 +215,21 @@ export function extractDirectiveMetadata(
     exportAs = resolved.split(',').map(part => part.trim());
   }
 
-  const rawCtorDeps = getConstructorDependencies(clazz, reflector, defaultImportRecorder, isCore);
-  let ctorDeps: R3DependencyMetadata[]|'invalid'|null;
-
-  // Non-abstract directives (those with a selector) require valid constructor dependencies, whereas
-  // abstract directives are allowed to have invalid dependencies, given that a subclass may call
-  // the constructor explicitly.
-  if (selector !== null) {
-    ctorDeps = validateConstructorDependencies(clazz, rawCtorDeps);
-  } else {
-    ctorDeps = unwrapConstructorDependencies(rawCtorDeps);
-  }
-
   // Detect if the component inherits from another class
   const usesInheritance = reflector.hasBaseClass(clazz);
   const metadata: R3DirectiveMetadata = {
     name: clazz.name.text,
-    deps: ctorDeps, host,
+    deps: getValidConstructorDependencies(clazz, reflector, defaultImportRecorder, isCore), host,
     lifecycle: {
         usesOnChanges,
     },
     inputs: {...inputsFromMeta, ...inputsFromFields},
     outputs: {...outputsFromMeta, ...outputsFromFields}, queries, viewQueries, selector,
-    fullInheritance: !!(flags & HandlerFlags.FULL_INHERITANCE),
     type: new WrappedNodeExpr(clazz.name),
-    internalType: new WrappedNodeExpr(reflector.getInternalNameOfClass(clazz)),
     typeArgumentCount: reflector.getGenericArityOfClass(clazz) || 0,
     typeSourceSpan: EMPTY_SOURCE_SPAN, usesInheritance, exportAs, providers
   };
-  return {decorator: directive, metadata};
+  return {decoratedElements, decorator: directive, metadata};
 }
 
 export function extractQueryMetadata(
@@ -302,7 +253,7 @@ export function extractQueryMetadata(
   } else if (typeof arg === 'string') {
     predicate = [arg];
   } else if (isStringArrayOrDie(arg, '@' + name)) {
-    predicate = arg;
+    predicate = arg as string[];
   } else {
     throw new FatalDiagnosticError(
         ErrorCode.VALUE_HAS_WRONG_TYPE, node, `@${name} predicate cannot be interpreted`);
@@ -485,7 +436,7 @@ export function queriesFromFields(
     evaluator: PartialEvaluator): R3QueryMetadata[] {
   return fields.map(({member, decorators}) => {
     const decorator = decorators[0];
-    const node = member.node || Decorator.nodeForError(decorator);
+    const node = member.node || decorator.node;
 
     // Throw in case of `@Input() @ContentChild('foo') foo: any`, which is not supported in Ivy
     if (member.decorators !.some(v => v.name === 'Input')) {
@@ -503,7 +454,7 @@ export function queriesFromFields(
           'Query decorator must go on a property-type member');
     }
     return extractQueryMetadata(
-        node, decorator.name, decorator.args || [], member.name, reflector, evaluator);
+        decorator.node, decorator.name, decorator.args || [], member.name, reflector, evaluator);
   });
 }
 

@@ -80,7 +80,6 @@ runInEachFileSystem(() => {
         handler.resolve.and.callFake((decl: ts.Declaration, analysis: any) => {
           logs.push(`resolve: ${(decl as any).name.text}@${analysis.decoratorName}`);
           analysis.resolved = true;
-          return {};
         });
         // The "test" compilation result is just the name of the decorator being compiled
         // (suffixed with `(compiled)`)
@@ -97,7 +96,8 @@ runInEachFileSystem(() => {
         loadTestFiles(testFiles);
         loadFakeCore(getFileSystem());
         const rootFiles = getRootFiles(testFiles);
-        const bundle = makeTestEntryPointBundle('test-package', 'esm2015', false, rootFiles);
+        const bundle =
+            makeTestEntryPointBundle('test-package', 'es2015', 'esm2015', false, rootFiles);
         program = bundle.src.program;
 
         const reflectionHost =
@@ -199,10 +199,10 @@ runInEachFileSystem(() => {
         it('should call `apply()` on each migration for each class', () => {
           expect(migrationLogs).toEqual([
             'migration1:MyComponent',
-            'migration1:MyDirective',
-            'migration1:MyOtherComponent',
             'migration2:MyComponent',
+            'migration1:MyDirective',
             'migration2:MyDirective',
+            'migration1:MyOtherComponent',
             'migration2:MyOtherComponent',
           ]);
         });

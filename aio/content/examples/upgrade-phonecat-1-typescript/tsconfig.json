@@ -6,10 +6,7 @@
     "sourceMap": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "lib": [
-      "es2015",
-      "dom"
-    ],
+    "lib": [ "es2015", "dom" ],
     "noImplicitAny": true,
     "skipLibCheck": true,
     "suppressImplicitAnyIndexErrors": true
@@ -19,8 +16,5 @@
     "node_modules/*",
     "**/*-aot.ts",
     "aot/**/*"
-  ],
-  "angularCompilerOptions": {
-    "enableIvy": false
-  }
+  ]
 }

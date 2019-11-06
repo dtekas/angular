@@ -9,8 +9,6 @@
 import {SchemaMetadata, ViewEncapsulation} from '../../core';
 import {ProcessProvidersFunction} from '../../di/interface/provider';
 import {Type} from '../../interface/type';
-
-import {TConstants} from './node';
 import {CssSelectorList} from './projection';
 import {TView} from './view';
 
@@ -69,25 +67,24 @@ export const enum RenderFlags {
 }
 
 /**
- * A subclass of `Type` which has a static `ɵcmp`:`ComponentDef` field making it
+ * A subclass of `Type` which has a static `ngComponentDef`:`ComponentDef` field making it
  * consumable for rendering.
  */
-export interface ComponentType<T> extends Type<T> { ɵcmp: never; }
+export interface ComponentType<T> extends Type<T> { ngComponentDef: never; }
 
 /**
- * A subclass of `Type` which has a static `ɵdir`:`DirectiveDef` field making it
+ * A subclass of `Type` which has a static `ngDirectiveDef`:`DirectiveDef` field making it
  * consumable for rendering.
  */
-export interface DirectiveType<T> extends Type<T> {
-  ɵdir: never;
-  ɵfac: () => T;
-}
+export interface DirectiveType<T> extends Type<T> { ngDirectiveDef: never; }
+
+export const enum DirectiveDefFlags {ContentQuery = 0b10}
 
 /**
- * A subclass of `Type` which has a static `ɵpipe`:`PipeDef` field making it
+ * A subclass of `Type` which has a static `ngPipeDef`:`PipeDef` field making it
  * consumable for rendering.
  */
-export interface PipeType<T> extends Type<T> { ɵpipe: never; }
+export interface PipeType<T> extends Type<T> { ngPipeDef: never; }
 
 /**
  * @codeGenApi
@@ -97,20 +94,17 @@ export type ɵɵDirectiveDefWithMeta<
     OutputMap extends{[key: string]: string}, QueryFields extends string[]> = DirectiveDef<T>;
 
 /**
- * Runtime link information for Directives.
+ * Runtime information for classes that are inherited by components or directives
+ * that aren't defined as components or directives.
  *
- * This is an internal data structure used by the render to link
- * directives into templates.
+ * This is an internal data structure used by the renderer to determine what inputs
+ * and outputs should be inherited.
  *
- * NOTE: Always use `defineDirective` function to create this object,
- * never create the object directly since the shape of this object
- * can change between versions.
+ * See: {@link defineBase}
  *
- * @param Selector type metadata specifying the selector of the directive or component
- *
- * See: {@link defineDirective}
+ * @codeGenApi
  */
-export interface DirectiveDef<T> {
+export interface ɵɵBaseDef<T> {
   /**
    * A dictionary mapping the inputs' minified property names to their public API names, which
    * are their aliases if any, or their original unminified property names
@@ -147,7 +141,23 @@ export interface DirectiveDef<T> {
    * Refreshes host bindings on the associated directive.
    */
   hostBindings: HostBindingsFunction<T>|null;
+}
 
+/**
+ * Runtime link information for Directives.
+ *
+ * This is internal data structure used by the render to link
+ * directives into templates.
+ *
+ * NOTE: Always use `defineDirective` function to create this object,
+ * never create the object directly since the shape of this object
+ * can change between versions.
+ *
+ * @param Selector type metadata specifying the selector of the directive or component
+ *
+ * See: {@link defineDirective}
+ */
+export interface DirectiveDef<T> extends ɵɵBaseDef<T> {
   /** Token representing the directive. Used by DI. */
   type: Type<T>;
 
@@ -165,10 +175,9 @@ export interface DirectiveDef<T> {
   readonly exportAs: string[]|null;
 
   /**
-   * Factory function used to create a new directive instance. Will be null initially.
-   * Populated when the factory is first requested by directive instantiation logic.
+   * Factory function used to create a new directive instance.
    */
-  factory: FactoryFn<T>|null;
+  factory: FactoryFn<T>;
 
   /* The following are lifecycle hooks for this component */
   onChanges: (() => void)|null;
@@ -199,14 +208,9 @@ export type ɵɵComponentDefWithMeta<
     OutputMap extends{[key: string]: string}, QueryFields extends string[]> = ComponentDef<T>;
 
 /**
- * @codeGenApi
- */
-export type ɵɵFactoryDef<T> = () => T;
-
-/**
  * Runtime link information for Components.
  *
- * This is an internal data structure used by the render to link
+ * This is internal data structure used by the render to link
  * components into templates.
  *
  * NOTE: Always use `defineComponent` function to create this object,
@@ -226,9 +230,6 @@ export interface ComponentDef<T> extends DirectiveDef<T> {
    */
   readonly template: ComponentTemplate<T>;
 
-  /** Constants associated with the component's view. */
-  readonly consts: TConstants|null;
-
   /**
    * An array of `ngContent[selector]` values that were found in the template.
    */
@@ -246,7 +247,7 @@ export interface ComponentDef<T> extends DirectiveDef<T> {
    * can pre-fill the array and set the binding start index.
    */
   // TODO(kara): remove queries from this count
-  readonly decls: number;
+  readonly consts: number;
 
   /**
    * The number of bindings in this component template (including pure fn bindings).
@@ -318,7 +319,7 @@ export interface ComponentDef<T> extends DirectiveDef<T> {
 /**
  * Runtime link information for Pipes.
  *
- * This is an internal data structure used by the renderer to link
+ * This is internal data structure used by the renderer to link
  * pipes into templates.
  *
  * NOTE: Always use `definePipe` function to create this object,
@@ -328,9 +329,6 @@ export interface ComponentDef<T> extends DirectiveDef<T> {
  * See: {@link definePipe}
  */
 export interface PipeDef<T> {
-  /** Token representing the pipe. */
-  type: Type<T>;
-
   /**
    * Pipe name.
    *
@@ -339,10 +337,9 @@ export interface PipeDef<T> {
   readonly name: string;
 
   /**
-   * Factory function used to create a new pipe instance. Will be null initially.
-   * Populated when the factory is first requested by pipe instantiation logic.
+   * Factory function used to create a new pipe instance.
    */
-  factory: FactoryFn<T>|null;
+  factory: FactoryFn<T>;
 
   /**
    * Whether or not the pipe is pure.

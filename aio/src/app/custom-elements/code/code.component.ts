@@ -63,7 +63,7 @@ export class CodeComponent implements OnChanges {
   @Input() hideCopy: boolean;
 
   /** Language to render the code (e.g. javascript, dart, typescript). */
-  @Input() language: string | undefined;
+  @Input() language: string;
 
   /**
    * Whether to display line numbers:
@@ -71,7 +71,7 @@ export class CodeComponent implements OnChanges {
    *  - If true: show
    *  - If number: show but start at that number
    */
-  @Input() linenums: boolean | number | string | undefined;
+  @Input() linenums: boolean | number | string;
 
   /** Path to the source of the code. */
   @Input() path: string;
@@ -81,12 +81,12 @@ export class CodeComponent implements OnChanges {
 
   /** Optional header to be displayed above the code. */
   @Input()
-  set header(header: string | undefined) {
+  set header(header: string) {
     this._header = header;
     this.ariaLabel = this.header ? `Copy code snippet from ${this.header}` : '';
   }
-  get header(): string|undefined { return this._header; }
-  private _header: string | undefined;
+  get header(): string { return this._header; }
+  private _header: string;
 
   @Output() codeFormatted = new EventEmitter<void>();
 
@@ -113,9 +113,9 @@ export class CodeComponent implements OnChanges {
     this.codeText = this.getCodeText(); // store the unformatted code as text (for copying)
 
     this.pretty
-        .formatCode(leftAlignedCode, this.language, this.getLinenums())
+        .formatCode(leftAlignedCode, this.language, this.getLinenums(leftAlignedCode))
         .pipe(tap(() => this.codeFormatted.emit()))
-        .subscribe(c => this.setCodeHtml(c), () => { /* ignore failure to format */ }
+        .subscribe(c => this.setCodeHtml(c), err => { /* ignore failure to format */ }
     );
   }
 
@@ -156,7 +156,7 @@ export class CodeComponent implements OnChanges {
   }
 
   /** Gets the calculated value of linenums (boolean/number). */
-  getLinenums() {
+  getLinenums(code: string) {
     const linenums =
       typeof this.linenums === 'boolean' ? this.linenums :
       this.linenums === 'true' ? true :

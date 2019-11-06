@@ -8,13 +8,12 @@
 
 import * as ts from 'typescript';
 import {absoluteFrom} from '../../../src/ngtsc/file_system';
-import {Declaration, Import} from '../../../src/ngtsc/reflection';
+import {ClassSymbol, Declaration, Import} from '../../../src/ngtsc/reflection';
 import {Logger} from '../logging/logger';
 import {BundleProgram} from '../packages/bundle_program';
 import {isDefined} from '../utils';
 
 import {Esm5ReflectionHost} from './esm5_host';
-import {NgccClassSymbol} from './ngcc_host';
 
 export class CommonJsReflectionHost extends Esm5ReflectionHost {
   protected commonJsExports = new Map<ts.SourceFile, Map<string, Declaration>|null>();
@@ -26,11 +25,6 @@ export class CommonJsReflectionHost extends Esm5ReflectionHost {
   }
 
   getImportOfIdentifier(id: ts.Identifier): Import|null {
-    const superImport = super.getImportOfIdentifier(id);
-    if (superImport !== null) {
-      return superImport;
-    }
-
     const requireCall = this.findCommonJsImport(id);
     if (requireCall === null) {
       return null;
@@ -63,13 +57,13 @@ export class CommonJsReflectionHost extends Esm5ReflectionHost {
    * @param helperName the name of the helper (e.g. `__decorate`) whose calls we are interested in.
    * @returns an array of nodes of calls to the helper with the given name.
    */
-  protected getHelperCallsForClass(classSymbol: NgccClassSymbol, helperName: string):
+  protected getHelperCallsForClass(classSymbol: ClassSymbol, helperName: string):
       ts.CallExpression[] {
     const esm5HelperCalls = super.getHelperCallsForClass(classSymbol, helperName);
     if (esm5HelperCalls.length > 0) {
       return esm5HelperCalls;
     } else {
-      const sourceFile = classSymbol.declaration.valueDeclaration.getSourceFile();
+      const sourceFile = classSymbol.valueDeclaration.getSourceFile();
       return this.getTopLevelHelperCalls(sourceFile, helperName);
     }
   }
@@ -98,7 +92,9 @@ export class CommonJsReflectionHost extends Esm5ReflectionHost {
     for (const statement of this.getModuleStatements(sourceFile)) {
       if (isCommonJsExportStatement(statement)) {
         const exportDeclaration = this.extractCommonJsExportDeclaration(statement);
-        moduleMap.set(exportDeclaration.name, exportDeclaration.declaration);
+        if (exportDeclaration !== null) {
+          moduleMap.set(exportDeclaration.name, exportDeclaration.declaration);
+        }
       } else if (isReexportStatement(statement)) {
         const reexports = this.extractCommonJsReexports(statement, sourceFile);
         for (const reexport of reexports) {
@@ -110,22 +106,14 @@ export class CommonJsReflectionHost extends Esm5ReflectionHost {
   }
 
   private extractCommonJsExportDeclaration(statement: CommonJsExportStatement):
-      CommonJsExportDeclaration {
+      CommonJsExportDeclaration|null {
     const exportExpression = statement.expression.right;
     const declaration = this.getDeclarationOfExpression(exportExpression);
-    const name = statement.expression.left.name.text;
-    if (declaration !== null) {
-      return {name, declaration};
-    } else {
-      return {
-        name,
-        declaration: {
-          node: null,
-          expression: exportExpression,
-          viaModule: null,
-        },
-      };
+    if (declaration === null) {
+      return null;
     }
+    const name = statement.expression.left.name.text;
+    return {name, declaration};
   }
 
   private extractCommonJsReexports(statement: ReexportStatement, containingFile: ts.SourceFile):
@@ -138,14 +126,8 @@ export class CommonJsReflectionHost extends Esm5ReflectionHost {
       const viaModule = stripExtension(importedFile.fileName);
       const importedExports = this.getExportsOfModule(importedFile);
       if (importedExports !== null) {
-        importedExports.forEach((decl, name) => {
-          if (decl.node !== null) {
-            reexports.push({name, declaration: {node: decl.node, viaModule}});
-          } else {
-            reexports.push(
-                {name, declaration: {node: null, expression: decl.expression, viaModule}});
-          }
-        });
+        importedExports.forEach(
+            (decl, name) => reexports.push({name, declaration: {node: decl.node, viaModule}}));
       }
     }
     return reexports;
@@ -174,16 +156,14 @@ export class CommonJsReflectionHost extends Esm5ReflectionHost {
       return null;
     }
 
-    const viaModule = !importInfo.from.startsWith('.') ? importInfo.from : null;
-    return {node: importedFile, viaModule};
+    return {node: importedFile, viaModule: importInfo.from};
   }
 
   private resolveModuleName(moduleName: string, containingFile: ts.SourceFile): ts.SourceFile
       |undefined {
     if (this.compilerHost.resolveModuleNames) {
-      const moduleInfo = this.compilerHost.resolveModuleNames(
-          [moduleName], containingFile.fileName, undefined, undefined,
-          this.program.getCompilerOptions())[0];
+      const moduleInfo =
+          this.compilerHost.resolveModuleNames([moduleName], containingFile.fileName)[0];
       return moduleInfo && this.program.getSourceFile(absoluteFrom(moduleInfo.resolvedFileName));
     } else {
       const moduleInfo = ts.resolveModuleName(

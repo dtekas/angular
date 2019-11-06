@@ -11,10 +11,10 @@
     "@angular/platform-browser": "file:../../dist/packages-dist/platform-browser",
     "@angular/platform-browser-dynamic": "file:../../dist/packages-dist/platform-browser-dynamic",
     "@angular/platform-server": "file:../../dist/packages-dist/platform-server",
-    "@types/node": "file:../../node_modules/@types/node",
+    "@types/node": "^9.4.0",
     "rxjs": "file:../../node_modules/rxjs",
     "typescript": "file:../../node_modules/typescript",
-    "zone.js": "file:../../dist/bin/packages/zone.js/npm_package"
+    "zone.js": "file:../../node_modules/zone.js"
   },
   "devDependencies": {
     "@types/jasmine": "2.5.41",

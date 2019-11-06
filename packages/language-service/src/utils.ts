@@ -10,7 +10,7 @@ import {AstPath, CompileDirectiveSummary, CompileTypeMetadata, CssSelector, Dire
 import {DiagnosticTemplateInfo} from '@angular/compiler-cli/src/language_services';
 import * as ts from 'typescript';
 
-import {AstResult, SelectorInfo} from './common';
+import {SelectorInfo, TemplateInfo} from './common';
 import {Span} from './types';
 
 export interface SpanHolder {
@@ -60,24 +60,47 @@ export function hasTemplateReference(type: CompileTypeMetadata): boolean {
   if (type.diDeps) {
     for (let diDep of type.diDeps) {
       if (diDep.token && diDep.token.identifier &&
-          identifierName(diDep.token !.identifier !) === 'TemplateRef')
+          identifierName(diDep.token !.identifier !) == 'TemplateRef')
         return true;
     }
   }
   return false;
 }
 
-export function getSelectors(info: AstResult): SelectorInfo {
+export function getSelectors(info: TemplateInfo): SelectorInfo {
   const map = new Map<CssSelector, CompileDirectiveSummary>();
-  const results: CssSelector[] = [];
-  for (const directive of info.directives) {
+  const selectors: CssSelector[] = flatten(info.directives.map(directive => {
     const selectors: CssSelector[] = CssSelector.parse(directive.selector !);
-    for (const selector of selectors) {
-      results.push(selector);
-      map.set(selector, directive);
+    selectors.forEach(selector => map.set(selector, directive));
+    return selectors;
+  }));
+  return {selectors, map};
+}
+
+export function flatten<T>(a: T[][]) {
+  return (<T[]>[]).concat(...a);
+}
+
+export function removeSuffix(value: string, suffix: string) {
+  if (value.endsWith(suffix)) return value.substring(0, value.length - suffix.length);
+  return value;
+}
+
+export function uniqueByName < T extends {
+  name: string;
+}
+> (elements: T[] | undefined): T[]|undefined {
+  if (elements) {
+    const result: T[] = [];
+    const set = new Set<string>();
+    for (const element of elements) {
+      if (!set.has(element.name)) {
+        set.add(element.name);
+        result.push(element);
+      }
     }
+    return result;
   }
-  return {selectors: results, map};
 }
 
 export function isTypescriptVersion(low: string, high?: string) {
@@ -90,9 +113,9 @@ export function isTypescriptVersion(low: string, high?: string) {
   return true;
 }
 
-export function diagnosticInfoFromTemplateInfo(info: AstResult): DiagnosticTemplateInfo {
+export function diagnosticInfoFromTemplateInfo(info: TemplateInfo): DiagnosticTemplateInfo {
   return {
-    fileName: info.template.fileName,
+    fileName: info.fileName,
     offset: info.template.span.start,
     query: info.template.query,
     members: info.template.members,
@@ -143,7 +166,7 @@ export function findTemplateAstAt(
       // Ignore the host properties of a directive
       const result = this.visitChildren(context, visit => { visit(ast.inputs); });
       // We never care about the diretive itself, just its inputs.
-      if (path[path.length - 1] === ast) {
+      if (path[path.length - 1] == ast) {
         path.pop();
       }
       return result;
@@ -153,76 +176,4 @@ export function findTemplateAstAt(
   templateVisitAll(visitor, ast);
 
   return new AstPath<TemplateAst>(path, position);
-}
-
-/**
- * Return the node that most tightly encompass the specified `position`.
- * @param node
- * @param position
- */
-export function findTightestNode(node: ts.Node, position: number): ts.Node|undefined {
-  if (node.getStart() <= position && position < node.getEnd()) {
-    return node.forEachChild(c => findTightestNode(c, position)) || node;
-  }
-}
-
-interface DirectiveClassLike {
-  decoratorId: ts.Identifier;  // decorator identifier
-  classDecl: ts.ClassDeclaration;
-}
-
-/**
- * Return metadata about `node` if it looks like an Angular directive class.
- * In this case, potential matches are `@NgModule`, `@Component`, `@Directive`,
- * `@Pipe`, etc.
- * These class declarations all share some common attributes, namely their
- * decorator takes exactly one parameter and the parameter must be an object
- * literal.
- *
- * For example,
- *     v---------- `decoratorId`
- * @NgModule({
- *   declarations: [],
- * })
- * class AppModule {}
- *          ^----- `classDecl`
- *
- * @param node Potential node that represents an Angular directive.
- */
-export function getDirectiveClassLike(node: ts.Node): DirectiveClassLike|undefined {
-  if (!ts.isClassDeclaration(node) || !node.name || !node.decorators) {
-    return;
-  }
-  for (const d of node.decorators) {
-    const expr = d.expression;
-    if (!ts.isCallExpression(expr) || expr.arguments.length !== 1 ||
-        !ts.isIdentifier(expr.expression)) {
-      continue;
-    }
-    const arg = expr.arguments[0];
-    if (ts.isObjectLiteralExpression(arg)) {
-      return {
-        decoratorId: expr.expression,
-        classDecl: node,
-      };
-    }
-  }
-}
-
-/**
- * Finds the value of a property assignment that is nested in a TypeScript node and is of a certain
- * type T.
- *
- * @param startNode node to start searching for nested property assignment from
- * @param propName property assignment name
- * @param predicate function to verify that a node is of type T.
- * @return node property assignment value of type T, or undefined if none is found
- */
-export function findPropertyValueOfType<T extends ts.Node>(
-    startNode: ts.Node, propName: string, predicate: (node: ts.Node) => node is T): T|undefined {
-  if (ts.isPropertyAssignment(startNode) && startNode.name.getText() === propName) {
-    const {initializer} = startNode;
-    if (predicate(initializer)) return initializer;
-  }
-  return startNode.forEachChild(c => findPropertyValueOfType(c, propName, predicate));
 }

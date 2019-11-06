@@ -13,16 +13,16 @@ Running this command will:
 - configure your project to use Web Workers, if it isn't already.
 - add `src/app/app.worker.ts` with scaffolded code to receive messages:
 
-  <code-example language="typescript" header="src/app/app.worker.ts">
+  ```typescript
   addEventListener('message', ({ data }) => {
     const response = `worker response to ${data}`;
     postMessage(response);
   });
- </code-example>
+  ```
 
 - add scaffolded code to `src/app/app.component.ts` to use the worker:
 
-  <code-example language="typescript" header="src/app/app.component.ts">
+  ```typescript
   if (typeof Worker !== 'undefined') {
     // Create a new
     const worker = new Worker('./app.worker', { type: 'module' });
@@ -34,7 +34,7 @@ Running this command will:
     // Web Workers are not supported in this environment.
     // You should add a fallback so that your program still executes correctly.
   }
-  </code-example>
+  ```
 
 After the initial scaffolding, you will need to refactor your code to use the Web Worker by sending messages to and from.
 

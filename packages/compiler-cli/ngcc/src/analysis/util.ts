@@ -6,13 +6,9 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import * as ts from 'typescript';
-
-import {isFatalDiagnosticError} from '../../../src/ngtsc/diagnostics';
 import {AbsoluteFsPath, absoluteFromSourceFile, relative} from '../../../src/ngtsc/file_system';
-import {Decorator} from '../../../src/ngtsc/reflection';
-import {DecoratorHandler, DetectResult, HandlerFlags, HandlerPrecedence} from '../../../src/ngtsc/transform';
-import {NgccClassSymbol} from '../host/ngcc_host';
-
+import {ClassSymbol, Decorator} from '../../../src/ngtsc/reflection';
+import {DecoratorHandler, DetectResult, HandlerPrecedence} from '../../../src/ngtsc/transform';
 import {AnalyzedClass, MatchingHandler} from './types';
 
 export function isWithinPackage(packagePath: AbsoluteFsPath, sourceFile: ts.SourceFile): boolean {
@@ -20,9 +16,9 @@ export function isWithinPackage(packagePath: AbsoluteFsPath, sourceFile: ts.Sour
 }
 
 export function analyzeDecorators(
-    classSymbol: NgccClassSymbol, decorators: Decorator[] | null,
-    handlers: DecoratorHandler<any, any>[], flags?: HandlerFlags): AnalyzedClass|null {
-  const declaration = classSymbol.declaration.valueDeclaration;
+    symbol: ClassSymbol, decorators: Decorator[] | null,
+    handlers: DecoratorHandler<any, any>[]): AnalyzedClass|null {
+  const declaration = symbol.valueDeclaration;
   const matchingHandlers = handlers
                                .map(handler => {
                                  const detected = handler.detect(declaration, decorators);
@@ -63,22 +59,14 @@ export function analyzeDecorators(
   const matches: {handler: DecoratorHandler<any, any>, analysis: any}[] = [];
   const allDiagnostics: ts.Diagnostic[] = [];
   for (const {handler, detected} of detections) {
-    try {
-      const {analysis, diagnostics} = handler.analyze(declaration, detected.metadata, flags);
-      if (diagnostics !== undefined) {
-        allDiagnostics.push(...diagnostics);
-      }
-      matches.push({handler, analysis});
-    } catch (e) {
-      if (isFatalDiagnosticError(e)) {
-        allDiagnostics.push(e.toDiagnostic());
-      } else {
-        throw e;
-      }
+    const {analysis, diagnostics} = handler.analyze(declaration, detected.metadata);
+    if (diagnostics !== undefined) {
+      allDiagnostics.push(...diagnostics);
     }
+    matches.push({handler, analysis});
   }
   return {
-    name: classSymbol.name,
+    name: symbol.name,
     declaration,
     decorators,
     matches,

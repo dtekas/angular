@@ -10,7 +10,7 @@ import {nocollapseHack} from '../../src/transformers/nocollapse_hack';
 
 describe('@nocollapse hack', () => {
   it('should add @nocollapse to a basic class', () => {
-    const decl = `Foo.ɵinj = define(...);`;
+    const decl = `Foo.ngInjectorDef = define(...);`;
     expect(nocollapseHack(decl)).toEqual('/** @nocollapse */ ' + decl);
   });
 
@@ -18,7 +18,7 @@ describe('@nocollapse hack', () => {
     const decl = `
       if (false) {
         /** @type {?} */
-        Foo.ɵinj;
+        Foo.ngInjectorDef;
       }
     `;
     expect(nocollapseHack(decl)).toContain('/** @nocollapse @type {?} */');

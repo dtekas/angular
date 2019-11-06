@@ -24,7 +24,7 @@ Zone.__load_patch('EventEmitter', (global: any) => {
 
   const eventNameToString = function(eventName: string|Symbol) {
     if (typeof eventName === 'string') {
-      return eventName;
+      return eventName as string;
     }
     if (!eventName) {
       return '';

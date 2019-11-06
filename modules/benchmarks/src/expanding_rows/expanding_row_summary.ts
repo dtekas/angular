@@ -48,7 +48,7 @@ export class ExpandingRowSummary implements OnDestroy {
    * reference to compute collapsed height of the row. We also use this
    * reference for focus and blur methods below.
    */
-  @ViewChild('expandingRowSummaryMainElement')
+  @ViewChild('expandingRowSummaryMainElement', {static: false})
   mainElementRef !: ElementRef;
 
   /** Subscription for changes in parent isExpanded property. */

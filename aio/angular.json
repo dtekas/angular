@@ -59,13 +59,7 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": [],
-            "budgets": [
-              {
-                "type": "anyComponentStyle",
-                "maximumWarning": "6kb"
-              }
-            ]
+            "scripts": []
           },
           "configurations": {
             "fast": {

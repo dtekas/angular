@@ -59,9 +59,6 @@ describe('ngc transformer command-line', () => {
         "moduleResolution": "node",
         "lib": ["es6", "dom"],
         "typeRoots": ["node_modules/@types"]
-      },
-      "angularCompilerOptions": {
-        "enableIvy": false
       }
     }`);
   });
@@ -154,8 +151,8 @@ describe('ngc transformer command-line', () => {
 
       const exitCode = main(['-p', basePath], errorSpy);
       expect(errorSpy).toHaveBeenCalledWith(
-          'test.ts(3,9): error TS2349: This expression is not callable.\n' +
-          '  Type \'String\' has no call signatures.\n');
+          'test.ts(3,9): error TS2349: Cannot invoke an expression whose type lacks a call signature. ' +
+          'Type \'String\' has no compatible call signatures.\n');
       expect(exitCode).toEqual(1);
     });
 
@@ -2082,7 +2079,7 @@ describe('ngc transformer command-line', () => {
         })
         export class ServiceModule {}
         `);
-        expect(source).not.toMatch(/ɵprov/);
+        expect(source).not.toMatch(/ngInjectableDef/);
       });
       it('on a service with a base class service', () => {
         const source = compileService(`
@@ -2102,7 +2099,7 @@ describe('ngc transformer command-line', () => {
         })
         export class ServiceModule {}
         `);
-        expect(source).not.toMatch(/ɵprov/);
+        expect(source).not.toMatch(/ngInjectableDef/);
       });
     });
 
@@ -2116,20 +2113,21 @@ describe('ngc transformer command-line', () => {
         })
         export class Service {}
       `);
-      expect(source).toMatch(/ɵprov = .+\.ɵɵdefineInjectable\(/);
-      expect(source).toMatch(/ɵprov.*token: Service/);
-      expect(source).toMatch(/ɵprov.*providedIn: .+\.Module/);
+      expect(source).toMatch(/ngInjectableDef = .+\.ɵɵdefineInjectable\(/);
+      expect(source).toMatch(/ngInjectableDef.*token: Service/);
+      expect(source).toMatch(/ngInjectableDef.*providedIn: .+\.Module/);
     });
 
-    it('ɵprov in es5 mode is annotated @nocollapse when closure options are enabled', () => {
-      writeConfig(`{
+    it('ngInjectableDef in es5 mode is annotated @nocollapse when closure options are enabled',
+       () => {
+         writeConfig(`{
         "extends": "./tsconfig-base.json",
         "angularCompilerOptions": {
           "annotateForClosureCompiler": true
         },
         "files": ["service.ts"]
       }`);
-      const source = compileService(`
+         const source = compileService(`
         import {Injectable} from '@angular/core';
         import {Module} from './module';
 
@@ -2138,8 +2136,8 @@ describe('ngc transformer command-line', () => {
         })
         export class Service {}
       `);
-      expect(source).toMatch(/\/\*\* @nocollapse \*\/ Service\.ɵprov =/);
-    });
+         expect(source).toMatch(/\/\*\* @nocollapse \*\/ Service\.ngInjectableDef =/);
+       });
 
     it('compiles a useValue InjectableDef', () => {
       const source = compileService(`
@@ -2154,7 +2152,7 @@ describe('ngc transformer command-line', () => {
         })
         export class Service {}
       `);
-      expect(source).toMatch(/ɵprov.*return CONST_SERVICE/);
+      expect(source).toMatch(/ngInjectableDef.*return CONST_SERVICE/);
     });
 
     it('compiles a useExisting InjectableDef', () => {
@@ -2171,7 +2169,7 @@ describe('ngc transformer command-line', () => {
         })
         export class Service {}
       `);
-      expect(source).toMatch(/ɵprov.*return ..\.ɵɵinject\(Existing\)/);
+      expect(source).toMatch(/ngInjectableDef.*return ..\.ɵɵinject\(Existing\)/);
     });
 
     it('compiles a useFactory InjectableDef with optional dep', () => {
@@ -2191,7 +2189,7 @@ describe('ngc transformer command-line', () => {
           constructor(e: Existing|null) {}
         }
       `);
-      expect(source).toMatch(/ɵprov.*return ..\(..\.ɵɵinject\(Existing, 8\)/);
+      expect(source).toMatch(/ngInjectableDef.*return ..\(..\.ɵɵinject\(Existing, 8\)/);
     });
 
     it('compiles a useFactory InjectableDef with skip-self dep', () => {
@@ -2211,7 +2209,7 @@ describe('ngc transformer command-line', () => {
           constructor(e: Existing) {}
         }
       `);
-      expect(source).toMatch(/ɵprov.*return ..\(..\.ɵɵinject\(Existing, 4\)/);
+      expect(source).toMatch(/ngInjectableDef.*return ..\(..\.ɵɵinject\(Existing, 4\)/);
     });
 
     it('compiles a service that depends on a token', () => {
@@ -2228,9 +2226,9 @@ describe('ngc transformer command-line', () => {
           constructor(@Inject(TOKEN) value: boolean) {}
         }
       `);
-      expect(source).toMatch(/ɵprov = .+\.ɵɵdefineInjectable\(/);
-      expect(source).toMatch(/ɵprov.*token: Service/);
-      expect(source).toMatch(/ɵprov.*providedIn: .+\.Module/);
+      expect(source).toMatch(/ngInjectableDef = .+\.ɵɵdefineInjectable\(/);
+      expect(source).toMatch(/ngInjectableDef.*token: Service/);
+      expect(source).toMatch(/ngInjectableDef.*providedIn: .+\.Module/);
     });
 
     it('generates exports.* references when outputting commonjs', () => {
@@ -2284,56 +2282,5 @@ describe('ngc transformer command-line', () => {
     `);
     let exitCode = main(['-p', path.join(basePath, 'tsconfig.json')], errorSpy);
     expect(exitCode).toEqual(0);
-  });
-
-  describe('base directives', () => {
-    it('should allow directives with no selector that are not in NgModules', () => {
-      // first only generate .d.ts / .js / .metadata.json files
-      writeConfig(`{
-          "extends": "./tsconfig-base.json",
-          "files": ["main.ts"]
-        }`);
-      write('main.ts', `
-          import {Directive} from '@angular/core';
-
-          @Directive({})
-          export class BaseDir {}
-
-          @Directive({})
-          export abstract class AbstractBaseDir {}
-
-          @Directive()
-          export abstract class EmptyDir {}
-      `);
-      let exitCode = main(['-p', path.join(basePath, 'tsconfig.json')], errorSpy);
-      expect(exitCode).toEqual(0);
-    });
-
-    it('should be able to use abstract directive in other compilation units', () => {
-      writeConfig();
-      write('lib1/tsconfig.json', JSON.stringify({
-        extends: '../tsconfig-base.json',
-        compilerOptions: {rootDir: '.', outDir: '../node_modules/lib1_built'},
-      }));
-      write('lib1/index.ts', `
-        import {Directive} from '@angular/core';
-        
-        @Directive()
-        export class BaseClass {}
-      `);
-      write('index.ts', `
-        import {NgModule, Directive} from '@angular/core';
-        import {BaseClass} from 'lib1_built';
-        
-        @Directive({selector: 'my-dir'})
-        export class MyDirective extends BaseClass {}
-        
-        @NgModule({declarations: [MyDirective]})
-        export class AppModule {}
-      `);
-
-      expect(main(['-p', path.join(basePath, 'lib1/tsconfig.json')], errorSpy)).toBe(0);
-      expect(main(['-p', path.join(basePath, 'tsconfig.json')], errorSpy)).toBe(0);
-    });
   });
 });

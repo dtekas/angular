@@ -279,7 +279,7 @@ function defaultRouterHook(snapshot: RouterStateSnapshot, runExtras: {
 /**
  * @description
  *
- * A service that provides navigation and URL manipulation capabilities.
+ * An NgModule that provides navigation and URL manipulation capabilities.
  *
  * @see `Route`.
  * @see [Routing and Navigation Guide](guide/router).
@@ -379,7 +379,7 @@ export class Router {
 
   /**
    * Determines when the router updates the browser URL.
-   * By default (`"deferred"`), updates the browser URL after navigation has finished.
+   * By default (`"deferred"`), udates the browser URL after navigation has finished.
    * Set to `'eager'` to update the browser URL at the beginning of navigation.
    * You can choose to update early so that, if navigation fails,
    * you can show an error message with the URL that failed.
@@ -739,27 +739,10 @@ export class Router {
                   const navCancel =
                       new NavigationCancel(t.id, this.serializeUrl(t.extractedUrl), e.message);
                   eventsSubject.next(navCancel);
+                  t.resolve(false);
 
-                  // When redirecting, we need to delay resolving the navigation
-                  // promise and push it to the redirect navigation
-                  if (!redirecting) {
-                    t.resolve(false);
-                  } else {
-                    // setTimeout is required so this navigation finishes with
-                    // the return EMPTY below. If it isn't allowed to finish
-                    // processing, there can be multiple navigations to the same
-                    // URL.
-                    setTimeout(() => {
-                      const mergedTree = this.urlHandlingStrategy.merge(e.url, this.rawUrlTree);
-                      const extras = {
-                        skipLocationChange: t.extras.skipLocationChange,
-                        replaceUrl: this.urlUpdateStrategy === 'eager'
-                      };
-
-                      return this.scheduleNavigation(
-                          mergedTree, 'imperative', null, extras,
-                          {resolve: t.resolve, reject: t.reject, promise: t.promise});
-                    }, 0);
+                  if (redirecting) {
+                    this.navigateByUrl(e.url);
                   }
 
                   /* All other errors should reset to the router's internal URL reference to the
@@ -880,12 +863,11 @@ export class Router {
   /**
    * Applies an array of commands to the current URL tree and creates a new URL tree.
    *
-   * When given an activated route, applies the given commands starting from the route.
+   * When given an activate route, applies the given commands starting from the route.
    * Otherwise, applies the given command starting from the root.
    *
    * @param commands An array of commands to apply.
-   * @param navigationExtras Options that control the navigation strategy. This function
-   * only utilizes properties in `NavigationExtras` that would change the provided URL.
+   * @param navigationExtras Options that control the navigation strategy.
    * @returns The new URL tree.
    *
    * @usageNotes
@@ -1069,8 +1051,7 @@ export class Router {
 
   private scheduleNavigation(
       rawUrl: UrlTree, source: NavigationTrigger, restoredState: RestoredState|null,
-      extras: NavigationExtras,
-      priorPromise?: {resolve: any, reject: any, promise: Promise<boolean>}): Promise<boolean> {
+      extras: NavigationExtras): Promise<boolean> {
     const lastNavigation = this.getTransition();
     // If the user triggers a navigation imperatively (e.g., by using navigateByUrl),
     // and that navigation results in 'replaceState' that leads to the same URL,
@@ -1095,20 +1076,13 @@ export class Router {
       return Promise.resolve(true);  // return value is not used
     }
 
-    let resolve: any;
-    let reject: any;
-    let promise: Promise<boolean>;
-    if (priorPromise) {
-      resolve = priorPromise.resolve;
-      reject = priorPromise.reject;
-      promise = priorPromise.promise;
+    let resolve: any = null;
+    let reject: any = null;
 
-    } else {
-      promise = new Promise<boolean>((res, rej) => {
-        resolve = res;
-        reject = rej;
-      });
-    }
+    const promise = new Promise<boolean>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
 
     const id = ++this.navigationId;
     this.setTransition({

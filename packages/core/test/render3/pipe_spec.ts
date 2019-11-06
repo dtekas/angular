@@ -9,7 +9,7 @@
 import {Directive as _Directive, Pipe as _Pipe, PipeTransform, WrappedValue, ɵɵdefinePipe} from '@angular/core';
 import {expect} from '@angular/platform-browser/testing/src/matchers';
 
-import {ɵɵtext, ɵɵtextInterpolate1} from '../../src/render3/instructions/all';
+import {ɵɵselect, ɵɵtext, ɵɵtextInterpolate1} from '../../src/render3/instructions/all';
 import {ɵɵpipe, ɵɵpipeBind1} from '../../src/render3/pipe';
 
 import {TemplateFixture} from './render_util';
@@ -29,8 +29,12 @@ describe('pipe', () => {
     class WrappingPipe implements PipeTransform {
       transform(value: any) { return new WrappedValue('Bar'); }
 
-      static ɵfac = function WrappingPipe_Factory() { return new WrappingPipe(); };
-      static ɵpipe = ɵɵdefinePipe({name: 'wrappingPipe', type: WrappingPipe, pure: false});
+      static ngPipeDef = ɵɵdefinePipe({
+        name: 'wrappingPipe',
+        type: WrappingPipe,
+        factory: function WrappingPipe_Factory() { return new WrappingPipe(); },
+        pure: false
+      });
     }
 
     function createTemplate() {
@@ -38,7 +42,10 @@ describe('pipe', () => {
       ɵɵpipe(1, 'wrappingPipe');
     }
 
-    function updateTemplate() { ɵɵtextInterpolate1('', ɵɵpipeBind1(1, 1, null), ''); }
+    function updateTemplate() {
+      ɵɵselect(0);
+      ɵɵtextInterpolate1('', ɵɵpipeBind1(1, 1, null), '');
+    }
 
     it('should unwrap', () => {
       const fixture =

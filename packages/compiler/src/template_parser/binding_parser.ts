@@ -118,7 +118,7 @@ export class BindingParser {
       tplKey: string, tplValue: string, sourceSpan: ParseSourceSpan, absoluteOffset: number,
       targetMatchableAttrs: string[][], targetProps: ParsedProperty[],
       targetVars: ParsedVariable[]) {
-    const bindings = this._parseTemplateBindings(tplKey, tplValue, sourceSpan, absoluteOffset);
+    const bindings = this._parseTemplateBindings(tplKey, tplValue, sourceSpan);
 
     for (let i = 0; i < bindings.length; i++) {
       const binding = bindings[i];
@@ -137,14 +137,13 @@ export class BindingParser {
     }
   }
 
-  private _parseTemplateBindings(
-      tplKey: string, tplValue: string, sourceSpan: ParseSourceSpan,
-      absoluteOffset: number): TemplateBinding[] {
+  private _parseTemplateBindings(tplKey: string, tplValue: string, sourceSpan: ParseSourceSpan):
+      TemplateBinding[] {
     const sourceInfo = sourceSpan.start.toString();
 
     try {
-      const bindingsResult =
-          this._exprParser.parseTemplateBindings(tplKey, tplValue, sourceInfo, absoluteOffset);
+      const bindingsResult = this._exprParser.parseTemplateBindings(
+          tplKey, tplValue, sourceInfo, sourceSpan.start.offset);
       this._reportExpressionParserErrors(bindingsResult.errors, sourceSpan);
       bindingsResult.templateBindings.forEach((binding) => {
         if (binding.expression) {

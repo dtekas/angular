@@ -24,10 +24,7 @@ if (msgFile) {
     isValid = checkMsg(firstLine);
 
     if (!isValid) {
-        console.error(
-            '\nCheck CONTRIBUTING.md at the root of the repo for more information.' +
-            '\n' +
-            '\n(In case you need the invalid commit message, it should be stored in \'.git/COMMIT_EDITMSG\'.)');
+        console.error('\nCheck CONTRIBUTING.md at the root of the repo for more information.');
     }
 }
 

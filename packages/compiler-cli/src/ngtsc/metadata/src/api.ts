@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {DirectiveMeta as T2DirectiveMeta, SchemaMetadata} from '@angular/compiler';
+import {DirectiveMeta as T2DirectiveMeta} from '@angular/compiler';
 
 import {Reference} from '../../imports';
 import {ClassDeclaration} from '../../reflection';
@@ -19,7 +19,6 @@ export interface NgModuleMeta {
   declarations: Reference<ClassDeclaration>[];
   imports: Reference<ClassDeclaration>[];
   exports: Reference<ClassDeclaration>[];
-  schemas: SchemaMetadata[];
 }
 
 /**
@@ -28,13 +27,12 @@ export interface NgModuleMeta {
 export interface DirectiveMeta extends T2DirectiveMeta {
   ref: Reference<ClassDeclaration>;
   /**
-   * Unparsed selector of the directive, or null if the directive does not have a selector.
+   * Unparsed selector of the directive.
    */
-  selector: string|null;
+  selector: string;
   queries: string[];
   ngTemplateGuards: TemplateGuardMeta[];
   hasNgTemplateContextGuard: boolean;
-  coercedInputFields: Set<string>;
 
   /**
    * A `Reference` to the base class for the directive, if one was detected.

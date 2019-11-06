@@ -15,8 +15,7 @@ import {QueryList} from '../linker/query_list';
 import {TemplateRef} from '../linker/template_ref';
 import {ViewContainerRef} from '../linker/view_container_ref';
 import {Renderer2, RendererFactory2, RendererType2} from '../render/api';
-import {Sanitizer} from '../sanitization/sanitizer';
-import {SecurityContext} from '../sanitization/security';
+import {Sanitizer, SecurityContext} from '../sanitization/security';
 
 
 
@@ -45,7 +44,7 @@ export interface NgModuleDefinition extends Definition<NgModuleDefinitionFactory
   providers: NgModuleProviderDef[];
   providersByKey: {[tokenKey: string]: NgModuleProviderDef};
   modules: any[];
-  scope: 'root'|'platform'|null;
+  isRoot: boolean;
 }
 
 export interface NgModuleDefinitionFactory extends DefinitionFactory<NgModuleDefinition> {}

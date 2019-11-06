@@ -12,8 +12,8 @@ import {assertDefined, assertNotEqual} from '../util/assert';
 
 import {AttributeMarker, TAttributes, TNode, TNodeType, unusedValueExportToPlacateAjd as unused1} from './interfaces/node';
 import {CssSelector, CssSelectorList, SelectorFlags, unusedValueExportToPlacateAjd as unused2} from './interfaces/projection';
+import {getInitialStylingValue} from './styling_next/util';
 import {isNameOnlyAttributeMarker} from './util/attrs_utils';
-import {getInitialStylingValue} from './util/styling_utils';
 
 const unusedValueToPlacateAjd = unused1 + unused2;
 
@@ -21,10 +21,7 @@ const NG_TEMPLATE_SELECTOR = 'ng-template';
 
 function isCssClassMatching(nodeClassAttrVal: string, cssClassToMatch: string): boolean {
   const nodeClassesLen = nodeClassAttrVal.length;
-  // we lowercase the class attribute value to be able to match
-  // selectors without case-sensitivity
-  // (selectors are already in lowercase when generated)
-  const matchIndex = nodeClassAttrVal.toLowerCase().indexOf(cssClassToMatch);
+  const matchIndex = nodeClassAttrVal !.indexOf(cssClassToMatch);
   const matchEndIdx = matchIndex + cssClassToMatch.length;
   if (matchIndex === -1                                                  // no match
       || (matchIndex > 0 && nodeClassAttrVal ![matchIndex - 1] !== ' ')  // no space before
@@ -81,7 +78,7 @@ export function isNodeMatchingSelector(
     const current = selector[i];
     if (typeof current === 'number') {
       // If we finish processing a :not selector and it hasn't failed, return false
-      if (!skipToNextSelector && !isPositive(mode) && !isPositive(current)) {
+      if (!skipToNextSelector && !isPositive(mode) && !isPositive(current as number)) {
         return false;
       }
       // If we are skipping to the next :not() and this mode flag is positive,
@@ -135,10 +132,7 @@ export function isNodeMatchingSelector(
           ngDevMode && assertNotEqual(
                            nodeAttrs[attrIndexInNode], AttributeMarker.NamespaceURI,
                            'We do not match directives on namespaced attributes');
-          // we lowercase the attribute value to be able to match
-          // selectors without case-sensitivity
-          // (selectors are already in lowercase when generated)
-          nodeAttrValue = (nodeAttrs[attrIndexInNode + 1] as string).toLowerCase();
+          nodeAttrValue = nodeAttrs[attrIndexInNode + 1] as string;
         }
 
         const compareAgainstClassName = mode & SelectorFlags.CLASS ? nodeAttrValue : null;
@@ -204,8 +198,7 @@ function findAttrIndexInNode(
       } else if (
           maybeAttrName === AttributeMarker.Bindings || maybeAttrName === AttributeMarker.I18n) {
         bindingsMode = true;
-      } else if (
-          maybeAttrName === AttributeMarker.Classes || maybeAttrName === AttributeMarker.Styles) {
+      } else if (maybeAttrName === AttributeMarker.Classes) {
         let value = attrs[++i];
         // We should skip classes here because we have a separate mechanism for
         // matching classes in projection mode.

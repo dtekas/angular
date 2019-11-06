@@ -28,34 +28,9 @@ For details about `tsconfig.json`, see the official
 
 </div>
 
-The initial `tsconfig.json` for an Angular app typically looks like this example:
+The [Setup](guide/setup-local) guide uses the following `tsconfig.json`:
 
-
-<code-example lang="json" header="tsconfig.json" linenums="false">
-   {
-    "compileOnSave": false,
-    "compilerOptions": {
-      "baseUrl": "./",
-      "outDir": "./dist/out-tsc",
-      "sourceMap": true,
-      "declaration": false,
-      "module": "es2015",
-      "moduleResolution": "node",
-      "emitDecoratorMetadata": true,
-      "experimentalDecorators": true,
-      "importHelpers": true,
-      "target": "es5",
-      "typeRoots": [
-        "node_modules/@types"
-      ],
-      "lib": [
-        "es2018",
-        "dom"
-      ]
-    }
-   }
-</code-example>
-
+<code-example path="getting-started/tsconfig.0.json" header="tsconfig.json"></code-example>
 
 This file contains options and flags that are essential for Angular applications.
 

@@ -44,7 +44,7 @@ describe('compiler compliance: bindings', () => {
           $i0$.ɵɵelementEnd();
         }
         if (rf & 2) {
-          $r3$.ɵɵadvance(1);
+          $r3$.ɵɵselect(1);
           $i0$.ɵɵtextInterpolate1("Hello ", $ctx$.name, "");
         }
       }`;
@@ -74,11 +74,11 @@ describe('compiler compliance: bindings', () => {
       };
 
       const template = `
+      const $e0_attrs$ = [${AttributeMarker.Bindings}, "title"];
       …
-      consts: [[${AttributeMarker.Bindings}, "title"]],
       template:function MyComponent_Template(rf, $ctx$){
         if (rf & 1) {
-          $i0$.ɵɵelement(0, "a", 0);
+          $i0$.ɵɵelement(0, "a", $e0_attrs$);
         }
         if (rf & 2) {
           $i0$.ɵɵproperty("title", $ctx$.title);
@@ -108,11 +108,11 @@ describe('compiler compliance: bindings', () => {
       };
 
       const template = `
+      const $e0_attrs$ = [${AttributeMarker.Bindings}, "title"];
       …
-      consts: [[${AttributeMarker.Bindings}, "title"]],
       template:function MyComponent_Template(rf, $ctx$){
         if (rf & 1) {
-          $i0$.ɵɵelement(0, "a", 0);
+          $i0$.ɵɵelement(0, "a", $e0_attrs$);
         }
         if (rf & 2) {
           $i0$.ɵɵpropertyInterpolate1("title", "Hello ", $ctx$.name, "");
@@ -162,13 +162,13 @@ describe('compiler compliance: bindings', () => {
          };
 
          const template = `
-      consts: [[${AttributeMarker.Bindings}, "for"]]
+      const $c0$ = [${AttributeMarker.Bindings}, "for"];
 
       // ...
 
       function MyComponent_Template(rf, ctx) {
         if (rf & 1) {
-            $i0$.ɵɵelement(0, "label", 0);
+            $i0$.ɵɵelement(0, "label", _c0);
         }
         if (rf & 2) {
             $i0$.ɵɵproperty("for", ctx.forValue);
@@ -360,9 +360,9 @@ describe('compiler compliance: bindings', () => {
             …
             if (rf & 2) {
               $r3$.ɵɵproperty("title", ctx.myTitle)("id", ctx.buttonId)("tabindex", 1);
-              $r3$.ɵɵadvance(1);
+              $r3$.ɵɵselect(1);
               $r3$.ɵɵproperty("id", 1)("title", "hello")("someProp", 1 + 2);
-              $r3$.ɵɵadvance(1);
+              $r3$.ɵɵselect(2);
               $r3$.ɵɵproperty("prop", "one")("otherProp", 2);
             }
           }
@@ -397,7 +397,7 @@ describe('compiler compliance: bindings', () => {
             …
             if (rf & 2) {
               $r3$.ɵɵproperty("title", ctx.myTitle)("id", ctx.buttonId)("tabindex", 1);
-              $r3$.ɵɵadvance(1);
+              $r3$.ɵɵselect(1);
               $r3$.ɵɵproperty("id", 1)("title", "hello")("someProp", 1 + 2);
             }
           }
@@ -566,9 +566,9 @@ describe('compiler compliance: bindings', () => {
             …
             if (rf & 2) {
               $r3$.ɵɵattribute("title", ctx.myTitle)("id", ctx.buttonId)("tabindex", 1);
-              $r3$.ɵɵadvance(1);
+              $r3$.ɵɵselect(1);
               $r3$.ɵɵattribute("id", 1)("title", "hello")("some-attr", 1 + 2);
-              $r3$.ɵɵadvance(1);
+              $r3$.ɵɵselect(2);
               $r3$.ɵɵattribute("some-attr", "one")("some-other-attr", 2);
             }
           }
@@ -603,7 +603,7 @@ describe('compiler compliance: bindings', () => {
             …
             if (rf & 2) {
               $r3$.ɵɵattribute("title", ctx.myTitle)("id", ctx.buttonId)("tabindex", 1);
-              $r3$.ɵɵadvance(1);
+              $r3$.ɵɵselect(1);
               $r3$.ɵɵattribute("id", 1)("title", "hello")("some-attr", 1 + 2);
             }
           }
@@ -640,7 +640,7 @@ describe('compiler compliance: bindings', () => {
       };
 
       const template = `
-        consts: [["target", "_blank", "aria-label", "link", ${AttributeMarker.Bindings}, "title", "id", "customEvent"]],
+        const $e0_attrs$ = ["target", "_blank", "aria-label", "link", ${AttributeMarker.Bindings}, "title", "id", "customEvent"];
         …
       `;
       const result = compile(files, angularFiles);
@@ -668,9 +668,10 @@ describe('compiler compliance: bindings', () => {
       };
 
       const HostBindingDirDeclaration = `
-        HostBindingDir.ɵdir = $r3$.ɵɵdefineDirective({
+        HostBindingDir.ngDirectiveDef = $r3$.ɵɵdefineDirective({
           type: HostBindingDir,
           selectors: [["", "hostBindingDir", ""]],
+          factory: function HostBindingDir_Factory(t) { return new (t || HostBindingDir)(); },
           hostBindings: function HostBindingDir_HostBindings(rf, ctx, elIndex) {
             if (rf & 1) {
               $r3$.ɵɵallocHostVars(1);
@@ -714,9 +715,10 @@ describe('compiler compliance: bindings', () => {
       const HostBindingCompDeclaration = `
         const $ff$ = function ($v$) { return ["red", $v$]; };
         …
-        HostBindingComp.ɵcmp = $r3$.ɵɵdefineComponent({
+        HostBindingComp.ngComponentDef = $r3$.ɵɵdefineComponent({
           type: HostBindingComp,
           selectors: [["host-binding-comp"]],
+          factory: function HostBindingComp_Factory(t) { return new (t || HostBindingComp)(); },
           hostBindings: function HostBindingComp_HostBindings(rf, ctx, elIndex) {
             if (rf & 1) {
               $r3$.ɵɵallocHostVars(3);
@@ -725,7 +727,7 @@ describe('compiler compliance: bindings', () => {
               $r3$.ɵɵhostProperty("id", $r3$.ɵɵpureFunction1(1, $ff$, ctx.id));
             }
           },
-          decls: 0,
+          consts: 0,
           vars: 0,
           template: function HostBindingComp_Template(rf, ctx) {},
           encapsulation: 2
@@ -761,9 +763,10 @@ describe('compiler compliance: bindings', () => {
       };
 
       const HostAttributeDirDeclaration = `
-        HostAttributeDir.ɵdir = $r3$.ɵɵdefineDirective({
+        HostAttributeDir.ngDirectiveDef = $r3$.ɵɵdefineDirective({
           type: HostAttributeDir,
           selectors: [["", "hostAttributeDir", ""]],
+          factory: function HostAttributeDir_Factory(t) { return new (t || HostAttributeDir)(); },
           hostBindings: function HostAttributeDir_HostBindings(rf, ctx, elIndex) {
             if (rf & 1) {
               $r3$.ɵɵallocHostVars(1);
@@ -805,9 +808,10 @@ describe('compiler compliance: bindings', () => {
       const HostAttributeDirDeclaration = `
         const $c0$ = ["aria-label", "label"];
         …
-        HostAttributeDir.ɵdir = $r3$.ɵɵdefineDirective({
+        HostAttributeDir.ngDirectiveDef = $r3$.ɵɵdefineDirective({
           type: HostAttributeDir,
           selectors: [["", "hostAttributeDir", ""]],
+          factory: function HostAttributeDir_Factory(t) { return new (t || HostAttributeDir)(); },
           hostBindings: function HostAttributeDir_HostBindings(rf, ctx, elIndex) {
             if (rf & 1) {
               $r3$.ɵɵelementHostAttrs($c0$);
@@ -862,9 +866,10 @@ describe('compiler compliance: bindings', () => {
         const $c0$ = ["title", "hello there from component", ${AttributeMarker.Styles}, "opacity", "1"];
         const $c1$ = ["title", "hello there from directive", ${AttributeMarker.Classes}, "one", "two", ${AttributeMarker.Styles}, "width", "200px", "height", "500px"];
         …
-        HostAttributeComp.ɵcmp = $r3$.ɵɵdefineComponent({
+        HostAttributeComp.ngComponentDef = $r3$.ɵɵdefineComponent({
           type: HostAttributeComp,
           selectors: [["my-host-attribute-component"]],
+          factory: function HostAttributeComp_Factory(t) { return new (t || HostAttributeComp)(); },
           hostBindings: function HostAttributeComp_HostBindings(rf, ctx, elIndex) {
             if (rf & 1) {
               $r3$.ɵɵelementHostAttrs($c0$);
@@ -873,9 +878,10 @@ describe('compiler compliance: bindings', () => {
             …
           }
         …
-        HostAttributeDir.ɵdir = $r3$.ɵɵdefineDirective({
+        HostAttributeDir.ngDirectiveDef = $r3$.ɵɵdefineDirective({
           type: HostAttributeDir,
           selectors: [["", "hostAttributeDir", ""]],
+          factory: function HostAttributeDir_Factory(t) { return new (t || HostAttributeDir)(); },
           hostBindings: function HostAttributeDir_HostBindings(rf, ctx, elIndex) {
             if (rf & 1) {
               $r3$.ɵɵallocHostVars(2);
@@ -1173,23 +1179,23 @@ describe('compiler compliance: bindings', () => {
       …
         if (rf & 2) {
           i0.ɵɵpropertyInterpolateV("title", ["a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e", ctx.five, "f", ctx.six, "g", ctx.seven, "h", ctx.eight, "i", ctx.nine, "j"]);
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(1);
           i0.ɵɵpropertyInterpolate8("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e", ctx.five, "f", ctx.six, "g", ctx.seven, "h", ctx.eight, "i");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(2);
           i0.ɵɵpropertyInterpolate7("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e", ctx.five, "f", ctx.six, "g", ctx.seven, "h");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(3);
           i0.ɵɵpropertyInterpolate6("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e", ctx.five, "f", ctx.six, "g");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(4);
           i0.ɵɵpropertyInterpolate5("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e", ctx.five, "f");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(5);
           i0.ɵɵpropertyInterpolate4("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(6);
           i0.ɵɵpropertyInterpolate3("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(7);
           i0.ɵɵpropertyInterpolate2("title", "a", ctx.one, "b", ctx.two, "c");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(8);
           i0.ɵɵpropertyInterpolate1("title", "a", ctx.one, "b");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(9);
           i0.ɵɵpropertyInterpolate("title", ctx.one);
       }
       …
@@ -1217,23 +1223,23 @@ describe('compiler compliance: bindings', () => {
       …
         if (rf & 2) {
           i0.ɵɵattributeInterpolateV("title", ["a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e", ctx.five, "f", ctx.six, "g", ctx.seven, "h", ctx.eight, "i", ctx.nine, "j"]);
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(1);
           i0.ɵɵattributeInterpolate8("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e", ctx.five, "f", ctx.six, "g", ctx.seven, "h", ctx.eight, "i");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(2);
           i0.ɵɵattributeInterpolate7("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e", ctx.five, "f", ctx.six, "g", ctx.seven, "h");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(3);
           i0.ɵɵattributeInterpolate6("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e", ctx.five, "f", ctx.six, "g");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(4);
           i0.ɵɵattributeInterpolate5("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e", ctx.five, "f");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(5);
           i0.ɵɵattributeInterpolate4("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d", ctx.four, "e");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(6);
           i0.ɵɵattributeInterpolate3("title", "a", ctx.one, "b", ctx.two, "c", ctx.three, "d");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(7);
           i0.ɵɵattributeInterpolate2("title", "a", ctx.one, "b", ctx.two, "c");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(8);
           i0.ɵɵattributeInterpolate1("title", "a", ctx.one, "b");
-          i0.ɵɵadvance(1);
+          i0.ɵɵselect(9);
           i0.ɵɵattribute("title", ctx.one);
       }
       …
@@ -1251,11 +1257,12 @@ describe('compiler compliance: bindings', () => {
       `);
 
       const template = `
+        const $_c0$ = ["id", "my-id"];
+        const $_c1$ = ["myRef", ""];
         …
-        consts: [["id", "my-id"], ["myRef", ""]],
         template:function MyComponent_Template(rf, $ctx$){
           if (rf & 1) {
-            $i0$.ɵɵelementStart(0, "b", 0, 1);
+            $i0$.ɵɵelementStart(0, "b", $_c0$, $_c1$);
             $i0$.ɵɵdisableBindings();
             $i0$.ɵɵelementStart(2, "i");
             $i0$.ɵɵtext(3, "Hello {{ name }}!");
@@ -1266,7 +1273,7 @@ describe('compiler compliance: bindings', () => {
           }
           if (rf & 2) {
             const $_r0$ = $i0$.ɵɵreference(1);
-            $r3$.ɵɵadvance(4);
+            $r3$.ɵɵselect(4);
             $i0$.ɵɵtextInterpolate1(" ", $_r0$.id, " ");
           }
         }
@@ -1283,13 +1290,13 @@ describe('compiler compliance: bindings', () => {
       `);
 
       const template = `
+        const $_c0$ = ["value", "one", "#myInput", ""];
         …
-        consts: [["value", "one", "#myInput", ""]],
         template:function MyComponent_Template(rf, $ctx$){
           if (rf & 1) {
             $i0$.ɵɵelementStart(0, "div");
             $i0$.ɵɵdisableBindings();
-            $i0$.ɵɵelement(1, "input", 0);
+            $i0$.ɵɵelement(1, "input", $_c0$);
             $i0$.ɵɵtext(2, " {{ myInput.value }} ");
             $i0$.ɵɵenableBindings();
             $i0$.ɵɵelementEnd();
@@ -1307,13 +1314,13 @@ describe('compiler compliance: bindings', () => {
       `);
 
       const template = `
+        const $_c0$ = ["[id]", "my-id", "(click)", "onclick"];
         …
-        consts: [["[id]", "my-id", "(click)", "onclick"]],
         template:function MyComponent_Template(rf, $ctx$){
           if (rf & 1) {
             $i0$.ɵɵelementStart(0, "div");
             $i0$.ɵɵdisableBindings();
-            $i0$.ɵɵelement(1, "div", 0);
+            $i0$.ɵɵelement(1, "div", $_c0$);
             $i0$.ɵɵenableBindings();
             $i0$.ɵɵelementEnd();
         }

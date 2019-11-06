@@ -36,9 +36,9 @@ module.exports = function(config) {
       {pattern: 'node_modules/angular-mocks/angular-mocks.js', included: false, watched: false},
 
       'node_modules/core-js/client/core.js',
-      'dist/bin/packages/zone.js/npm_package/dist/zone.js',
-      'dist/bin/packages/zone.js/npm_package/dist/zone-testing.js',
-      'dist/bin/packages/zone.js/npm_package/dist/task-tracking.js',
+      'node_modules/zone.js/dist/zone.js',
+      'node_modules/zone.js/dist/zone-testing.js',
+      'node_modules/zone.js/dist/task-tracking.js',
 
       // Including systemjs because it defines `__eval`, which produces correct stack traces.
       'test-events.js',
@@ -64,6 +64,7 @@ module.exports = function(config) {
         included: false,
         watched: false,
       },
+      {pattern: 'packages/common/i18n/**', included: false, watched: false, served: true},
     ],
 
     exclude: [
@@ -79,12 +80,9 @@ module.exports = function(config) {
       'dist/all/@angular/compiler/test/render3/**',
       'dist/all/@angular/core/test/bundling/**',
       'dist/all/@angular/core/test/render3/ivy/**',
-      'dist/all/@angular/core/test/render3/perf/**',
       'dist/all/@angular/elements/schematics/**',
       'dist/all/@angular/examples/**/e2e_test/*',
       'dist/all/@angular/language-service/**',
-      'dist/all/@angular/localize/**/test/**',
-      'dist/all/@angular/localize/schematics/**',
       'dist/all/@angular/router/**/test/**',
       'dist/all/@angular/platform-browser/testing/e2e_util.js',
       'dist/all/angular1_router.js',

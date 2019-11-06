@@ -21,7 +21,8 @@ export function assertTNodeForLView(tNode: TNode, lView: LView) {
 
 export function assertComponentType(
     actual: any,
-    msg: string = 'Type passed in is not ComponentType, it does not have \'ɵcmp\' property.') {
+    msg: string =
+        'Type passed in is not ComponentType, it does not have \'ngComponentDef\' property.') {
   if (!getComponentDef(actual)) {
     throwError(msg);
   }
@@ -29,7 +30,8 @@ export function assertComponentType(
 
 export function assertNgModuleType(
     actual: any,
-    msg: string = 'Type passed in is not NgModuleType, it does not have \'ɵmod\' property.') {
+    msg: string =
+        'Type passed in is not NgModuleType, it does not have \'ngModuleDef\' property.') {
   if (!getNgModuleDef(actual)) {
     throwError(msg);
   }
@@ -68,7 +70,6 @@ export function assertLView(value: any) {
   assertEqual(isLView(value), true, 'Expecting LView');
 }
 
-export function assertFirstCreatePass(tView: TView, errMessage?: string) {
-  assertEqual(
-      tView.firstCreatePass, true, errMessage || 'Should only be called in first create pass.');
+export function assertFirstTemplatePass(tView: TView, errMessage: string) {
+  assertEqual(tView.firstTemplatePass, true, errMessage);
 }

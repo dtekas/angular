@@ -34,12 +34,8 @@ export function isContentQueryHost(tNode: TNode): boolean {
   return (tNode.flags & TNodeFlags.hasContentQuery) !== 0;
 }
 
-export function isComponentHost(tNode: TNode): boolean {
-  return (tNode.flags & TNodeFlags.isComponentHost) === TNodeFlags.isComponentHost;
-}
-
-export function isDirectiveHost(tNode: TNode): boolean {
-  return (tNode.flags & TNodeFlags.isDirectiveHost) === TNodeFlags.isDirectiveHost;
+export function isComponent(tNode: TNode): boolean {
+  return (tNode.flags & TNodeFlags.isComponent) === TNodeFlags.isComponent;
 }
 
 export function isComponentDef<T>(def: DirectiveDef<T>): def is ComponentDef<T> {

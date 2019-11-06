@@ -3,6 +3,7 @@ export interface AssetGroup {
     name: string;
     resources: {
         files?: Glob[];
+        /** @deprecated */ versionedFiles?: Glob[];
         urls?: Glob[];
     };
     updateMode?: 'prefetch' | 'lazy';

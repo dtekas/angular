@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {ɵRenderFlags, ɵrenderComponent as renderComponent, ɵɵadvance, ɵɵcontainer, ɵɵcontainerRefreshEnd, ɵɵcontainerRefreshStart, ɵɵdefineComponent, ɵɵelementEnd, ɵɵelementStart, ɵɵembeddedViewEnd, ɵɵembeddedViewStart, ɵɵstyleProp, ɵɵtext, ɵɵtextInterpolate1} from '@angular/core';
+import {ɵRenderFlags, ɵrenderComponent as renderComponent, ɵɵcontainer, ɵɵcontainerRefreshEnd, ɵɵcontainerRefreshStart, ɵɵdefineComponent, ɵɵelementEnd, ɵɵelementStart, ɵɵembeddedViewEnd, ɵɵembeddedViewStart, ɵɵselect, ɵɵstyleProp, ɵɵstyling, ɵɵstylingApply, ɵɵtext, ɵɵtextInterpolate1} from '@angular/core';
 
 import {bindAction, profile} from '../../util';
 import {createDom, destroyDom, detectChanges} from '../render3/tree';
@@ -18,18 +18,16 @@ export class TreeFunction {
   data: TreeNode = emptyTree;
 
   /** @nocollapse */
-  static ɵfac = () => new TreeFunction;
-
-  /** @nocollapse */
-  static ɵcmp = ɵɵdefineComponent({
+  static ngComponentDef = ɵɵdefineComponent({
     type: TreeFunction,
     selectors: [['tree']],
-    decls: 5,
+    consts: 5,
     vars: 1,
     template: function(rf: ɵRenderFlags, ctx: TreeFunction) {
       // bit of a hack
       TreeTpl(rf, ctx.data);
     },
+    factory: () => new TreeFunction,
     inputs: {data: 'data'}
   });
 }
@@ -39,6 +37,7 @@ export function TreeTpl(rf: ɵRenderFlags, ctx: TreeNode) {
     ɵɵelementStart(0, 'tree');
     {
       ɵɵelementStart(1, 'span');
+      ɵɵstyling();
       { ɵɵtext(2); }
       ɵɵelementEnd();
       ɵɵcontainer(3);
@@ -47,9 +46,10 @@ export function TreeTpl(rf: ɵRenderFlags, ctx: TreeNode) {
     ɵɵelementEnd();
   }
   if (rf & ɵRenderFlags.Update) {
-    ɵɵadvance(1);
+    ɵɵselect(1);
     ɵɵstyleProp('background-color', ctx.depth % 2 ? '' : 'grey');
-    ɵɵadvance(1);
+    ɵɵstylingApply();
+    ɵɵselect(2);
     ɵɵtextInterpolate1(' ', ctx.value, ' ');
     ɵɵcontainerRefreshStart(3);
     {

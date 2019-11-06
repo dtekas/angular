@@ -7,7 +7,6 @@ ts_library(
     # Visible to //:test_web_all target
     visibility = ["//:__pkg__"],
     deps = [
-        "//packages/common",
         "//packages/core",
         "//packages/core/testing",
         "//packages/http",

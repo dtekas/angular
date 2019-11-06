@@ -113,10 +113,8 @@ To define navigation rules, you associate *navigation paths* with your component
 
 You've learned the basics about the main building blocks of an Angular application. The following diagram shows how these basic pieces are related.
 
-<figure class="lightbox">
-  <div class="card">
-    <img src="generated/images/guide/architecture/overview2.png" alt="overview">
-  </div>
+<figure>
+  <img src="generated/images/guide/architecture/overview2.png" alt="overview">
 </figure>
 
 * Together, a component and template define an Angular view.

@@ -6,11 +6,12 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {DOCUMENT, ɵgetDOM as getDOM} from '@angular/common';
+import {DOCUMENT} from '@angular/common';
 import {ANALYZE_FOR_ENTRY_COMPONENTS, ApplicationRef, Component, ComponentRef, ContentChild, Directive, ErrorHandler, EventEmitter, HostListener, InjectionToken, Injector, Input, NgModule, NgModuleRef, NgZone, Output, Pipe, PipeTransform, Provider, QueryList, Renderer2, SimpleChanges, TemplateRef, ViewChild, ViewChildren, ViewContainerRef, destroyPlatform, ɵivyEnabled as ivyEnabled} from '@angular/core';
 import {TestBed, fakeAsync, inject, tick} from '@angular/core/testing';
 import {BrowserModule, By} from '@angular/platform-browser';
 import {platformBrowserDynamic} from '@angular/platform-browser-dynamic';
+import {getDOM} from '@angular/platform-browser/src/dom/dom_adapter';
 import {expect} from '@angular/platform-browser/testing/src/matchers';
 import {modifiedInIvy, onlyInIvy} from '@angular/private/testing';
 
@@ -417,7 +418,7 @@ function declareTests(config?: {useJit: boolean}) {
       const compRef =
           modRef.componentFactoryResolver.resolveComponentFactory(App).create(Injector.NULL);
 
-      expect(compRef.location.nativeElement.hasAttribute('ng-version')).toBe(false);
+      expect(getDOM().hasAttribute(compRef.location.nativeElement, 'ng-version')).toBe(false);
     });
   });
 }
@@ -438,7 +439,7 @@ function declareTestsUsingBootstrap() {
     beforeEach(inject([DOCUMENT], (doc: any) => {
       destroyPlatform();
       const el = getDOM().createElement(COMP_SELECTOR, doc);
-      doc.body.appendChild(el);
+      getDOM().appendChild(doc.body, el);
 
       logger = new MockConsole();
       errorHandler = new ErrorHandler();

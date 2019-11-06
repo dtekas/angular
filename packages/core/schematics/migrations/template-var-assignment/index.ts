@@ -13,7 +13,6 @@ import * as ts from 'typescript';
 
 import {NgComponentTemplateVisitor} from '../../utils/ng_component_template';
 import {getProjectTsConfigPaths} from '../../utils/project_tsconfig_paths';
-import {createMigrationCompilerHost} from '../../utils/typescript/compiler_host';
 import {parseTsconfigFile} from '../../utils/typescript/parse_tsconfig';
 
 import {analyzeResolvedTemplate} from './analyze_template';
@@ -48,7 +47,18 @@ export default function(): Rule {
 function runTemplateVariableAssignmentCheck(
     tree: Tree, tsconfigPath: string, basePath: string, logger: Logger) {
   const parsed = parseTsconfigFile(tsconfigPath, dirname(tsconfigPath));
-  const host = createMigrationCompilerHost(tree, parsed.options, basePath);
+  const host = ts.createCompilerHost(parsed.options, true);
+
+  // We need to overwrite the host "readFile" method, as we want the TypeScript
+  // program to be based on the file contents in the virtual file tree.
+  host.readFile = fileName => {
+    const buffer = tree.read(relative(basePath, fileName));
+    // Strip BOM as otherwise TSC methods (Ex: getWidth) will return an offset which
+    // which breaks the CLI UpdateRecorder.
+    // See: https://github.com/angular/angular/pull/30719
+    return buffer ? buffer.toString().replace(/^\uFEFF/, '') : undefined;
+  };
+
   const program = ts.createProgram(parsed.fileNames, parsed.options, host);
   const typeChecker = program.getTypeChecker();
   const templateVisitor = new NgComponentTemplateVisitor(typeChecker);
@@ -87,5 +97,6 @@ function runTemplateVariableAssignmentCheck(
     logger.info('');
     logger.info('The following template assignments were found:');
     collectedFailures.forEach(failure => logger.warn(`⮑   ${failure}`));
+    logger.info('------------------------------------------------');
   }
 }

@@ -1,6 +1,6 @@
 // #docplaster
 // #docregion imports
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CartService } from '../cart.service';
 // #enddocregion imports
 
@@ -10,14 +10,12 @@ import { CartService } from '../cart.service';
   styleUrls: ['./cart.component.css']
 })
 // #docregion props-services, submit
-export class CartComponent implements OnInit {
+export class CartComponent {
   items;
 
   constructor(
     private cartService: CartService
-  ) { }
-
-  ngOnInit() {
+  ) {
     this.items = this.cartService.getItems();
   }
 }

@@ -20,7 +20,6 @@ import {computeMsgId, digest, sha1} from '../../src/i18n/digest';
           meaning: '',
           description: '',
           sources: [],
-          customId: 'i',
         })).toEqual('i');
       });
     });

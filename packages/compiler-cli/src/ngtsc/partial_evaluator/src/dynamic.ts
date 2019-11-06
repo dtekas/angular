@@ -38,10 +38,9 @@ export const enum DynamicValueReason {
   EXTERNAL_REFERENCE,
 
   /**
-   * Syntax that `StaticInterpreter` doesn't know how to evaluate, for example a type of
-   * `ts.Expression` that is not supported.
+   * A type of `ts.Expression` that `StaticInterpreter` doesn't know how to evaluate.
    */
-  UNSUPPORTED_SYNTAX,
+  UNKNOWN_EXPRESSION_TYPE,
 
   /**
    * A declaration of a `ts.Identifier` could not be found.
@@ -81,8 +80,8 @@ export class DynamicValue<R = unknown> {
     return new DynamicValue(node, ref, DynamicValueReason.EXTERNAL_REFERENCE);
   }
 
-  static fromUnsupportedSyntax(node: ts.Node): DynamicValue {
-    return new DynamicValue(node, undefined, DynamicValueReason.UNSUPPORTED_SYNTAX);
+  static fromUnknownExpressionType(node: ts.Node): DynamicValue {
+    return new DynamicValue(node, undefined, DynamicValueReason.UNKNOWN_EXPRESSION_TYPE);
   }
 
   static fromUnknownIdentifier(node: ts.Identifier): DynamicValue {
@@ -109,8 +108,8 @@ export class DynamicValue<R = unknown> {
     return this.code === DynamicValueReason.EXTERNAL_REFERENCE;
   }
 
-  isFromUnsupportedSyntax(this: DynamicValue<R>): this is DynamicValue {
-    return this.code === DynamicValueReason.UNSUPPORTED_SYNTAX;
+  isFromUnknownExpressionType(this: DynamicValue<R>): this is DynamicValue {
+    return this.code === DynamicValueReason.UNKNOWN_EXPRESSION_TYPE;
   }
 
   isFromUnknownIdentifier(this: DynamicValue<R>): this is DynamicValue {

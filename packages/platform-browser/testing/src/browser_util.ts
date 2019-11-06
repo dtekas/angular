@@ -6,8 +6,8 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {ɵgetDOM as getDOM} from '@angular/common';
 import {NgZone, ɵglobal as global} from '@angular/core';
+import {ɵgetDOM as getDOM} from '@angular/platform-browser';
 
 export let browserDetection: BrowserDetection;
 
@@ -91,19 +91,11 @@ export class BrowserDetection {
 BrowserDetection.setup();
 
 export function dispatchEvent(element: any, eventType: any): void {
-  const evt: Event = getDOM().getDefaultDocument().createEvent('Event');
-  evt.initEvent(eventType, true, true);
-  getDOM().dispatchEvent(element, evt);
-}
-
-export function createMouseEvent(eventType: string): MouseEvent {
-  const evt: MouseEvent = getDOM().getDefaultDocument().createEvent('MouseEvent');
-  evt.initEvent(eventType, true, true);
-  return evt;
+  getDOM().dispatchEvent(element, getDOM().createEvent(eventType));
 }
 
 export function el(html: string): HTMLElement {
-  return <HTMLElement>getContent(createTemplate(html)).firstChild;
+  return <HTMLElement>getDOM().firstChild(getDOM().content(getDOM().createTemplate(html)));
 }
 
 export function normalizeCSS(css: string): string {
@@ -115,27 +107,17 @@ export function normalizeCSS(css: string): string {
       .replace(/\[(.+)=([^"\]]+)\]/g, (...match: string[]) => `[${match[1]}="${match[2]}"]`);
 }
 
-function getAttributeMap(element: any): Map<string, string> {
-  const res = new Map<string, string>();
-  const elAttrs = element.attributes;
-  for (let i = 0; i < elAttrs.length; i++) {
-    const attrib = elAttrs.item(i);
-    res.set(attrib.name, attrib.value);
-  }
-  return res;
-}
-
 const _selfClosingTags = ['br', 'hr', 'input'];
 export function stringifyElement(el: any /** TODO #9100 */): string {
   let result = '';
   if (getDOM().isElementNode(el)) {
-    const tagName = el.tagName.toLowerCase();
+    const tagName = getDOM().tagName(el).toLowerCase();
 
     // Opening tag
     result += `<${tagName}`;
 
     // Attributes in an ordered way
-    const attributeMap = getAttributeMap(el);
+    const attributeMap = getDOM().attributeMap(el);
     const sortedKeys = Array.from(attributeMap.keys()).sort();
     for (const key of sortedKeys) {
       const lowerCaseKey = key.toLowerCase();
@@ -155,8 +137,8 @@ export function stringifyElement(el: any /** TODO #9100 */): string {
     result += '>';
 
     // Children
-    const childrenRoot = templateAwareRoot(el);
-    const children = childrenRoot ? childrenRoot.childNodes : [];
+    const childrenRoot = getDOM().templateAwareRoot(el);
+    const children = childrenRoot ? getDOM().childNodes(childrenRoot) : [];
     for (let j = 0; j < children.length; j++) {
       result += stringifyElement(children[j]);
     }
@@ -165,73 +147,15 @@ export function stringifyElement(el: any /** TODO #9100 */): string {
     if (_selfClosingTags.indexOf(tagName) == -1) {
       result += `</${tagName}>`;
     }
-  } else if (isCommentNode(el)) {
-    result += `<!--${el.nodeValue}-->`;
+  } else if (getDOM().isCommentNode(el)) {
+    result += `<!--${getDOM().nodeValue(el)}-->`;
   } else {
-    result += el.textContent;
+    result += getDOM().getText(el);
   }
 
   return result;
 }
 
 export function createNgZone(): NgZone {
-  return new NgZone({enableLongStackTrace: true, shouldCoalesceEventChangeDetection: false});
-}
-
-export function isCommentNode(node: Node): boolean {
-  return node.nodeType === Node.COMMENT_NODE;
-}
-
-export function isTextNode(node: Node): boolean {
-  return node.nodeType === Node.TEXT_NODE;
-}
-
-export function getContent(node: Node): Node {
-  if ('content' in node) {
-    return (<any>node).content;
-  } else {
-    return node;
-  }
-}
-
-export function templateAwareRoot(el: Node): any {
-  return getDOM().isElementNode(el) && el.nodeName === 'TEMPLATE' ? getContent(el) : el;
-}
-
-export function setCookie(name: string, value: string) {
-  // document.cookie is magical, assigning into it assigns/overrides one cookie value, but does
-  // not clear other cookies.
-  document.cookie = encodeURIComponent(name) + '=' + encodeURIComponent(value);
-}
-
-export function supportsWebAnimation(): boolean {
-  return typeof(<any>Element).prototype['animate'] === 'function';
-}
-
-export function hasStyle(element: any, styleName: string, styleValue?: string | null): boolean {
-  const value = element.style[styleName] || '';
-  return styleValue ? value == styleValue : value.length > 0;
-}
-
-export function hasClass(element: any, className: string): boolean {
-  return element.classList.contains(className);
-}
-
-export function sortedClassList(element: any): any[] {
-  return Array.prototype.slice.call(element.classList, 0).sort();
-}
-
-export function createTemplate(html: any): HTMLElement {
-  const t = getDOM().getDefaultDocument().createElement('template');
-  t.innerHTML = html;
-  return t;
-}
-
-export function childNodesAsList(el: Node): any[] {
-  const childNodes = el.childNodes;
-  const res = [];
-  for (let i = 0; i < childNodes.length; i++) {
-    res[i] = childNodes[i];
-  }
-  return res;
+  return new NgZone({enableLongStackTrace: true});
 }

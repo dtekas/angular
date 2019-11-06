@@ -66,13 +66,6 @@
             "rev": true,
             "title": "Happy Angular Podcast",
             "url": "https://happy-angular.de/"
-          },
-          "ngruair": {
-            "desc": "Russian language video podcast about Angular.",
-            "logo": "",
-            "rev": true,
-            "title": "NgRuAir",
-            "url": "https://github.com/ngRuAir/ngruair"
           }
         }
       }
@@ -121,12 +114,6 @@
             "rev": true,
             "title": "NGXS",
             "url": "https://ngxs.io/"
-          },
-          "akita": {
-            "desc": "Akita is a state management pattern, built on top of RxJS, which takes the idea of multiple data stores from Flux and the immutable updates from Redux, along with the concept of streaming data, to create the Observable Data Store model.",
-            "rev": true,
-            "title": "Akita",
-            "url": "https://netbasal.gitbook.io/akita/"
           },
           "ab": {
             "desc": "The official library for Firebase and Angular",
@@ -272,23 +259,11 @@
       "UI Components": {
         "order": 4,
         "resources": {
-           "AngularUIToolkit": {
-            "desc": "Angular UI Toolkit: 115 professionally maintained UI components ranging from a robust grid to charts and more. Try for free & build Angular apps faster.",
-            "rev": true,
-            "title": "Angular UI Toolkit",
-            "url": "https://www.angular-ui-tools.com"
-          },
-          "SenchaforAngular": {
-            "desc": "Build modern web apps faster with 115+ pre-built UI components. Try for free and download today.",
-            "rev": true,
-            "title": "Sencha for Angular",
-            "url": "https://www.sencha.com/products/extangular/"
-          },
           "IgniteUIforAngular": {
             "desc": "Ignite UI for Angular is a dependency-free Angular toolkit for building modern web apps.",
             "rev": true,
             "title": "Ignite UI for Angular",
-            "url": "https://www.infragistics.com/products/ignite-ui-angular?utm_source=angular.io&utm_medium=Referral&utm_campaign=Angular"
+            "url": "https://www.infragistics.com/products/ignite-ui-angular"
           },
           "DevExtreme": {
             "desc": "50+ UI components including data grid, pivot grid, scheduler, charts, editors, maps and other multi-purpose controls for creating highly responsive web applications for touch devices and traditional desktops.",
@@ -662,25 +637,6 @@
             "rev": true,
             "title": "Loiane Training (Português)",
             "url": "https://loiane.training/course/angular/"
-          },
-          "web-dev-angular": {
-            "desc": "Build performant and progressive Angular applications.",
-            "rev": true,
-            "title": "web.dev/angular",
-            "url": "https://web.dev/angular"
-          },
-          "mdb-angular-boilerplate": {
-            "desc": "Angular CRUD application starter with NgRx state management, Firebase backend and installation guide.",
-            "rev": true,
-            "title": "MDB Angular Boilerplate",
-            "url": "https://github.com/mdbootstrap/Angular-Bootstrap-Boilerplate"
-          },
-          "dotnettricks": {
-            "desc": "Online videos and training for Angular.",
-            "logo": "",
-            "rev": true,
-            "title": "DotNetTricks",
-            "url": "https://www.dotnettricks.com/courses/angular"
           }
         }
       },
@@ -772,7 +728,7 @@
             "desc": "Angular trainings delivered by Zenika (FRANCE)",
             "rev": true,
             "title": "Angular Trainings (French)",
-            "url": "https://training.zenika.com/fr/training/angular/description"
+            "url": "https://training.zenika.com/fr/training/angular2/description"
           },
           "formationjs": {
             "desc": "Angular onsite training in Paris (France). Monthly Angular workshops and custom onsite classes. We are focused on Angular, so we are always up to date.",

@@ -29,8 +29,7 @@ withEachNg1Version(() => {
     afterEach(() => destroyPlatform());
 
     describe('(basic use)', () => {
-      it('should have AngularJS loaded',
-         () => expect(angular.getAngularJSGlobal().version.major).toBe(1));
+      it('should have AngularJS loaded', () => expect(angular.version.major).toBe(1));
 
       it('should instantiate ng2 in ng1 template and project content', async(() => {
            const ng1Module = angular.module_('ng1', []);

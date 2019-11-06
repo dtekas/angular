@@ -6,10 +6,7 @@ load("//modules/benchmarks:benchmark_test.bzl", "benchmark_test")
 
 ng_module(
     name = "largetable_lib",
-    srcs = [
-        "index_aot.ts",
-        "table.ts",
-    ],
+    srcs = glob(["**/*.ts"]),
     tags = ["ivy-only"],
     deps = [
         "//modules/benchmarks/src:util_lib",
@@ -17,12 +14,13 @@ ng_module(
         "//packages:types",
         "//packages/common",
         "//packages/core",
+        "@npm//reflect-metadata",
     ],
 )
 
 ng_rollup_bundle(
     name = "bundle",
-    entry_point = ":index_aot.ts",
+    entry_point = ":index.ts",
     tags = ["ivy-only"],
     deps = [
         ":largetable_lib",
@@ -32,12 +30,12 @@ ng_rollup_bundle(
 
 ts_devserver(
     name = "devserver",
-    index_html = "index.html",
-    port = 4200,
-    tags = ["ivy-only"],
-    deps = [
+    static_files = [
         ":bundle.min_debug.js",
+        ":bundle.min.js",
+        "index.html",
     ],
+    tags = ["ivy-only"],
 )
 
 benchmark_test(

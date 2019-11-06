@@ -8,6 +8,7 @@
 import {absoluteFrom, getFileSystem} from '../../../src/ngtsc/file_system';
 import {runInEachFileSystem} from '../../../src/ngtsc/file_system/testing';
 import {loadTestFiles} from '../../../test/helpers';
+import {EntryPoint} from '../../src/packages/entry_point';
 import {EntryPointBundle} from '../../src/packages/entry_point_bundle';
 import {InPlaceFileWriter} from '../../src/writing/in_place_file_writer';
 
@@ -31,7 +32,7 @@ runInEachFileSystem(() => {
     it('should write all the FileInfo to the disk', () => {
       const fs = getFileSystem();
       const fileWriter = new InPlaceFileWriter(fs);
-      fileWriter.writeBundle({} as EntryPointBundle, [
+      fileWriter.writeBundle({} as EntryPoint, {} as EntryPointBundle, [
         {path: _('/package/path/top-level.js'), contents: 'MODIFIED TOP LEVEL'},
         {path: _('/package/path/folder-1/file-1.js'), contents: 'MODIFIED FILE 1'},
         {path: _('/package/path/folder-2/file-4.js'), contents: 'MODIFIED FILE 4'},
@@ -48,7 +49,7 @@ runInEachFileSystem(() => {
     it('should create backups of all files that previously existed', () => {
       const fs = getFileSystem();
       const fileWriter = new InPlaceFileWriter(fs);
-      fileWriter.writeBundle({} as EntryPointBundle, [
+      fileWriter.writeBundle({} as EntryPoint, {} as EntryPointBundle, [
         {path: _('/package/path/top-level.js'), contents: 'MODIFIED TOP LEVEL'},
         {path: _('/package/path/folder-1/file-1.js'), contents: 'MODIFIED FILE 1'},
         {path: _('/package/path/folder-2/file-4.js'), contents: 'MODIFIED FILE 4'},
@@ -71,7 +72,10 @@ runInEachFileSystem(() => {
       const absoluteBackupPath = _('/package/path/already-backed-up.js');
       expect(
           () => fileWriter.writeBundle(
-              {} as EntryPointBundle, [{path: absoluteBackupPath, contents: 'MODIFIED BACKED UP'}]))
+              {} as EntryPoint, {} as EntryPointBundle,
+              [
+                {path: absoluteBackupPath, contents: 'MODIFIED BACKED UP'},
+              ]))
           .toThrowError(
               `Tried to overwrite ${absoluteBackupPath}.__ivy_ngcc_bak with an ngcc back up file, which is disallowed.`);
     });

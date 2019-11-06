@@ -50,11 +50,9 @@ export interface InjectableDecorator {
    *
    */
   (): TypeDecorator;
-  (options?: {providedIn: Type<any>| 'root' | 'platform' | 'any' | null}&
-   InjectableProvider): TypeDecorator;
+  (options?: {providedIn: Type<any>| 'root' | null}&InjectableProvider): TypeDecorator;
   new (): Injectable;
-  new (options?: {providedIn: Type<any>| 'root' | 'platform' | 'any' | null}&
-       InjectableProvider): Injectable;
+  new (options?: {providedIn: Type<any>| 'root' | null}&InjectableProvider): Injectable;
 }
 
 /**
@@ -66,14 +64,10 @@ export interface Injectable {
   /**
    * Determines which injectors will provide the injectable,
    * by either associating it with an @NgModule or other `InjectorType`,
-   * or by specifying that this injectable should be provided in the:
-   * - 'root' injector, which will be the application-level injector in most apps.
-   * - 'platform' injector, which would be the special singleton platform injector shared by all
-   * applications on the page.
-   * - 'any' injector, which would be the injector which receives the resolution. (Note this only
-   * works on NgModule Injectors and not on Element Injector)
+   * or by specifying that this injectable should be provided in the
+   * 'root' injector, which will be the application-level injector in most apps.
    */
-  providedIn?: Type<any>|'root'|'platform'|'any'|null;
+  providedIn?: Type<any>|'root'|null;
 }
 
 /**
@@ -91,16 +85,16 @@ export const Injectable: InjectableDecorator = makeDecorator(
  *
  * @publicApi
  */
-export interface InjectableType<T> extends Type<T> { ɵprov: ɵɵInjectableDef<T>; }
+export interface InjectableType<T> extends Type<T> { ngInjectableDef: ɵɵInjectableDef<T>; }
 
 /**
  * Supports @Injectable() in JIT mode for Render2.
  */
-function render2CompileInjectable(injectableType: Type<any>, options?: {
-  providedIn?: Type<any>| 'root' | 'platform' | 'any' | null
-} & InjectableProvider): void {
+function render2CompileInjectable(
+    injectableType: Type<any>,
+    options?: {providedIn?: Type<any>| 'root' | null} & InjectableProvider): void {
   if (options && options.providedIn !== undefined && !getInjectableDef(injectableType)) {
-    (injectableType as InjectableType<any>).ɵprov = ɵɵdefineInjectable({
+    (injectableType as InjectableType<any>).ngInjectableDef = ɵɵdefineInjectable({
       token: injectableType,
       providedIn: options.providedIn,
       factory: convertInjectableProviderToFactory(injectableType, options),

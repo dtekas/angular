@@ -353,14 +353,10 @@ export class IvyCompilation {
       const compileMatchRes =
           match.handler.compile(node as ClassDeclaration, match.analyzed.analysis, constantPool);
       this.perf.stop(compileSpan);
-      if (Array.isArray(compileMatchRes)) {
-        compileMatchRes.forEach(result => {
-          if (!res.some(r => r.name === result.name)) {
-            res.push(result);
-          }
-        });
-      } else if (!res.some(result => result.name === compileMatchRes.name)) {
+      if (!Array.isArray(compileMatchRes)) {
         res.push(compileMatchRes);
+      } else {
+        res.push(...compileMatchRes);
       }
     }
 

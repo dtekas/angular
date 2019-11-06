@@ -14,33 +14,24 @@ import {FileSizeData} from './file_size_data';
 
 if (require.main === module) {
   const
-      [filePath, sourceMapPath, goldenPath, maxPercentageDiffArg, maxSizeDiffArg, writeGoldenArg,
-       requiredCompileMode] = process.argv.slice(2);
+      [filePath, sourceMapPath, goldenPath, maxPercentageDiffArg, maxSizeDiffArg, writeGoldenArg] =
+          process.argv.slice(2);
   const status = main(
       require.resolve(filePath), require.resolve(sourceMapPath), require.resolve(goldenPath),
-      writeGoldenArg === 'true', parseInt(maxPercentageDiffArg), parseInt(maxSizeDiffArg),
-      requiredCompileMode);
+      writeGoldenArg === 'true', parseInt(maxPercentageDiffArg), parseInt(maxSizeDiffArg));
 
   process.exit(status ? 0 : 1);
 }
 
 export function main(
     filePath: string, sourceMapPath: string, goldenSizeMapPath: string, writeGolden: boolean,
-    maxPercentageDiff: number, maxByteDiff: number, requiredCompileMode: string): boolean {
+    maxPercentageDiff: number, maxByteDiff: number): boolean {
   const {sizeResult} = new SizeTracker(filePath, sourceMapPath);
-  const compileMode = process.env['compile'];
-
-  if (requiredCompileMode && compileMode !== requiredCompileMode) {
-    console.error(chalk.red(
-        `Expected the size-tracking tool to be run with: ` +
-        `--define=compile=${requiredCompileMode}`));
-    return false;
-  }
 
   if (writeGolden) {
     writeFileSync(goldenSizeMapPath, JSON.stringify(sizeResult, null, 2));
     console.error(chalk.green(`Updated golden size data in ${goldenSizeMapPath}`));
-    return true;
+    return;
   }
 
   const expectedSizeData = <FileSizeData>JSON.parse(readFileSync(goldenSizeMapPath, 'utf8'));
@@ -59,10 +50,10 @@ export function main(
     console.error(chalk.red(`    ${failurePrefix}${message}`));
   });
 
+  const compile = process.env['compile'];
+  const defineFlag = (compile !== 'legacy') ? `--define=compile=${compile} ` : '';
   const bazelTargetName = process.env['TEST_TARGET'];
-  const defineFlag = (compileMode !== 'legacy') ? `--define=compile=${compileMode} ` : '';
 
   console.error(`\nThe golden file can be updated with the following command:`);
   console.error(`    yarn bazel run ${defineFlag}${bazelTargetName}.accept`);
-  return false;
 }

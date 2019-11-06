@@ -34,22 +34,24 @@ const NATIVE_REMOVE_LISTENER = 'removeEventListener';
 const stopSymbol = '__zone_symbol__propagationStopped';
 const stopMethodSymbol = '__zone_symbol__stopImmediatePropagation';
 
-const unpatchedMap: {[key: string]: string}|undefined = (() => {
-  const unpatchedEvents =
-      (typeof Zone !== 'undefined') && (Zone as any)[__symbol__('UNPATCHED_EVENTS')];
-  if (unpatchedEvents) {
-    const unpatchedEventMap: {[eventName: string]: string} = {};
-    unpatchedEvents.forEach((eventName: string) => { unpatchedEventMap[eventName] = eventName; });
-    return unpatchedEventMap;
+
+const blackListedMap = (() => {
+  const blackListedEvents: string[] =
+      (typeof Zone !== 'undefined') && (Zone as any)[__symbol__('BLACK_LISTED_EVENTS')];
+  if (blackListedEvents) {
+    const res: {[eventName: string]: string} = {};
+    blackListedEvents.forEach(eventName => { res[eventName] = eventName; });
+    return res;
   }
   return undefined;
 })();
 
-const isUnpatchedEvent = function(eventName: string) {
-  if (!unpatchedMap) {
+
+const isBlackListedEvent = function(eventName: string) {
+  if (!blackListedMap) {
     return false;
   }
-  return unpatchedMap.hasOwnProperty(eventName);
+  return blackListedMap.hasOwnProperty(eventName);
 };
 
 interface TaskData {
@@ -158,7 +160,7 @@ export class DomEventsPlugin extends EventManagerPlugin {
     let callback: EventListener = handler as EventListener;
     // if zonejs is loaded and current zone is not ngZone
     // we keep Zone.current on target for later restoration.
-    if (zoneJsLoaded && (!NgZone.isInAngularZone() || isUnpatchedEvent(eventName))) {
+    if (zoneJsLoaded && (!NgZone.isInAngularZone() || isBlackListedEvent(eventName))) {
       let symbolName = symbolNames[eventName];
       if (!symbolName) {
         symbolName = symbolNames[eventName] = __symbol__(ANGULAR + eventName + FALSE);
@@ -169,7 +171,7 @@ export class DomEventsPlugin extends EventManagerPlugin {
         taskDatas = (element as any)[symbolName] = [];
       }
 
-      const zone = isUnpatchedEvent(eventName) ? Zone.root : Zone.current;
+      const zone = isBlackListedEvent(eventName) ? Zone.root : Zone.current;
       if (taskDatas.length === 0) {
         taskDatas.push({zone: zone, handler: callback});
       } else {

@@ -70,7 +70,7 @@ describe('pipe', () => {
       template: `<div my-dir [dirProp]="'a'|double"></div>`,
     })
     class App {
-      @ViewChild(Dir) directive !: Dir;
+      @ViewChild(Dir, {static: false}) directive !: Dir;
     }
 
     TestBed.configureTestingModule({declarations: [App, DoublePipe, Dir]});
@@ -421,7 +421,7 @@ describe('pipe', () => {
          })
          class App {
            @Input() something: any;
-           @ViewChild(SomeComp) comp !: SomeComp;
+           @ViewChild(SomeComp, {static: false}) comp !: SomeComp;
            pipeValue = 10;
            displayValue = 0;
          }
@@ -473,7 +473,7 @@ describe('pipe', () => {
          })
          class App {
            @Input() something: any;
-           @ViewChild(SomeComp) comp !: SomeComp;
+           @ViewChild(SomeComp, {static: false}) comp !: SomeComp;
            pipeValue = 10;
            displayValue = 0;
          }

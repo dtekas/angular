@@ -3,7 +3,7 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file at https://angular.io/license
 
-load("@build_bazel_rules_nodejs//:index.bzl", "nodejs_binary", "nodejs_test")
+load("@build_bazel_rules_nodejs//:defs.bzl", "nodejs_binary", "nodejs_test")
 
 """
   Macro that can be used to track the size of a given input file by inspecting
@@ -14,11 +14,10 @@ load("@build_bazel_rules_nodejs//:index.bzl", "nodejs_binary", "nodejs_test")
 def js_size_tracking_test(
         name,
         src,
-        source_map,
-        golden_file,
-        max_percentage_diff,
-        max_byte_diff,
-        required_compile_mode = "",
+        sourceMap,
+        goldenFile,
+        maxPercentageDiff,
+        maxByteDiff,
         data = [],
         **kwargs):
     all_data = data + [
@@ -33,15 +32,7 @@ def js_size_tracking_test(
         data = all_data,
         entry_point = entry_point,
         configuration_env_vars = ["compile"],
-        templated_args = [
-            src,
-            source_map,
-            golden_file,
-            "%d" % max_percentage_diff,
-            "%d" % max_byte_diff,
-            "false",
-            required_compile_mode,
-        ],
+        templated_args = [src, sourceMap, goldenFile, "%d" % maxPercentageDiff, "%d" % maxByteDiff, "false"],
         **kwargs
     )
 
@@ -51,6 +42,6 @@ def js_size_tracking_test(
         data = all_data,
         entry_point = entry_point,
         configuration_env_vars = ["compile"],
-        templated_args = [src, source_map, golden_file, "0", "0", "true", required_compile_mode],
+        templated_args = [src, sourceMap, goldenFile, "0", "0", "true"],
         **kwargs
     )

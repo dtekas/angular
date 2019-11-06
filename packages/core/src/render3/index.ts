@@ -6,17 +6,15 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import {LifecycleHooksFeature, renderComponent, whenRendered} from './component';
-import {ɵɵdefineComponent, ɵɵdefineDirective, ɵɵdefineNgModule, ɵɵdefinePipe, ɵɵsetComponentScope, ɵɵsetNgModuleScope} from './definition';
-import {ɵɵCopyDefinitionFeature} from './features/copy_definition_feature';
+import {ɵɵdefineBase, ɵɵdefineComponent, ɵɵdefineDirective, ɵɵdefineNgModule, ɵɵdefinePipe, ɵɵsetComponentScope, ɵɵsetNgModuleScope} from './definition';
 import {ɵɵInheritDefinitionFeature} from './features/inherit_definition_feature';
 import {ɵɵNgOnChangesFeature} from './features/ng_onchanges_feature';
 import {ɵɵProvidersFeature} from './features/providers_feature';
-import {ComponentDef, ComponentTemplate, ComponentType, DirectiveDef, DirectiveType, PipeDef, ɵɵComponentDefWithMeta, ɵɵDirectiveDefWithMeta, ɵɵFactoryDef, ɵɵPipeDefWithMeta} from './interfaces/definition';
+import {ComponentDef, ComponentTemplate, ComponentType, DirectiveDef, DirectiveDefFlags, DirectiveType, PipeDef, ɵɵBaseDef, ɵɵComponentDefWithMeta, ɵɵDirectiveDefWithMeta, ɵɵPipeDefWithMeta} from './interfaces/definition';
 import {getComponent, getDirectives, getHostElement, getRenderedText} from './util/discovery_utils';
 
 export {ComponentFactory, ComponentFactoryResolver, ComponentRef, injectComponentFactoryResolver} from './component_ref';
 export {ɵɵgetFactoryOf, ɵɵgetInheritedFactory} from './di';
-
 // clang-format off
 export {
   detectChanges,
@@ -56,7 +54,6 @@ export {
   ɵɵcontainerRefreshStart,
 
   ɵɵdirectiveInject,
-  ɵɵinvalidFactory,
 
   ɵɵelement,
   ɵɵelementContainer,
@@ -75,6 +72,7 @@ export {
   ɵɵinjectAttribute,
 
   ɵɵlistener,
+  ɵɵload,
 
   ɵɵnamespaceHTML,
   ɵɵnamespaceMathML,
@@ -99,9 +97,7 @@ export {
 
   ɵɵreference,
 
-  // TODO: remove `select` once we've refactored all of the tests not to use it.
   ɵɵselect,
-  ɵɵadvance,
   ɵɵstyleMap,
 
   ɵɵstyleProp,
@@ -116,9 +112,12 @@ export {
   ɵɵstylePropInterpolateV,
 
   ɵɵstyleSanitizer,
+  ɵɵstyling,
+  ɵɵstylingApply,
   ɵɵtemplate,
 
   ɵɵtext,
+  ɵɵtextBinding,
   ɵɵtextInterpolate,
   ɵɵtextInterpolate1,
   ɵɵtextInterpolate2,
@@ -143,6 +142,7 @@ export {
 } from './state';
 
 export {
+  DEFAULT_LOCALE_ID,
   ɵɵi18n,
   ɵɵi18nAttributes,
   ɵɵi18nExp,
@@ -150,6 +150,8 @@ export {
   ɵɵi18nEnd,
   ɵɵi18nApply,
   ɵɵi18nPostprocess,
+  i18nConfigureLocalize,
+  ɵɵi18nLocalize,
   getLocaleId,
   setLocaleId,
 } from './i18n';
@@ -177,8 +179,9 @@ export {
   ɵɵqueryRefresh,
   ɵɵviewQuery,
   ɵɵstaticViewQuery,
-  ɵɵloadQuery,
+  ɵɵloadViewQuery,
   ɵɵcontentQuery,
+  ɵɵloadContentQuery,
   ɵɵstaticContentQuery
 } from './query';
 
@@ -202,16 +205,16 @@ export {ɵɵresolveWindow, ɵɵresolveDocument, ɵɵresolveBody} from './util/mi
 // clang-format on
 
 export {
+  ɵɵBaseDef,
   ComponentDef,
   ɵɵComponentDefWithMeta,
-  ɵɵFactoryDef,
   ComponentTemplate,
   ComponentType,
   DirectiveDef,
+  DirectiveDefFlags,
   ɵɵDirectiveDefWithMeta,
   DirectiveType,
   ɵɵNgOnChangesFeature,
-  ɵɵCopyDefinitionFeature,
   ɵɵInheritDefinitionFeature,
   ɵɵProvidersFeature,
   PipeDef,
@@ -220,6 +223,7 @@ export {
   ɵɵdefineComponent,
   ɵɵdefineDirective,
   ɵɵdefineNgModule,
+  ɵɵdefineBase,
   ɵɵdefinePipe,
   getHostElement,
   getComponent,

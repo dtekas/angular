@@ -9,7 +9,7 @@
 import {Component, Input, NgModule} from '@angular/core';
 import {BrowserModule, DomSanitizer, SafeStyle} from '@angular/platform-browser';
 
-import {TreeNode, emptyTree, getMaxDepth} from '../util';
+import {TreeNode, emptyTree, maxDepth} from '../util';
 
 let trustedEmptyColor: SafeStyle;
 let trustedGreyColor: SafeStyle;
@@ -40,8 +40,8 @@ export class RootTreeComponent {
 
 function createModule(): any {
   const components: any[] = [RootTreeComponent];
-  for (let i = 0; i <= getMaxDepth(); i++) {
-    components.push(createTreeComponent(i, i === getMaxDepth()));
+  for (let i = 0; i <= maxDepth; i++) {
+    components.push(createTreeComponent(i, i === maxDepth));
   }
 
   @NgModule({imports: [BrowserModule], bootstrap: [RootTreeComponent], declarations: [components]})

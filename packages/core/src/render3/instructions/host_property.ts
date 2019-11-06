@@ -5,13 +5,12 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import {bindingUpdated} from '../bindings';
+import {assertNotEqual} from '../../util/assert';
 import {SanitizerFn} from '../interfaces/sanitization';
-import {TVIEW} from '../interfaces/view';
-import {getLView, getSelectedIndex, nextBindingIndex} from '../state';
+import {getLView, getSelectedIndex} from '../state';
 import {NO_CHANGE} from '../tokens';
-
-import {TsickleIssue1009, elementPropertyInternal, loadComponentRenderer, storePropertyBindingMetadata} from './shared';
+import {bind} from './property';
+import {TsickleIssue1009, elementPropertyInternal, loadComponentRenderer} from './shared';
 
 /**
  * Update a property on a host element. Only applies to native node properties, not inputs.
@@ -29,12 +28,12 @@ import {TsickleIssue1009, elementPropertyInternal, loadComponentRenderer, storeP
  */
 export function ɵɵhostProperty<T>(
     propName: string, value: T, sanitizer?: SanitizerFn | null): TsickleIssue1009 {
+  const index = getSelectedIndex();
+  ngDevMode && assertNotEqual(index, -1, 'selected index cannot be -1');
   const lView = getLView();
-  const bindingIndex = nextBindingIndex();
-  if (bindingUpdated(lView, bindingIndex, value)) {
-    const nodeIndex = getSelectedIndex();
-    elementPropertyInternal(lView, nodeIndex, propName, value, sanitizer, true);
-    ngDevMode && storePropertyBindingMetadata(lView[TVIEW].data, nodeIndex, propName, bindingIndex);
+  const bindReconciledValue = bind(lView, value);
+  if (bindReconciledValue !== NO_CHANGE) {
+    elementPropertyInternal(index, propName, bindReconciledValue, sanitizer, true);
   }
   return ɵɵhostProperty;
 }
@@ -63,13 +62,12 @@ export function ɵɵhostProperty<T>(
  */
 export function ɵɵupdateSyntheticHostBinding<T>(
     propName: string, value: T | NO_CHANGE, sanitizer?: SanitizerFn | null): TsickleIssue1009 {
+  const index = getSelectedIndex();
   const lView = getLView();
-  const bindingIndex = nextBindingIndex();
-  if (bindingUpdated(lView, bindingIndex, value)) {
-    const nodeIndex = getSelectedIndex();
-    elementPropertyInternal(
-        lView, nodeIndex, propName, value, sanitizer, true, loadComponentRenderer);
-    ngDevMode && storePropertyBindingMetadata(lView[TVIEW].data, nodeIndex, propName, bindingIndex);
+  // TODO(benlesh): remove bind call here.
+  const bound = bind(lView, value);
+  if (bound !== NO_CHANGE) {
+    elementPropertyInternal(index, propName, bound, sanitizer, true, loadComponentRenderer);
   }
   return ɵɵupdateSyntheticHostBinding;
 }

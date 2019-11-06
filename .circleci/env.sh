@@ -19,20 +19,16 @@ setPublicVar PROJECT_ROOT "$projectDir";
 setPublicVar CI_AIO_MIN_PWA_SCORE "95";
 # This is the branch being built; e.g. `pull/12345` for PR builds.
 setPublicVar CI_BRANCH "$CIRCLE_BRANCH";
-setPublicVar CI_BUILD_URL "$CIRCLE_BUILD_URL";
 # ChromeDriver version compatible with the Chrome version included in the docker image used in
 # `.circleci/config.yml`. See http://chromedriver.chromium.org/downloads for a list of versions.
 # This variable is intended to be passed as an arg to the `webdriver-manager update` command (e.g.
 # `"postinstall": "webdriver-manager update $CI_CHROMEDRIVER_VERSION_ARG"`).
 setPublicVar CI_CHROMEDRIVER_VERSION_ARG "--versions.chrome 75.0.3770.90";
 setPublicVar CI_COMMIT "$CIRCLE_SHA1";
-# `CI_COMMIT_RANGE` is only used on push builds (a.k.a. non-PR, non-scheduled builds and rerun
-# workflows of such builds).
-# NOTE: With [CircleCI Pipelines](https://circleci.com/docs/2.0/build-processing) enabled,
-#       `CIRCLE_COMPARE_URL` is no longer available and the commit range cannot be reliably
-#       detected. Fall back to only considering the last commit (which is accurate in the majority
-#       of cases for push builds).
-setPublicVar CI_COMMIT_RANGE "`[[ ${CIRCLE_PR_NUMBER:-false} != false ]] && echo "" || echo "$CIRCLE_SHA1~1...$CIRCLE_SHA1"`";
+# `CI_COMMIT_RANGE` will only be available when `CIRCLE_COMPARE_URL` is also available (or can be
+# retrieved via `get-compare-url.js`), i.e. on push builds (a.k.a. non-PR, non-scheduled builds and
+# rerun workflows of such builds). That is fine, since we only need it in push builds.
+setPublicVar CI_COMMIT_RANGE "`[[ ${CIRCLE_PR_NUMBER:-false} != false ]] && echo "" || node $getCommitRangePath "$CIRCLE_BUILD_NUM" "$CIRCLE_COMPARE_URL"`";
 setPublicVar CI_PULL_REQUEST "${CIRCLE_PR_NUMBER:-false}";
 setPublicVar CI_REPO_NAME "$CIRCLE_PROJECT_REPONAME";
 setPublicVar CI_REPO_OWNER "$CIRCLE_PROJECT_USERNAME";
@@ -65,7 +61,6 @@ else
   setPublicVar SAUCE_USERNAME "angular-ci";
   setSecretVar SAUCE_ACCESS_KEY "9b988f434ff8-fbca-8aa4-4ae3-35442987";
 fi
-# TODO(josephperrott): Remove environment variables once all saucelabs tests are via bazel method.
 setPublicVar SAUCE_LOG_FILE /tmp/angular/sauce-connect.log
 setPublicVar SAUCE_READY_FILE /tmp/angular/sauce-connect-ready-file.lock
 setPublicVar SAUCE_PID_FILE /tmp/angular/sauce-connect-pid-file.lock
@@ -84,7 +79,7 @@ setPublicVar MATERIAL_REPO_TMP_DIR "/tmp/material2"
 setPublicVar MATERIAL_REPO_URL "https://github.com/angular/material2.git"
 setPublicVar MATERIAL_REPO_BRANCH "master"
 # **NOTE**: When updating the commit SHA, also update the cache key in the CircleCI "config.yml".
-setPublicVar MATERIAL_REPO_COMMIT "50514b2358f394f1f6d634fa181b563b7edd738b"
+setPublicVar MATERIAL_REPO_COMMIT "701302dc482d7e4b77990b24e3b5ab330bbf1aa5"
 
 # Source `$BASH_ENV` to make the variables available immediately.
 source $BASH_ENV;

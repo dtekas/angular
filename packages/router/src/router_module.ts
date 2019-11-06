@@ -6,9 +6,11 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {APP_BASE_HREF, HashLocationStrategy, LOCATION_INITIALIZED, Location, LocationStrategy, PathLocationStrategy, PlatformLocation, ViewportScroller, ɵgetDOM as getDOM} from '@angular/common';
+import {APP_BASE_HREF, HashLocationStrategy, LOCATION_INITIALIZED, Location, LocationStrategy, PathLocationStrategy, PlatformLocation, ViewportScroller} from '@angular/common';
 import {ANALYZE_FOR_ENTRY_COMPONENTS, APP_BOOTSTRAP_LISTENER, APP_INITIALIZER, ApplicationRef, Compiler, ComponentRef, Inject, Injectable, InjectionToken, Injector, ModuleWithProviders, NgModule, NgModuleFactoryLoader, NgProbeToken, Optional, Provider, SkipSelf, SystemJsNgModuleLoader} from '@angular/core';
+import {ɵgetDOM as getDOM} from '@angular/platform-browser';
 import {Subject, of } from 'rxjs';
+
 import {EmptyOutletComponent} from './components/empty_outlet';
 import {Route, Routes} from './config';
 import {RouterLink, RouterLinkWithHref} from './directives/router_link';
@@ -25,6 +27,8 @@ import {ActivatedRoute} from './router_state';
 import {UrlHandlingStrategy} from './url_handling_strategy';
 import {DefaultUrlSerializer, UrlSerializer, UrlTree} from './url_tree';
 import {flatten} from './utils/collection';
+
+
 
 /**
  * The directives defined in the `RouterModule`.
@@ -229,17 +233,16 @@ export function provideRoutes(routes: Routes): any {
  * Allowed values in an `ExtraOptions` object that configure
  * when the router performs the initial navigation operation.
  *
- * * 'enabled' - The initial navigation starts before the root component is created.
- * The bootstrap is blocked until the initial navigation is complete. This value is required
- * for [server-side rendering](guide/universal) to work.
+ * * 'enabled' (Default) The initial navigation starts before the root component is created.
+ * The bootstrap is blocked until the initial navigation is complete.
  * * 'disabled' - The initial navigation is not performed. The location listener is set up before
  * the root component gets created. Use if there is a reason to have
  * more control over when the router starts its initial navigation due to some complex
  * initialization logic.
- * * 'legacy_enabled'- (Default, for compatibility.) The initial navigation starts after the root component has been created.
+ * * 'legacy_enabled'- The initial navigation starts after the root component has been created.
  * The bootstrap is not blocked until the initial navigation is complete. @deprecated
  * * 'legacy_disabled'- The initial navigation is not performed. The location listener is set up
- * after the root component gets created. @deprecated since v4
+ * after the root component gets created. @deprecated
  * * `true` - same as 'legacy_enabled'. @deprecated since v4
  * * `false` - same as 'legacy_disabled'. @deprecated since v4
  *
@@ -272,24 +275,11 @@ export interface ExtraOptions {
   useHash?: boolean;
 
   /**
-   * One of `enabled` or `disabled`.
-   * When set to `enabled`, the initial navigation starts before the root component is created.
-   * The bootstrap is blocked until the initial navigation is complete. This value is required for
-   * [server-side rendering](guide/universal) to work.
+   * One of `enabled` (the default) or `disabled`.
+   * By default, the initial navigation starts before the root component is created.
+   * The bootstrap is blocked until the initial navigation is complete.
    * When set to `disabled`, the initial navigation is not performed.
    * The location listener is set up before the root component gets created.
-   * Use if there is a reason to have more control over when the router
-   * starts its initial navigation due to some complex initialization logic.
-   *
-   * Legacy values are deprecated since v4 and should not be used for new applications:
-   *
-   * * `legacy_enabled` - Default for compatibility.
-   * The initial navigation starts after the root component has been created,
-   * but the bootstrap is not blocked until the initial navigation is complete.
-   * * `legacy_disabled` - The initial navigation is not performed.
-   * The location listener is set up after the root component gets created.
-   * * `true` - same as `legacy_enabled`.
-   * * `false` - same as `legacy_disabled`.
    */
   initialNavigation?: InitialNavigation;
 
@@ -327,24 +317,24 @@ export interface ExtraOptions {
    *
    * ```typescript
    * class AppModule {
-   *   constructor(router: Router, viewportScroller: ViewportScroller) {
-   *     router.events.pipe(
-   *       filter((e: Event): e is Scroll => e instanceof Scroll)
-   *     ).subscribe(e => {
-   *       if (e.position) {
-   *         // backward navigation
-   *         viewportScroller.scrollToPosition(e.position);
-   *       } else if (e.anchor) {
-   *         // anchor navigation
-   *         viewportScroller.scrollToAnchor(e.anchor);
-   *       } else {
-   *         // forward navigation
-   *         viewportScroller.scrollToPosition([0, 0]);
-   *       }
-   *     });
-   *   }
-   * }
-   * ```
+    *   constructor(router: Router, viewportScroller: ViewportScroller) {
+    *     router.events.pipe(
+    *       filter((e: Event): e is Scroll => e instanceof Scroll)
+    *     ).subscribe(e => {
+    *       if (e.position) {
+    *         // backward navigation
+    *         viewportScroller.scrollToPosition(e.position);
+    *       } else if (e.anchor) {
+    *         // anchor navigation
+    *         viewportScroller.scrollToAnchor(e.anchor);
+    *       } else {
+    *         // forward navigation
+    *         viewportScroller.scrollToPosition([0, 0]);
+    *       }
+    *     });
+    *   }
+    * }
+    * ```
    */
   scrollPositionRestoration?: 'disabled'|'enabled'|'top';
 

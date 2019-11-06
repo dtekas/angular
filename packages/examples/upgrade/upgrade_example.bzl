@@ -1,5 +1,5 @@
+load("//packages/bazel:index.bzl", "protractor_web_test_suite")
 load("//tools:defaults.bzl", "ng_module", "ts_library")
-load("@npm_bazel_protractor//:index.bzl", "protractor_web_test_suite")
 load("@npm_bazel_typescript//:index.bzl", "ts_devserver")
 
 """
@@ -46,7 +46,7 @@ def create_upgrade_example_targets(name, srcs, e2e_srcs, entry_module, assets = 
         port = 4200,
         entry_module = entry_module,
         static_files = [
-            "//packages/zone.js/dist:zone.js",
+            "@npm//:node_modules/zone.js/dist/zone.js",
             "@npm//:node_modules/angular/angular.js",
             "@npm//:node_modules/reflect-metadata/Reflect.js",
         ],
@@ -61,6 +61,7 @@ def create_upgrade_example_targets(name, srcs, e2e_srcs, entry_module, assets = 
 
     protractor_web_test_suite(
         name = "%s_protractor" % name,
+        data = ["//packages/bazel/src/protractor/utils"],
         on_prepare = "//packages/examples/upgrade:start-server.js",
         server = ":devserver",
         deps = [

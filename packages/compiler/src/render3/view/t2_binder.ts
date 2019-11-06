@@ -260,16 +260,16 @@ class DirectiveBinder<DirectiveT extends DirectiveMeta> implements Visitor {
         // This could be a reference to a component if there is one.
         dirTarget = directives.find(dir => dir.isComponent) || null;
       } else {
-        // This should be a reference to a directive exported via exportAs.
+        // This is a reference to a directive exported via exportAs. One should exist.
         dirTarget =
             directives.find(
                 dir => dir.exportAs !== null && dir.exportAs.some(value => value === ref.value)) ||
             null;
-        // Check if a matching directive was found.
+
+        // Check if a matching directive was found, and error if it wasn't.
         if (dirTarget === null) {
-          // No matching directive was found - this reference points to an unknown target. Leave it
-          // unmapped.
-          return;
+          // TODO(alxhub): Return an error value here that can be used for template validation.
+          throw new Error(`Assertion error: failed to find directive with exportAs: ${ref.value}`);
         }
       }
 

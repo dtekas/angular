@@ -296,11 +296,11 @@ describe('LocationService', () => {
     it('should do a "full page navigation" and remove the stored scroll position when navigating to ' +
       'internal URLs only if a ServiceWorker update has been activated', () => {
       const goExternalSpy = spyOn(service, 'goExternal');
-      const removeStoredScrollInfoSpy = spyOn(scrollService, 'removeStoredScrollInfo');
+      const removeStoredScrollPositionSpy = spyOn(scrollService, 'removeStoredScrollPosition');
 
       // Internal URL - No ServiceWorker update
       service.go('some-internal-url');
-      expect(removeStoredScrollInfoSpy).not.toHaveBeenCalled();
+      expect(removeStoredScrollPositionSpy).not.toHaveBeenCalled();
       expect(goExternalSpy).not.toHaveBeenCalled();
       expect(location.path(true)).toEqual('some-internal-url');
 
@@ -308,24 +308,24 @@ describe('LocationService', () => {
       swUpdates.updateActivated.next('foo');
       service.go('other-internal-url');
       expect(goExternalSpy).toHaveBeenCalledWith('other-internal-url');
-      expect(removeStoredScrollInfoSpy).toHaveBeenCalled();
+      expect(removeStoredScrollPositionSpy).toHaveBeenCalled();
     });
 
     it('should not remove the stored scroll position when navigating to external URLs', () => {
-      const removeStoredScrollInfoSpy = spyOn(scrollService, 'removeStoredScrollInfo');
+      const removeStoredScrollPositionSpy = spyOn(scrollService, 'removeStoredScrollPosition');
       const goExternalSpy = spyOn(service, 'goExternal');
       const externalUrl = 'http://some/far/away/land';
       const otherExternalUrl = 'http://some/far/far/away/land';
 
       // External URL - No ServiceWorker update
       service.go(externalUrl);
-      expect(removeStoredScrollInfoSpy).not.toHaveBeenCalled();
+      expect(removeStoredScrollPositionSpy).not.toHaveBeenCalled();
       expect(goExternalSpy).toHaveBeenCalledWith(externalUrl);
 
       // External URL - ServiceWorker update
       swUpdates.updateActivated.next('foo');
       service.go(otherExternalUrl);
-      expect(removeStoredScrollInfoSpy).not.toHaveBeenCalled();
+      expect(removeStoredScrollPositionSpy).not.toHaveBeenCalled();
       expect(goExternalSpy).toHaveBeenCalledWith(otherExternalUrl);
     });
 
@@ -633,7 +633,7 @@ class MockSwUpdatesService {
 }
 
 class MockScrollService {
-  removeStoredScrollInfo() { }
+  removeStoredScrollPosition() { }
 }
 
 class TestGaService {

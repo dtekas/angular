@@ -9,7 +9,6 @@ import MagicString from 'magic-string';
 import * as ts from 'typescript';
 import {absoluteFrom, getFileSystem} from '../../../src/ngtsc/file_system';
 import {TestFile, runInEachFileSystem} from '../../../src/ngtsc/file_system/testing';
-import {Reexport} from '../../../src/ngtsc/imports';
 import {loadTestFiles} from '../../../test/helpers';
 import {Import, ImportManager} from '../../../src/ngtsc/translator';
 import {DecorationAnalyzer} from '../../src/analysis/decoration_analyzer';
@@ -29,9 +28,6 @@ class TestRenderingFormatter implements RenderingFormatter {
   }
   addExports(output: MagicString, baseEntryPointPath: string, exports: ExportInfo[]) {
     output.prepend('\n// ADD EXPORTS\n');
-  }
-  addDirectExports(output: MagicString, exports: Reexport[]) {
-    output.prepend('\n// ADD DIRECT EXPORTS\n');
   }
   addConstants(output: MagicString, constants: string, file: ts.SourceFile): void {
     output.prepend('\n// ADD CONSTANTS\n');
@@ -65,7 +61,8 @@ function createTestRenderer(
   const fs = getFileSystem();
   const isCore = packageName === '@angular/core';
   const bundle = makeTestEntryPointBundle(
-      'test-package', 'esm2015', isCore, getRootFiles(files), dtsFiles && getRootFiles(dtsFiles));
+      'test-package', 'es2015', 'esm2015', isCore, getRootFiles(files),
+      dtsFiles && getRootFiles(dtsFiles));
   const typeChecker = bundle.src.program.getTypeChecker();
   const host = new Esm2015ReflectionHost(logger, isCore, typeChecker, bundle.dts);
   const referencesRegistry = new NgccReferencesRegistry(host);
@@ -123,7 +120,7 @@ runInEachFileSystem(() => {
       const typingsFile = result.find(f => f.path === _('/typings/file.d.ts')) !;
       expect(typingsFile.contents)
           .toContain(
-              'foo(x: number): number;\n    static ɵfac: ɵngcc0.ɵɵFactoryDef<A>;\n    static ɵdir: ɵngcc0.ɵɵDirectiveDefWithMeta');
+              'foo(x: number): number;\n    static ngDirectiveDef: ɵngcc0.ɵɵDirectiveDefWithMeta');
     });
 
     it('should render imports into typings files', () => {

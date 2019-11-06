@@ -331,9 +331,8 @@ Zone.__load_patch('Error', (global: any, Zone: ZoneType, api: _ZonePrivate) => {
   // we need to detect all zone related frames, it will
   // exceed default stackTraceLimit, so we set it to
   // larger number here, and restore it after detect finish.
-  // We cast through any so we don't need to depend on nodejs typings.
-  const originalStackTraceLimit = (Error as any).stackTraceLimit;
-  (Error as any).stackTraceLimit = 100;
+  const originalStackTraceLimit = Error.stackTraceLimit;
+  Error.stackTraceLimit = 100;
   // we schedule event/micro/macro task, and invoke them
   // when onSchedule, so we can get all stack traces for
   // all kinds of tasks with one error thrown.
@@ -375,5 +374,5 @@ Zone.__load_patch('Error', (global: any, Zone: ZoneType, api: _ZonePrivate) => {
     });
   });
 
-  (Error as any).stackTraceLimit = originalStackTraceLimit;
+  Error.stackTraceLimit = originalStackTraceLimit;
 });

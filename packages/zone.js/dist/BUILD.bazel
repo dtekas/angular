@@ -1,7 +1,7 @@
-load("//tools:defaults.bzl", "rollup_bundle")
+load("@build_bazel_rules_nodejs//:defs.bzl", "rollup_bundle")
 load("//packages/zone.js:bundles.bzl", "ES2015_BUNDLES", "ES5_BUNDLES", "ES5_GLOBAL_BUNDLES")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//packages/zone.js:__subpackages__"])
 
 # copy this file from //lib to //dist
 genrule(
@@ -13,9 +13,9 @@ genrule(
 
 genrule(
     name = "zone_d_ts",
-    srcs = ["//packages/zone.js/lib:zone_d_ts"],
+    srcs = ["//packages/zone.js/lib"],
     outs = ["zone.js.d.ts"],
-    cmd = "cp $< $@",
+    cmd = "find $(SRCS) -name \"zone.d.ts\" -exec cp {} $(@D)/zone.js.d.ts \;",
 )
 
 [
@@ -100,9 +100,7 @@ genrule(
         ],
         cmd = " && ".join([
             "mkdir -p $(@D)",
-            # remove the last line '//# sourceMappingURL=b[0].umd.js.map' because we don't release
-            # source map for now
-            "sed '$$d' $(@D)/" + b[0].replace("-", "_") + "_rollup.es5umd.js > $(@D)/" + b[0] + ".js",
+            "cp $(@D)/" + b[0].replace("-", "_") + "_rollup.es5umd.js $(@D)/" + b[0] + ".js",
             "cp $(@D)/" + b[0].replace("-", "_") + "_rollup.min.es5umd.js $(@D)/" + b[0] + ".min.js",
         ]),
     )
@@ -176,9 +174,7 @@ genrule(
         ],
         cmd = " && ".join([
             "mkdir -p $(@D)",
-            # remove the last line '//# sourceMappingURL=b[0].umd.js.map' because we don't release
-            # source map for now
-            "sed '$$d' $(@D)/" + b.replace("-", "_") + "_rollup.umd.js > $(@D)/" + b + ".js",
+            "cp $(@D)/" + b.replace("-", "_") + "_rollup.umd.js $(@D)/" + b + ".js",
             "cp $(@D)/" + b.replace("-", "_") + "_rollup.min.umd.js $(@D)/" + b + ".min.js",
         ]),
     )

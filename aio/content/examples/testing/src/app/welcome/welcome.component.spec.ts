@@ -25,8 +25,8 @@ describe('WelcomeComponent (class only)', () => {
       ]
     });
     // inject both the component and the dependent service.
-    comp = TestBed.inject(WelcomeComponent);
-    userService = TestBed.inject(UserService);
+    comp = TestBed.get(WelcomeComponent);
+    userService = TestBed.get(UserService);
   });
   // #enddocregion class-only-before-each
 
@@ -93,7 +93,7 @@ describe('WelcomeComponent', () => {
     // #docregion setup
     // #docregion inject-from-testbed
     // UserService from the root injector
-    userService = TestBed.inject(UserService);
+    userService = TestBed.get(UserService);
     // #enddocregion inject-from-testbed
 
     //  get the "welcome" element by CSS selector (e.g., by class name)

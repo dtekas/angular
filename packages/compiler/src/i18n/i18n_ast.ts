@@ -10,9 +10,6 @@ import {ParseSourceSpan} from '../parse_util';
 
 export class Message {
   sources: MessageSpan[];
-  id: string = this.customId;
-  /** The id to use if there is no custom id and if `i18nLegacyMessageIdFormat` is not empty */
-  legacyId?: string = '';
 
   /**
    * @param nodes message AST
@@ -20,12 +17,12 @@ export class Message {
    * @param placeholderToMessage maps placeholder names to messages (used for nested ICU messages)
    * @param meaning
    * @param description
-   * @param customId
+   * @param id
    */
   constructor(
       public nodes: Node[], public placeholders: {[phName: string]: string},
       public placeholderToMessage: {[phName: string]: Message}, public meaning: string,
-      public description: string, public customId: string) {
+      public description: string, public id: string) {
     if (nodes.length) {
       this.sources = [{
         filePath: nodes[0].sourceSpan.start.file.url,
@@ -93,20 +90,12 @@ export class Placeholder implements Node {
 }
 
 export class IcuPlaceholder implements Node {
-  /** Used to capture a message computed from a previous processing pass (see `setI18nRefs()`). */
-  previousMessage?: Message;
   constructor(public value: Icu, public name: string, public sourceSpan: ParseSourceSpan) {}
 
   visit(visitor: Visitor, context?: any): any { return visitor.visitIcuPlaceholder(this, context); }
 }
 
-/**
- * Each HTML node that is affect by an i18n tag will also have an `i18n` property that is of type
- * `I18nMeta`.
- * This information is either a `Message`, which indicates it is the root of an i18n message, or a
- * `Node`, which indicates is it part of a containing `Message`.
- */
-export type I18nMeta = Message | Node;
+export type AST = Message | Node;
 
 export interface Visitor {
   visitText(text: Text, context?: any): any;

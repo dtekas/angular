@@ -10,24 +10,24 @@
 // correctly implementing its interfaces for backwards compatibility.
 import {Type} from '../core';
 import {Injector} from '../di/injector';
-import {Sanitizer} from '../sanitization/sanitizer';
+import {Sanitizer} from '../sanitization/security';
 import {assertDataInRange} from '../util/assert';
 
 import {assertComponentType} from './assert';
 import {getComponentDef} from './definition';
 import {diPublicInInjector, getOrCreateNodeInjectorForNode} from './di';
 import {registerPostOrderHooks, registerPreOrderHooks} from './hooks';
-import {CLEAN_PROMISE, addToViewTree, createLView, createTView, getOrCreateTNode, getOrCreateTView, initNodeFlags, instantiateRootComponent, invokeHostBindingsInCreationMode, locateHostElement, markAsComponentHost, refreshView, renderView} from './instructions/shared';
+import {CLEAN_PROMISE, addToViewTree, createLView, createTView, getOrCreateTNode, getOrCreateTView, initNodeFlags, instantiateRootComponent, invokeHostBindingsInCreationMode, locateHostElement, queueComponentIndexForCheck, refreshDescendantViews} from './instructions/shared';
 import {ComponentDef, ComponentType, RenderFlags} from './interfaces/definition';
-import {TElementNode, TNode, TNodeType} from './interfaces/node';
+import {TElementNode, TNode, TNodeFlags, TNodeType} from './interfaces/node';
 import {PlayerHandler} from './interfaces/player';
 import {RElement, Renderer3, RendererFactory3, domRendererFactory3} from './interfaces/renderer';
-import {CONTEXT, HEADER_OFFSET, LView, LViewFlags, RootContext, RootContextFlags, TVIEW} from './interfaces/view';
-import {enterView, getPreviousOrParentTNode, incrementActiveDirectiveId, leaveView, setActiveHostElement} from './state';
+import {CONTEXT, FLAGS, HEADER_OFFSET, LView, LViewFlags, RootContext, RootContextFlags, TVIEW} from './interfaces/view';
+import {enterView, getPreviousOrParentTNode, leaveView, resetComponentState, setActiveHostElement} from './state';
 import {publishDefaultGlobalUtils} from './util/global_utils';
 import {defaultScheduler, stringifyForError} from './util/misc_utils';
 import {getRootContext} from './util/view_traversal_utils';
-import {readPatchedLView} from './util/view_utils';
+import {readPatchedLView, resetPreOrderHookFlags} from './util/view_utils';
 
 
 
@@ -111,6 +111,10 @@ export function renderComponent<T>(
   ngDevMode && publishDefaultGlobalUtils();
   ngDevMode && assertComponentType(componentType);
 
+  // this is preemptively set to avoid having test and debug code accidentally
+  // read data from a previous application state...
+  setActiveHostElement(null);
+
   const rendererFactory = opts.rendererFactory || domRendererFactory3;
   const sanitizer = opts.sanitizer || null;
   const componentDef = getComponentDef<T>(componentType) !;
@@ -124,14 +128,15 @@ export function renderComponent<T>(
   const rootContext = createRootContext(opts.scheduler, opts.playerHandler);
 
   const renderer = rendererFactory.createRenderer(hostRNode, componentDef);
-  const rootTView = createTView(-1, null, 1, 0, null, null, null, null, null);
   const rootView: LView = createLView(
-      null, rootTView, rootContext, rootFlags, null, null, rendererFactory, renderer, undefined,
-      opts.injector || null);
+      null, createTView(-1, null, 1, 0, null, null, null, null), rootContext, rootFlags, null, null,
+      rendererFactory, renderer, undefined, opts.injector || null);
 
-  enterView(rootView, null);
+  const oldView = enterView(rootView, null);
   let component: T;
 
+  // Will become true if the `try` block executes with no errors.
+  let safeToRunHooks = false;
   try {
     if (rendererFactory.begin) rendererFactory.begin();
     const componentView = createRootComponentView(
@@ -139,13 +144,15 @@ export function renderComponent<T>(
     component = createRootComponent(
         componentView, componentDef, rootView, rootContext, opts.hostFeatures || null);
 
-    // create mode pass
-    renderView(rootView, rootTView, null);
-    // update mode pass
-    refreshView(rootView, rootTView, null, null);
+    addToViewTree(rootView, componentView);
 
+    refreshDescendantViews(rootView);  // creation mode pass
+    rootView[FLAGS] &= ~LViewFlags.CreationMode;
+    resetPreOrderHookFlags(rootView);
+    refreshDescendantViews(rootView);  // update mode pass
+    safeToRunHooks = true;
   } finally {
-    leaveView();
+    leaveView(oldView, safeToRunHooks);
     if (rendererFactory.end) rendererFactory.end();
   }
 
@@ -166,6 +173,7 @@ export function renderComponent<T>(
 export function createRootComponentView(
     rNode: RElement | null, def: ComponentDef<any>, rootView: LView,
     rendererFactory: RendererFactory3, renderer: Renderer3, sanitizer?: Sanitizer | null): LView {
+  resetComponentState();
   const tView = rootView[TVIEW];
   ngDevMode && assertDataInRange(rootView, 0 + HEADER_OFFSET);
   rootView[0 + HEADER_OFFSET] = rNode;
@@ -174,13 +182,12 @@ export function createRootComponentView(
       rootView, getOrCreateTView(def), null, def.onPush ? LViewFlags.Dirty : LViewFlags.CheckAlways,
       rootView[HEADER_OFFSET], tNode, rendererFactory, renderer, sanitizer);
 
-  if (tView.firstCreatePass) {
+  if (tView.firstTemplatePass) {
     diPublicInInjector(getOrCreateNodeInjectorForNode(tNode, rootView), tView, def.type);
-    markAsComponentHost(tView, tNode);
+    tNode.flags = TNodeFlags.isComponent;
     initNodeFlags(tNode, rootView.length, 1);
+    queueComponentIndexForCheck(tNode);
   }
-
-  addToViewTree(rootView, componentView);
 
   // Store component view at node index, with node as the HOST
   return rootView[HEADER_OFFSET] = componentView;
@@ -209,14 +216,13 @@ export function createRootComponent<T>(
   }
 
   const rootTNode = getPreviousOrParentTNode();
-  if (tView.firstCreatePass && componentDef.hostBindings) {
+  if (tView.firstTemplatePass && componentDef.hostBindings) {
     const elementIndex = rootTNode.index - HEADER_OFFSET;
     setActiveHostElement(elementIndex);
-    incrementActiveDirectiveId();
 
     const expando = tView.expandoInstructions !;
     invokeHostBindingsInCreationMode(
-        componentDef, expando, component, rootTNode, tView.firstCreatePass);
+        componentDef, expando, component, rootTNode, tView.firstTemplatePass);
 
     setActiveHostElement(null);
   }

@@ -35,7 +35,7 @@ export class LargeTableComponent {
 }
 
 @NgModule({declarations: [LargeTableComponent], imports: [CommonModule]})
-export class TableModule {
+class TableModule {
 }
 
 

@@ -6,10 +6,11 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {CommonModule, ɵgetDOM as getDOM} from '@angular/common';
+import {CommonModule} from '@angular/common';
 import {Component} from '@angular/core';
 import {ComponentFixture, TestBed, async} from '@angular/core/testing';
 import {By} from '@angular/platform-browser/src/dom/debug/by';
+import {getDOM} from '@angular/platform-browser/src/dom/dom_adapter';
 import {expect} from '@angular/platform-browser/testing/src/matchers';
 
 {
@@ -102,7 +103,8 @@ import {expect} from '@angular/platform-browser/testing/src/matchers';
 
          fixture.detectChanges();
          expect(fixture.debugElement.queryAll(By.css('span')).length).toEqual(3);
-         expect(fixture.nativeElement.textContent).toEqual('helloNumberhelloStringhelloFunction');
+         expect(getDOM().getText(fixture.nativeElement))
+             .toEqual('helloNumberhelloStringhelloFunction');
 
          getComponent().numberCondition = 0;
          fixture.detectChanges();
@@ -124,14 +126,14 @@ import {expect} from '@angular/platform-browser/testing/src/matchers';
          fixture.detectChanges();
          let els = fixture.debugElement.queryAll(By.css('span'));
          expect(els.length).toEqual(1);
-         els[0].nativeElement.classList.add('marker');
+         getDOM().addClass(els[0].nativeElement, 'marker');
          expect(fixture.nativeElement).toHaveText('hello');
 
          getComponent().numberCondition = 2;
          fixture.detectChanges();
          els = fixture.debugElement.queryAll(By.css('span'));
          expect(els.length).toEqual(1);
-         expect(els[0].nativeElement.classList.contains('marker')).toBe(true);
+         expect(getDOM().hasClass(els[0].nativeElement, 'marker')).toBe(true);
 
          expect(fixture.nativeElement).toHaveText('hello');
        }));

@@ -6,11 +6,11 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {CustomTransformers, Program, defaultGatherDiagnostics} from '@angular/compiler-cli';
+import {CustomTransformers, Program} from '@angular/compiler-cli';
 import * as api from '@angular/compiler-cli/src/transformers/api';
 import * as ts from 'typescript';
 
-import {createCompilerHost, createProgram} from '../../index';
+import {createCompilerHost, createProgram} from '../../ngtools2';
 import {main, mainDiagnosticsForTest, readNgcCommandLineAndConfiguration} from '../../src/main';
 import {AbsoluteFsPath, FileSystem, NgtscCompilerHost, absoluteFrom, getFileSystem} from '../../src/ngtsc/file_system';
 import {Folder, MockFileSystem} from '../../src/ngtsc/file_system/testing';
@@ -100,15 +100,6 @@ export class NgtscTestEnvironment {
     setWrapHostForTest(makeWrapHost(this.multiCompileHostExt));
   }
 
-  /**
-   * Installs a compiler host that allows for asynchronous reading of resources by implementing the
-   * `CompilerHost.readResource` method. Note that only asynchronous compilations are affected, as
-   * synchronous compilations do not use the asynchronous resource loader.
-   */
-  enablePreloading(): void {
-    setWrapHostForTest(makeWrapHost(new ResourceLoadingCompileHost(this.fs)));
-  }
-
   flushWrittenFileTracking(): void {
     if (this.multiCompileHostExt === null) {
       throw new Error(`Not tracking written files - call enableMultipleCompilations()`);
@@ -154,8 +145,7 @@ export class NgtscTestEnvironment {
     this.multiCompileHostExt.invalidate(absFilePath);
   }
 
-  tsconfig(extraOpts: {[key: string]: string | boolean | null} = {}, extraRootDirs?: string[]):
-      void {
+  tsconfig(extraOpts: {[key: string]: string | boolean} = {}, extraRootDirs?: string[]): void {
     const tsconfig: {[key: string]: any} = {
       extends: './tsconfig-base.json',
       angularCompilerOptions: {...extraOpts, enableIvy: true},
@@ -196,19 +186,8 @@ export class NgtscTestEnvironment {
   /**
    * Run the compiler to completion, and return any `ts.Diagnostic` errors that may have occurred.
    */
-  driveDiagnostics(): ReadonlyArray<ts.Diagnostic> {
-    // ngtsc only produces ts.Diagnostic messages.
-    return mainDiagnosticsForTest(['-p', this.basePath]) as ts.Diagnostic[];
-  }
-
-  async driveDiagnosticsAsync(): Promise<ReadonlyArray<ts.Diagnostic>> {
-    const {rootNames, options} = readNgcCommandLineAndConfiguration(['-p', this.basePath]);
-    const host = createCompilerHost({options});
-    const program = createProgram({rootNames, host, options});
-    await program.loadNgStructureAsync();
-
-    // ngtsc only produces ts.Diagnostic messages.
-    return defaultGatherDiagnostics(program as api.Program) as ts.Diagnostic[];
+  driveDiagnostics(): ReadonlyArray<ts.Diagnostic|api.Diagnostic> {
+    return mainDiagnosticsForTest(['-p', this.basePath]);
   }
 
   driveRoutes(entryPoint?: string): LazyRoute[] {
@@ -268,16 +247,6 @@ class MultiCompileHostExt extends AugmentedCompilerHost implements Partial<ts.Co
   getFilesWrittenSinceLastFlush(): Set<string> { return this.writtenFiles; }
 
   invalidate(fileName: string): void { this.cache.delete(fileName); }
-}
-
-class ResourceLoadingCompileHost extends AugmentedCompilerHost implements api.CompilerHost {
-  readResource(fileName: string): Promise<string>|string {
-    const resource = this.readFile(fileName);
-    if (resource === undefined) {
-      throw new Error(`Resource ${fileName} not found`);
-    }
-    return resource;
-  }
 }
 
 function makeWrapHost(wrapped: AugmentedCompilerHost): (host: ts.CompilerHost) => ts.CompilerHost {

@@ -15,7 +15,7 @@ import {diPublicInInjector, getNodeInjectable, getOrCreateNodeInjectorForNode} f
 import {ɵɵdirectiveInject} from './instructions/all';
 import {DirectiveDef} from './interfaces/definition';
 import {NodeInjectorFactory} from './interfaces/injector';
-import {TContainerNode, TDirectiveHostNode, TElementContainerNode, TElementNode, TNodeProviderIndexes} from './interfaces/node';
+import {TContainerNode, TElementContainerNode, TElementNode, TNodeProviderIndexes} from './interfaces/node';
 import {isComponentDef} from './interfaces/type_checks';
 import {LView, TData, TVIEW, TView} from './interfaces/view';
 import {getLView, getPreviousOrParentTNode} from './state';
@@ -44,7 +44,7 @@ export function providersResolver<T>(
     def: DirectiveDef<T>, providers: Provider[], viewProviders: Provider[]): void {
   const lView = getLView();
   const tView: TView = lView[TVIEW];
-  if (tView.firstCreatePass) {
+  if (tView.firstTemplatePass) {
     const isComponent = isComponentDef(def);
 
     // The list of view providers is processed first, and the flags are updated
@@ -205,7 +205,7 @@ function indexOf(item: any, arr: any[], begin: number, end: number) {
  */
 function multiProvidersFactoryResolver(
     this: NodeInjectorFactory, _: undefined, tData: TData, lData: LView,
-    tNode: TDirectiveHostNode): any[] {
+    tNode: TElementNode): any[] {
   return multiResolve(this.multi !, []);
 }
 
@@ -216,7 +216,7 @@ function multiProvidersFactoryResolver(
  */
 function multiViewProvidersFactoryResolver(
     this: NodeInjectorFactory, _: undefined, tData: TData, lData: LView,
-    tNode: TDirectiveHostNode): any[] {
+    tNode: TElementNode): any[] {
   const factories = this.multi !;
   let result: any[];
   if (this.providerFactory) {
@@ -254,8 +254,8 @@ function multiResolve(factories: Array<() => any>, result: any[]): any[] {
  */
 function multiFactory(
     factoryFn: (
-        this: NodeInjectorFactory, _: undefined, tData: TData, lData: LView,
-        tNode: TDirectiveHostNode) => any,
+        this: NodeInjectorFactory, _: undefined, tData: TData, lData: LView, tNode: TElementNode) =>
+        any,
     index: number, isViewProvider: boolean, isComponent: boolean,
     f: () => any): NodeInjectorFactory {
   const factory = new NodeInjectorFactory(factoryFn, isViewProvider, ɵɵdirectiveInject);

@@ -5,45 +5,33 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-// Make the `$localize()` global function available to the compiled templates, and the direct calls
-// below. This would normally be done inside the application `polyfills.ts` file.
-import '@angular/localize/init';
+
 import {registerLocaleData} from '@angular/common';
 import localeRo from '@angular/common/locales/ro';
-import {Component, ContentChild, ContentChildren, Directive, HostBinding, Input, LOCALE_ID, QueryList, TemplateRef, Type, ViewChild, ViewContainerRef, Pipe, PipeTransform, NO_ERRORS_SCHEMA} from '@angular/core';
+import {Component, ContentChild, ContentChildren, Directive, HostBinding, Input, LOCALE_ID, QueryList, TemplateRef, Type, ViewChild, ViewContainerRef, ɵi18nConfigureLocalize, Pipe, PipeTransform} from '@angular/core';
 import {setDelayProjection} from '@angular/core/src/render3/instructions/projection';
 import {TestBed} from '@angular/core/testing';
-import {loadTranslations, clearTranslations} from '@angular/localize';
 import {By} from '@angular/platform-browser';
 import {expect} from '@angular/platform-browser/testing/src/matchers';
 import {onlyInIvy} from '@angular/private/testing';
-import {computeMsgId} from '@angular/compiler';
 
 
 onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   beforeEach(() => {
-    TestBed.configureTestingModule({
-      declarations: [AppComp, DirectiveWithTplRef, UppercasePipe],
-      // In some of the tests we use made-up tag names for better readability, however they'll
-      // cause validation errors. Add the `NO_ERRORS_SCHEMA` so that we don't have to declare
-      // dummy components for each one of them.
-      schemas: [NO_ERRORS_SCHEMA],
-    });
+    TestBed.configureTestingModule({declarations: [AppComp, DirectiveWithTplRef, UppercasePipe]});
   });
 
-  afterEach(() => {
-    setDelayProjection(false);
-    clearTranslations();
-  });
+  afterEach(() => { setDelayProjection(false); });
 
   it('should translate text', () => {
-    loadTranslations({[computeMsgId('text')]: 'texte'});
+    ɵi18nConfigureLocalize({translations: {'text': 'texte'}});
     const fixture = initWithTemplate(AppComp, `<div i18n>text</div>`);
     expect(fixture.nativeElement.innerHTML).toEqual(`<div>texte</div>`);
   });
 
   it('should support interpolations', () => {
-    loadTranslations({[computeMsgId('Hello {$INTERPOLATION}!')]: 'Bonjour {$INTERPOLATION}!'});
+    ɵi18nConfigureLocalize(
+        {translations: {'Hello {$interpolation}!': 'Bonjour {$interpolation}!'}});
     const fixture = initWithTemplate(AppComp, `<div i18n>Hello {{name}}!</div>`);
     expect(fixture.nativeElement.innerHTML).toEqual(`<div>Bonjour Angular!</div>`);
     fixture.componentRef.instance.name = `John`;
@@ -52,9 +40,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should support named interpolations', () => {
-    loadTranslations({
-      [computeMsgId(' Hello {$USER_NAME}! Emails: {$AMOUNT_OF_EMAILS_RECEIVED} ')]:
-          ' Bonjour {$USER_NAME}! Emails: {$AMOUNT_OF_EMAILS_RECEIVED} '
+    ɵi18nConfigureLocalize({
+      translations: {
+        ' Hello {$userName}! Emails: {$amountOfEmailsReceived} ':
+            ' Bonjour {$userName}! Emails: {$amountOfEmailsReceived} '
+      }
     });
     const fixture = initWithTemplate(AppComp, `
       <div i18n>
@@ -70,7 +60,7 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should support interpolations with custom interpolation config', () => {
-    loadTranslations({[computeMsgId('Hello {$INTERPOLATION}')]: 'Bonjour {$INTERPOLATION}'});
+    ɵi18nConfigureLocalize({translations: {'Hello {$interpolation}': 'Bonjour {$interpolation}'}});
     const interpolation = ['{%', '%}'] as[string, string];
     TestBed.overrideComponent(AppComp, {set: {interpolation}});
     const fixture = initWithTemplate(AppComp, `<div i18n>Hello {% name %}</div>`);
@@ -80,42 +70,31 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
 
   it('should support &ngsp; in translatable sections', () => {
     // note: the `` unicode symbol represents the `&ngsp;` in translations
-    loadTranslations({[computeMsgId('text ||')]: 'texte ||'});
+    ɵi18nConfigureLocalize({translations: {'text ||': 'texte ||'}});
     const fixture = initWithTemplate(AppCompWithWhitespaces, `<div i18n>text |&ngsp;|</div>`);
 
     expect(fixture.nativeElement.innerHTML).toEqual(`<div>texte | |</div>`);
   });
 
   it('should support interpolations with complex expressions', () => {
-    loadTranslations({
-      [computeMsgId(' {$INTERPOLATION} - {$INTERPOLATION_1} - {$INTERPOLATION_2} ')]:
-          ' {$INTERPOLATION} - {$INTERPOLATION_1} - {$INTERPOLATION_2} (fr) '
+    ɵi18nConfigureLocalize({
+      translations:
+          {'{$interpolation} - {$interpolation_1}': '{$interpolation} - {$interpolation_1} (fr)'}
     });
-    const fixture = initWithTemplate(AppComp, `
-      <div i18n>
-        {{ name | uppercase }} -
-        {{ obj?.a?.b }} -
-        {{ obj?.getA()?.b }}
-      </div>
-    `);
-    // the `obj` field is not yet defined, so 2nd and 3rd interpolations return empty strings
-    expect(fixture.nativeElement.innerHTML).toEqual(`<div> ANGULAR -  -  (fr) </div>`);
-
-    fixture.componentRef.instance.obj = {
-      a: {b: 'value 1'},
-      getA: () => ({b: 'value 2'}),
-    };
+    const fixture =
+        initWithTemplate(AppComp, `<div i18n>{{ name | uppercase }} - {{ obj?.a?.b }}</div>`);
+    expect(fixture.nativeElement.innerHTML).toEqual(`<div>ANGULAR -  (fr)</div>`);
+    fixture.componentRef.instance.obj = {a: {b: 'value'}};
     fixture.detectChanges();
-    expect(fixture.nativeElement.innerHTML)
-        .toEqual(`<div> ANGULAR - value 1 - value 2 (fr) </div>`);
+    expect(fixture.nativeElement.innerHTML).toEqual(`<div>ANGULAR - value (fr)</div>`);
   });
 
   it('should support elements', () => {
-    loadTranslations({
-      [computeMsgId(
-          'Hello {$START_TAG_SPAN}world{$CLOSE_TAG_SPAN} and {$START_TAG_DIV}universe{$CLOSE_TAG_DIV}!',
-          '')]:
-          'Bonjour {$START_TAG_SPAN}monde{$CLOSE_TAG_SPAN} et {$START_TAG_DIV}univers{$CLOSE_TAG_DIV}!'
+    ɵi18nConfigureLocalize({
+      translations: {
+        'Hello {$startTagSpan}world{$closeTagSpan} and {$startTagDiv}universe{$closeTagDiv}!':
+            'Bonjour {$startTagSpan}monde{$closeTagSpan} et {$startTagDiv}univers{$closeTagDiv}!'
+      }
     });
     const fixture = initWithTemplate(
         AppComp, `<div i18n>Hello <span>world</span> and <div>universe</div>!</div>`);
@@ -124,10 +103,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should support removing elements', () => {
-    loadTranslations({
-      [computeMsgId(
-          'Hello {$START_BOLD_TEXT}my{$CLOSE_BOLD_TEXT}{$START_TAG_SPAN}world{$CLOSE_TAG_SPAN}',
-          '')]: 'Bonjour {$START_TAG_SPAN}monde{$CLOSE_TAG_SPAN}'
+    ɵi18nConfigureLocalize({
+      translations: {
+        'Hello {$startBoldText}my{$closeBoldText}{$startTagSpan}world{$closeTagSpan}':
+            'Bonjour {$startTagSpan}monde{$closeTagSpan}'
+      }
     });
     const fixture =
         initWithTemplate(AppComp, `<div i18n>Hello <b>my</b><span>world</span></div><div>!</div>`);
@@ -136,11 +116,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should support moving elements', () => {
-    loadTranslations({
-      [computeMsgId(
-          'Hello {$START_TAG_SPAN}world{$CLOSE_TAG_SPAN} and {$START_TAG_DIV}universe{$CLOSE_TAG_DIV}!',
-          '')]:
-          'Bonjour {$START_TAG_DIV}univers{$CLOSE_TAG_DIV} et {$START_TAG_SPAN}monde{$CLOSE_TAG_SPAN}!'
+    ɵi18nConfigureLocalize({
+      translations: {
+        'Hello {$startTagSpan}world{$closeTagSpan} and {$startTagDiv}universe{$closeTagDiv}!':
+            'Bonjour {$startTagDiv}univers{$closeTagDiv} et {$startTagSpan}monde{$closeTagSpan}!'
+      }
     });
     const fixture = initWithTemplate(
         AppComp, `<div i18n>Hello <span>world</span> and <div>universe</div>!</div>`);
@@ -149,11 +129,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should support template directives', () => {
-    loadTranslations({
-      [computeMsgId(
-          'Content: {$START_TAG_DIV}before{$START_TAG_SPAN}middle{$CLOSE_TAG_SPAN}after{$CLOSE_TAG_DIV}!',
-          '')]:
-          'Contenu: {$START_TAG_DIV}avant{$START_TAG_SPAN}milieu{$CLOSE_TAG_SPAN}après{$CLOSE_TAG_DIV}!'
+    ɵi18nConfigureLocalize({
+      translations: {
+        'Content: {$startTagDiv}before{$startTagSpan}middle{$closeTagSpan}after{$closeTagDiv}!':
+            'Contenu: {$startTagDiv}avant{$startTagSpan}milieu{$closeTagSpan}après{$closeTagDiv}!'
+      }
     });
     const fixture = initWithTemplate(
         AppComp,
@@ -171,13 +151,14 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should support multiple i18n blocks', () => {
-    loadTranslations({
-      [computeMsgId('trad {$INTERPOLATION}')]: 'traduction {$INTERPOLATION}',
-      [computeMsgId('start {$INTERPOLATION} middle {$INTERPOLATION_1} end')]:
-          'start {$INTERPOLATION_1} middle {$INTERPOLATION} end',
-      [computeMsgId(
-          '{$START_TAG_C}trad{$CLOSE_TAG_C}{$START_TAG_D}{$CLOSE_TAG_D}{$START_TAG_E}{$CLOSE_TAG_E}',
-          '')]: '{$START_TAG_E}{$CLOSE_TAG_E}{$START_TAG_C}traduction{$CLOSE_TAG_C}'
+    ɵi18nConfigureLocalize({
+      translations: {
+        'trad {$interpolation}': 'traduction {$interpolation}',
+        'start {$interpolation} middle {$interpolation_1} end':
+            'start {$interpolation_1} middle {$interpolation} end',
+        '{$startTagC}trad{$closeTagC}{$startTagD}{$closeTagD}{$startTagE}{$closeTagE}':
+            '{$startTagE}{$closeTagE}{$startTagC}traduction{$closeTagC}'
+      }
     });
     const fixture = initWithTemplate(AppComp, `
       <div>
@@ -195,10 +176,12 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should support multiple sibling i18n blocks', () => {
-    loadTranslations({
-      [computeMsgId('Section 1')]: 'Section un',
-      [computeMsgId('Section 2')]: 'Section deux',
-      [computeMsgId('Section 3')]: 'Section trois',
+    ɵi18nConfigureLocalize({
+      translations: {
+        'Section 1': 'Section un',
+        'Section 2': 'Section deux',
+        'Section 3': 'Section trois',
+      }
     });
     const fixture = initWithTemplate(AppComp, `
       <div>
@@ -211,10 +194,12 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should support multiple sibling i18n blocks inside of a template directive', () => {
-    loadTranslations({
-      [computeMsgId('Section 1')]: 'Section un',
-      [computeMsgId('Section 2')]: 'Section deux',
-      [computeMsgId('Section 3')]: 'Section trois',
+    ɵi18nConfigureLocalize({
+      translations: {
+        'Section 1': 'Section un',
+        'Section 2': 'Section deux',
+        'Section 3': 'Section trois',
+      }
     });
     const fixture = initWithTemplate(AppComp, `
       <ul *ngFor="let item of [1,2,3]">
@@ -230,9 +215,10 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should properly escape quotes in content', () => {
-    loadTranslations({
-      [computeMsgId('\'Single quotes\' and "Double quotes"')]:
-          '\'Guillemets simples\' et "Guillemets doubles"'
+    ɵi18nConfigureLocalize({
+      translations: {
+        '\'Single quotes\' and "Double quotes"': '\'Guillemets simples\' et "Guillemets doubles"'
+      }
     });
     const fixture =
         initWithTemplate(AppComp, `<div i18n>'Single quotes' and "Double quotes"</div>`);
@@ -242,7 +228,7 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should correctly bind to context in nested template', () => {
-    loadTranslations({[computeMsgId('Item {$INTERPOLATION}')]: 'Article {$INTERPOLATION}'});
+    ɵi18nConfigureLocalize({translations: {'Item {$interpolation}': 'Article {$interpolation}'}});
     const fixture = initWithTemplate(AppComp, `
           <div *ngFor='let id of items'>
             <div i18n>Item {{ id }}</div>
@@ -262,13 +248,13 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should handle i18n attribute with directives', () => {
-    loadTranslations({[computeMsgId('Hello {$INTERPOLATION}')]: 'Bonjour {$INTERPOLATION}'});
+    ɵi18nConfigureLocalize({translations: {'Hello {$interpolation}': 'Bonjour {$interpolation}'}});
     const fixture = initWithTemplate(AppComp, `<div *ngIf="visible" i18n>Hello {{ name }}</div>`);
     expect(fixture.nativeElement.firstChild).toHaveText('Bonjour Angular');
   });
 
   it('should work correctly with event listeners', () => {
-    loadTranslations({[computeMsgId('Hello {$INTERPOLATION}')]: 'Bonjour {$INTERPOLATION}'});
+    ɵi18nConfigureLocalize({translations: {'Hello {$interpolation}': 'Bonjour {$interpolation}'}});
 
     @Component(
         {selector: 'app-comp', template: `<div i18n (click)="onClick()">Hello {{ name }}</div>`})
@@ -293,52 +279,16 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     expect(instance.clicks).toBe(1);
   });
 
-  it('should support local refs inside i18n block', () => {
-    loadTranslations({
-      [computeMsgId(
-          '{$START_TAG_NG_CONTAINER} One {$CLOSE_TAG_NG_CONTAINER}' +
-          '{$START_TAG_DIV} Two {$CLOSE_TAG_DIV}' +
-          '{$START_TAG_SPAN} Three {$CLOSE_TAG_SPAN}')]:
-          '{$START_TAG_NG_CONTAINER} Une {$CLOSE_TAG_NG_CONTAINER}' +
-          '{$START_TAG_DIV} Deux {$CLOSE_TAG_DIV}' +
-          '{$START_TAG_SPAN} Trois {$CLOSE_TAG_SPAN}'
-    });
-    const fixture = initWithTemplate(AppComp, `
-      <div i18n>
-        <ng-container #localRefA> One </ng-container>
-        <div #localRefB> Two </div>
-        <span #localRefC> Three </span>
-      </div>
-    `);
-    expect(fixture.nativeElement.textContent).toBe(' Une  Deux  Trois ');
-  });
-
-  it('should handle local refs correctly in case an element is removed in translation', () => {
-    loadTranslations({
-      [computeMsgId(
-          '{$START_TAG_NG_CONTAINER} One {$CLOSE_TAG_NG_CONTAINER}' +
-          '{$START_TAG_DIV} Two {$CLOSE_TAG_DIV}' +
-          '{$START_TAG_SPAN} Three {$CLOSE_TAG_SPAN}')]: '{$START_TAG_DIV} Deux {$CLOSE_TAG_DIV}'
-    });
-    const fixture = initWithTemplate(AppComp, `
-      <div i18n>
-        <ng-container #localRefA> One </ng-container>
-        <div #localRefB> Two </div>
-        <span #localRefC> Three </span>
-      </div>
-    `);
-    expect(fixture.nativeElement.textContent).toBe(' Deux ');
-  });
-
   describe('ng-container and ng-template support', () => {
     it('should support ng-container', () => {
-      loadTranslations({[computeMsgId('text')]: 'texte'});
+      ɵi18nConfigureLocalize({translations: {'text': 'texte'}});
       const fixture = initWithTemplate(AppComp, `<ng-container i18n>text</ng-container>`);
       expect(fixture.nativeElement.innerHTML).toEqual(`texte<!--ng-container-->`);
     });
 
     it('should handle single translation message within ng-template', () => {
-      loadTranslations({[computeMsgId('Hello {$INTERPOLATION}')]: 'Bonjour {$INTERPOLATION}'});
+      ɵi18nConfigureLocalize(
+          {translations: {'Hello {$interpolation}': 'Bonjour {$interpolation}'}});
       const fixture =
           initWithTemplate(AppComp, `<ng-template i18n tplRef>Hello {{ name }}</ng-template>`);
 
@@ -346,23 +296,12 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       expect(element).toHaveText('Bonjour Angular');
     });
 
-    // Note: applying structural directives to <ng-template> is typically user error, but it
-    // is technically allowed, so we need to support it.
-    it('should handle structural directives on ng-template', () => {
-      loadTranslations({[computeMsgId('Hello {$INTERPOLATION}')]: 'Bonjour {$INTERPOLATION}'});
-      const fixture = initWithTemplate(
-          AppComp, `<ng-template *ngIf="name" i18n tplRef>Hello {{ name }}</ng-template>`);
-
-      const element = fixture.nativeElement;
-      expect(element).toHaveText('Bonjour Angular');
-    });
-
     it('should be able to act as child elements inside i18n block (plain text content)', () => {
-      loadTranslations({
-        [computeMsgId(
-            '{$START_TAG_NG_TEMPLATE} Hello {$CLOSE_TAG_NG_TEMPLATE}{$START_TAG_NG_CONTAINER} Bye {$CLOSE_TAG_NG_CONTAINER}',
-            '')]:
-            '{$START_TAG_NG_TEMPLATE} Bonjour {$CLOSE_TAG_NG_TEMPLATE}{$START_TAG_NG_CONTAINER} Au revoir {$CLOSE_TAG_NG_CONTAINER}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{$startTagNgTemplate} Hello {$closeTagNgTemplate}{$startTagNgContainer} Bye {$closeTagNgContainer}':
+              '{$startTagNgTemplate} Bonjour {$closeTagNgTemplate}{$startTagNgContainer} Au revoir {$closeTagNgContainer}'
+        }
       });
       const fixture = initWithTemplate(AppComp, `
         <div i18n>
@@ -380,11 +319,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('should be able to act as child elements inside i18n block (text + tags)', () => {
-      loadTranslations({
-        [computeMsgId(
-            '{$START_TAG_NG_TEMPLATE}{$START_TAG_SPAN}Hello{$CLOSE_TAG_SPAN}{$CLOSE_TAG_NG_TEMPLATE}{$START_TAG_NG_CONTAINER}{$START_TAG_SPAN}Hello{$CLOSE_TAG_SPAN}{$CLOSE_TAG_NG_CONTAINER}',
-            '')]:
-            '{$START_TAG_NG_TEMPLATE}{$START_TAG_SPAN}Bonjour{$CLOSE_TAG_SPAN}{$CLOSE_TAG_NG_TEMPLATE}{$START_TAG_NG_CONTAINER}{$START_TAG_SPAN}Bonjour{$CLOSE_TAG_SPAN}{$CLOSE_TAG_NG_CONTAINER}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{$startTagNgTemplate}{$startTagSpan}Hello{$closeTagSpan}{$closeTagNgTemplate}{$startTagNgContainer}{$startTagSpan}Hello{$closeTagSpan}{$closeTagNgContainer}':
+              '{$startTagNgTemplate}{$startTagSpan}Bonjour{$closeTagSpan}{$closeTagNgTemplate}{$startTagNgContainer}{$startTagSpan}Bonjour{$closeTagSpan}{$closeTagNgContainer}'
+        }
       });
       const fixture = initWithTemplate(AppComp, `
         <div i18n>
@@ -405,11 +344,16 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('should be able to act as child elements inside i18n block (text + pipes)', () => {
-      loadTranslations({
-        [computeMsgId(
-            '{$START_TAG_NG_TEMPLATE}Hello {$INTERPOLATION}{$CLOSE_TAG_NG_TEMPLATE}{$START_TAG_NG_CONTAINER}Bye {$INTERPOLATION}{$CLOSE_TAG_NG_CONTAINER}',
-            '')]:
-            '{$START_TAG_NG_TEMPLATE}Hej {$INTERPOLATION}{$CLOSE_TAG_NG_TEMPLATE}{$START_TAG_NG_CONTAINER}Vi ses {$INTERPOLATION}{$CLOSE_TAG_NG_CONTAINER}'
+      // Note: for some reason keeping this key inline causes clang to reformat the entire file
+      // in a very weird way. Keeping it separated like this seems to make it happy.
+      const key = '{$startTagNgTemplate}Hello {$interpolation}{$closeTagNgTemplate}' +
+          '{$startTagNgContainer}Bye {$interpolation}{$closeTagNgContainer}';
+
+      ɵi18nConfigureLocalize({
+        translations: {
+          [key]:
+              '{$startTagNgTemplate}Hej {$interpolation}{$closeTagNgTemplate}{$startTagNgContainer}Vi ses {$interpolation}{$closeTagNgContainer}'
+        }
       });
       const fixture = initWithTemplate(AppComp, `
         <div i18n>
@@ -423,11 +367,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('should be able to handle deep nested levels with templates', () => {
-      loadTranslations({
-        [computeMsgId(
-            '{$START_TAG_SPAN} Hello - 1 {$CLOSE_TAG_SPAN}{$START_TAG_SPAN_1} Hello - 2 {$START_TAG_SPAN_1} Hello - 3 {$START_TAG_SPAN_1} Hello - 4 {$CLOSE_TAG_SPAN}{$CLOSE_TAG_SPAN}{$CLOSE_TAG_SPAN}{$START_TAG_SPAN} Hello - 5 {$CLOSE_TAG_SPAN}',
-            '')]:
-            '{$START_TAG_SPAN} Bonjour - 1 {$CLOSE_TAG_SPAN}{$START_TAG_SPAN_1} Bonjour - 2 {$START_TAG_SPAN_1} Bonjour - 3 {$START_TAG_SPAN_1} Bonjour - 4 {$CLOSE_TAG_SPAN}{$CLOSE_TAG_SPAN}{$CLOSE_TAG_SPAN}{$START_TAG_SPAN} Bonjour - 5 {$CLOSE_TAG_SPAN}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{$startTagSpan} Hello - 1 {$closeTagSpan}{$startTagSpan_1} Hello - 2 {$startTagSpan_1} Hello - 3 {$startTagSpan_1} Hello - 4 {$closeTagSpan}{$closeTagSpan}{$closeTagSpan}{$startTagSpan} Hello - 5 {$closeTagSpan}':
+              '{$startTagSpan} Bonjour - 1 {$closeTagSpan}{$startTagSpan_1} Bonjour - 2 {$startTagSpan_1} Bonjour - 3 {$startTagSpan_1} Bonjour - 4 {$closeTagSpan}{$closeTagSpan}{$closeTagSpan}{$startTagSpan} Bonjour - 5 {$closeTagSpan}'
+        }
       });
       const fixture = initWithTemplate(AppComp, `
         <div i18n>
@@ -457,9 +401,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('should handle self-closing tags as content', () => {
-      loadTranslations({
-        [computeMsgId('{$START_TAG_SPAN}My logo{$TAG_IMG}{$CLOSE_TAG_SPAN}')]:
-            '{$START_TAG_SPAN}Mon logo{$TAG_IMG}{$CLOSE_TAG_SPAN}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{$startTagSpan}My logo{$tagImg}{$closeTagSpan}':
+              '{$startTagSpan}Mon logo{$tagImg}{$closeTagSpan}'
+        }
       });
       const content = `My logo<img src="logo.png" title="Logo">`;
       const fixture = initWithTemplate(AppComp, `
@@ -480,10 +426,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('should correctly find context for an element inside i18n section in <ng-template>', () => {
-      loadTranslations({
-        [computeMsgId('{$START_LINK}Not logged in{$CLOSE_LINK}')]:
-            '{$START_LINK}Not logged in{$CLOSE_LINK}'
-      });
       @Directive({selector: '[myDir]'})
       class Dir {
         condition = true;
@@ -518,9 +460,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
 
   describe('should support ICU expressions', () => {
     it('with no root node', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_SELECT, select, 10 {ten} 20 {twenty} other {other}}')]:
-            '{VAR_SELECT, select, 10 {dix} 20 {vingt} other {autre}}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{VAR_SELECT, select, 10 {ten} 20 {twenty} other {other}}':
+              '{VAR_SELECT, select, 10 {dix} 20 {vingt} other {autre}}'
+        }
       });
       const fixture =
           initWithTemplate(AppComp, `{count, select, 10 {ten} 20 {twenty} other {other}}`);
@@ -530,9 +474,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('with no i18n tag', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_SELECT, select, 10 {ten} 20 {twenty} other {other}}')]:
-            '{VAR_SELECT, select, 10 {dix} 20 {vingt} other {autre}}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{VAR_SELECT, select, 10 {ten} 20 {twenty} other {other}}':
+              '{VAR_SELECT, select, 10 {dix} 20 {vingt} other {autre}}'
+        }
       });
       const fixture = initWithTemplate(
           AppComp, `<div>{count, select, 10 {ten} 20 {twenty} other {other}}</div>`);
@@ -542,14 +488,12 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('multiple', () => {
-      loadTranslations({
-        [computeMsgId(
-            '{VAR_PLURAL, plural, =0 {no {START_BOLD_TEXT}emails{CLOSE_BOLD_TEXT}!} =1 {one {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} {START_TAG_SPAN}emails{CLOSE_TAG_SPAN}}}',
-            '')]:
-            '{VAR_PLURAL, plural, =0 {aucun {START_BOLD_TEXT}email{CLOSE_BOLD_TEXT}!} =1 {un {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} {START_TAG_SPAN}emails{CLOSE_TAG_SPAN}}}',
-        [computeMsgId('{VAR_SELECT, select, other {({INTERPOLATION})}}')]:
-            '{VAR_SELECT, select, other {({INTERPOLATION})}}',
-        [computeMsgId('{$ICU} - {$ICU_1}')]: '{$ICU} - {$ICU_1}',
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{VAR_PLURAL, plural, =0 {no {START_BOLD_TEXT}emails{CLOSE_BOLD_TEXT}!} =1 {one {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} {START_TAG_SPAN}emails{CLOSE_TAG_SPAN}}}':
+              '{VAR_PLURAL, plural, =0 {aucun {START_BOLD_TEXT}email{CLOSE_BOLD_TEXT}!} =1 {un {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} {START_TAG_SPAN}emails{CLOSE_TAG_SPAN}}}',
+          '{VAR_SELECT, select, other {(name)}}': '{VAR_SELECT, select, other {({$interpolation})}}'
+        }
       });
       const fixture = initWithTemplate(AppComp, `<div i18n>{count, plural,
         =0 {no <b>emails</b>!}
@@ -575,9 +519,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('with custom interpolation config', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_SELECT, select, 10 {ten} other {{INTERPOLATION}}}')]:
-            '{VAR_SELECT, select, 10 {dix} other {{INTERPOLATION}}}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{VAR_SELECT, select, 10 {ten} other {{$interpolation}}}':
+              '{VAR_SELECT, select, 10 {dix} other {{$interpolation}}}'
+        }
       });
       const interpolation = ['{%', '%}'] as[string, string];
       TestBed.overrideComponent(AppComp, {set: {interpolation}});
@@ -588,17 +534,12 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('inside HTML elements', () => {
-      loadTranslations({
-        [computeMsgId(
-            '{VAR_PLURAL, plural, =0 {no {START_BOLD_TEXT}emails{CLOSE_BOLD_TEXT}!} =1 {one {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} {START_TAG_SPAN}emails{CLOSE_TAG_SPAN}}}',
-            '')]:
-            '{VAR_PLURAL, plural, =0 {aucun {START_BOLD_TEXT}email{CLOSE_BOLD_TEXT}!} =1 {un {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} {START_TAG_SPAN}emails{CLOSE_TAG_SPAN}}}',
-        [computeMsgId('{VAR_SELECT, select, other {({INTERPOLATION})}}')]:
-            '{VAR_SELECT, select, other {({INTERPOLATION})}}',
-        [computeMsgId(
-            '{$START_TAG_SPAN_1}{$ICU}{$CLOSE_TAG_SPAN} - ' +
-            '{$START_TAG_SPAN_1}{$ICU_1}{$CLOSE_TAG_SPAN}')]:
-            '{$START_TAG_SPAN_1}{$ICU}{$CLOSE_TAG_SPAN} - {$START_TAG_SPAN_1}{$ICU_1}{$CLOSE_TAG_SPAN}',
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{VAR_PLURAL, plural, =0 {no {START_BOLD_TEXT}emails{CLOSE_BOLD_TEXT}!} =1 {one {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} {START_TAG_SPAN}emails{CLOSE_TAG_SPAN}}}':
+              '{VAR_PLURAL, plural, =0 {aucun {START_BOLD_TEXT}email{CLOSE_BOLD_TEXT}!} =1 {un {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} {START_TAG_SPAN}emails{CLOSE_TAG_SPAN}}}',
+          '{VAR_SELECT, select, other {(name)}}': '{VAR_SELECT, select, other {({$interpolation})}}'
+        }
       });
       const fixture = initWithTemplate(AppComp, `<div i18n><span>{count, plural,
         =0 {no <b>emails</b>!}
@@ -626,11 +567,10 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('inside template directives', () => {
-      loadTranslations({
-        [computeMsgId('{$START_TAG_SPAN}{$ICU}{$CLOSE_TAG_SPAN}')]:
-            '{$START_TAG_SPAN}{$ICU}{$CLOSE_TAG_SPAN}',
-        [computeMsgId('{VAR_SELECT, select, other {({INTERPOLATION})}}')]:
-            '{VAR_SELECT, select, other {({INTERPOLATION})}}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{VAR_SELECT, select, other {(name)}}': '{VAR_SELECT, select, other {({$interpolation})}}'
+        }
       });
       const fixture = initWithTemplate(AppComp, `<div i18n><span *ngIf="visible">{name, select,
         other {({{name}})}
@@ -648,9 +588,10 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('inside ng-container', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_SELECT, select, other {({INTERPOLATION})}}')]:
-            '{VAR_SELECT, select, other {({INTERPOLATION})}}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{VAR_SELECT, select, other {(name)}}': '{VAR_SELECT, select, other {({$interpolation})}}'
+        }
       });
       const fixture = initWithTemplate(AppComp, `<ng-container i18n>{name, select,
         other {({{name}})}
@@ -659,15 +600,16 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('inside <ng-template>', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_SELECT, select, 10 {ten} 20 {twenty} other {other}}')]:
-            '{VAR_SELECT, select, 10 {dix} 20 {vingt} other {autre}}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{VAR_SELECT, select, 10 {ten} 20 {twenty} other {other}}':
+              '{VAR_SELECT, select, 10 {dix} 20 {vingt} other {autre}}'
+        }
       });
-      const fixture = initWithTemplate(
-          AppComp, `
-        <ng-template i18n tplRef>` +
-              `{count, select, 10 {ten} 20 {twenty} other {other}}` +
-              `</ng-template>
+      const fixture = initWithTemplate(AppComp, `
+        <ng-template i18n tplRef>
+          {count, select, 10 {ten} 20 {twenty} other {other}}
+        </ng-template>
       `);
 
       const element = fixture.nativeElement;
@@ -675,11 +617,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('nested', () => {
-      loadTranslations({
-        [computeMsgId(
-            '{VAR_PLURAL, plural, =0 {zero} other {{INTERPOLATION} {VAR_SELECT, select, cat {cats} dog {dogs} other {animals}}!}}',
-            '')]:
-            '{VAR_PLURAL, plural, =0 {zero} other {{INTERPOLATION} {VAR_SELECT, select, cat {chats} dog {chiens} other {animaux}}!}}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{VAR_PLURAL, plural, =0 {zero} other {{INTERPOLATION} {VAR_SELECT, select, cat {cats} dog {dogs} other {animals}}!}}':
+              '{VAR_PLURAL, plural, =0 {zero} other {{INTERPOLATION} {VAR_SELECT, select, cat {chats} dog {chients} other {animaux}}!}}'
+        }
       });
       const fixture = initWithTemplate(AppComp, `<div i18n>{count, plural,
         =0 {zero}
@@ -698,12 +640,13 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('nested with interpolations in "other" blocks', () => {
-      loadTranslations({
-        [computeMsgId(
-            '{VAR_PLURAL, plural, =0 {zero} =2 {{INTERPOLATION} {VAR_SELECT, select, cat {cats} dog {dogs} other {animals}}!} other {other - {INTERPOLATION}}}',
-            '')]:
-            '{VAR_PLURAL, plural, =0 {zero} =2 {{INTERPOLATION} {VAR_SELECT, select, cat {chats} dog {chiens} other {animaux}}!} other {autre - {INTERPOLATION}}}'
-      });
+      // Note: for some reason long string causing clang to reformat the entire file.
+      const key = '{VAR_PLURAL, plural, =0 {zero} =2 {{INTERPOLATION} {VAR_SELECT, select, ' +
+          'cat {cats} dog {dogs} other {animals}}!} other {other - {INTERPOLATION}}}';
+      const translation =
+          '{VAR_PLURAL, plural, =0 {zero} =2 {{INTERPOLATION} {VAR_SELECT, select, ' +
+          'cat {chats} dog {chients} other {animaux}}!} other {other - {INTERPOLATION}}}';
+      ɵi18nConfigureLocalize({translations: {[key]: translation}});
 
       const fixture = initWithTemplate(AppComp, `<div i18n>{count, plural,
         =0 {zero}
@@ -723,19 +666,15 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
 
       fixture.componentRef.instance.count = 4;
       fixture.detectChanges();
-      expect(fixture.nativeElement.innerHTML).toEqual(`<div>autre - 4<!--ICU 5--></div>`);
+      expect(fixture.nativeElement.innerHTML).toEqual(`<div>other - 4<!--ICU 5--></div>`);
     });
 
-    it('should return the correct plural form for ICU expressions when using a specific locale', () => {
-      loadTranslations({
-        [computeMsgId(
-            '{VAR_PLURAL, plural, =0 {no email} =one {one email} =few {a few emails} =other {lots of emails}}')]:
-            '{VAR_PLURAL, plural, =0 {no email} =one {one email} =few {a few emails} =other {lots of emails}}'
-      });
-      registerLocaleData(localeRo);
-      TestBed.configureTestingModule({providers: [{provide: LOCALE_ID, useValue: 'ro'}]});
-      // We could also use `TestBed.overrideProvider(LOCALE_ID, {useValue: 'ro'});`
-      const fixture = initWithTemplate(AppComp, `
+    it('should return the correct plural form for ICU expressions when using a specific locale',
+       () => {
+         registerLocaleData(localeRo);
+         TestBed.configureTestingModule({providers: [{provide: LOCALE_ID, useValue: 'ro'}]});
+         // We could also use `TestBed.overrideProvider(LOCALE_ID, {useValue: 'ro'});`
+         const fixture = initWithTemplate(AppComp, `
           {count, plural,
             =0 {no email}
             =one {one email}
@@ -743,38 +682,34 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
             =other {lots of emails}
           }`);
 
-      expect(fixture.nativeElement.innerHTML).toEqual('no email<!--ICU 2-->');
+         expect(fixture.nativeElement.innerHTML).toEqual('no email<!--ICU 2-->');
 
-      // Change detection cycle, no model changes
-      fixture.detectChanges();
-      expect(fixture.nativeElement.innerHTML).toEqual('no email<!--ICU 2-->');
+         // Change detection cycle, no model changes
+         fixture.detectChanges();
+         expect(fixture.nativeElement.innerHTML).toEqual('no email<!--ICU 2-->');
 
-      fixture.componentInstance.count = 3;
-      fixture.detectChanges();
-      expect(fixture.nativeElement.innerHTML).toEqual('a few emails<!--ICU 2-->');
+         fixture.componentInstance.count = 3;
+         fixture.detectChanges();
+         expect(fixture.nativeElement.innerHTML).toEqual('a few emails<!--ICU 2-->');
 
-      fixture.componentInstance.count = 1;
-      fixture.detectChanges();
-      expect(fixture.nativeElement.innerHTML).toEqual('one email<!--ICU 2-->');
+         fixture.componentInstance.count = 1;
+         fixture.detectChanges();
+         expect(fixture.nativeElement.innerHTML).toEqual('one email<!--ICU 2-->');
 
-      fixture.componentInstance.count = 10;
-      fixture.detectChanges();
-      expect(fixture.nativeElement.innerHTML).toEqual('a few emails<!--ICU 2-->');
+         fixture.componentInstance.count = 10;
+         fixture.detectChanges();
+         expect(fixture.nativeElement.innerHTML).toEqual('a few emails<!--ICU 2-->');
 
-      fixture.componentInstance.count = 20;
-      fixture.detectChanges();
-      expect(fixture.nativeElement.innerHTML).toEqual('lots of emails<!--ICU 2-->');
+         fixture.componentInstance.count = 20;
+         fixture.detectChanges();
+         expect(fixture.nativeElement.innerHTML).toEqual('lots of emails<!--ICU 2-->');
 
-      fixture.componentInstance.count = 0;
-      fixture.detectChanges();
-      expect(fixture.nativeElement.innerHTML).toEqual('no email<!--ICU 2-->');
-    });
+         fixture.componentInstance.count = 0;
+         fixture.detectChanges();
+         expect(fixture.nativeElement.innerHTML).toEqual('no email<!--ICU 2-->');
+       });
 
     it('projection', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_PLURAL, plural, =1 {one} other {at least {INTERPOLATION} .}}')]:
-            '{VAR_PLURAL, plural, =1 {one} other {at least {INTERPOLATION} .}}'
-      });
       @Component({selector: 'child', template: '<div><ng-content></ng-content></div>'})
       class Child {
       }
@@ -793,6 +728,7 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
         value = 3;
       }
       TestBed.configureTestingModule({declarations: [Parent, Child]});
+      ɵi18nConfigureLocalize({translations: {}});
 
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
@@ -801,10 +737,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('with empty values', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_SELECT, select, 10 {} 20 {twenty} other {other}}')]:
-            '{VAR_SELECT, select, 10 {} 20 {twenty} other {other}}'
-      });
       const fixture = initWithTemplate(AppComp, `{count, select, 10 {} 20 {twenty} other {other}}`);
 
       const element = fixture.nativeElement;
@@ -812,10 +744,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('inside a container when creating a view via vcr.createEmbeddedView', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_PLURAL, plural, =1 {ONE} other {OTHER}}')]:
-            '{VAR_PLURAL, plural, =1 {ONE} other {OTHER}}'
-      });
       @Directive({
         selector: '[someDir]',
       })
@@ -841,7 +769,7 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       @Component({
         selector: 'my-app',
         template: `
-            <my-cmp i18n="test" *ngIf="condition">{
+            <my-cmp i18n="test">{
               count,
               plural,
               =1 {ONE}
@@ -851,7 +779,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       })
       class App {
         count = 1;
-        condition = true;
       }
 
       TestBed.configureTestingModule({
@@ -860,48 +787,25 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       const fixture = TestBed.createComponent(App);
       fixture.detectChanges();
       expect(fixture.debugElement.nativeElement.innerHTML)
-          .toContain('<my-cmp><div>ONE<!--ICU 13--></div><!--container--></my-cmp>');
+          .toBe('<my-cmp><div>ONE<!--ICU 13--></div><!--container--></my-cmp>');
 
       fixture.componentRef.instance.count = 2;
       fixture.detectChanges();
       expect(fixture.debugElement.nativeElement.innerHTML)
-          .toContain('<my-cmp><div>OTHER<!--ICU 13--></div><!--container--></my-cmp>');
-
-      // destroy component
-      fixture.componentInstance.condition = false;
-      fixture.detectChanges();
-      expect(fixture.debugElement.nativeElement.textContent).toBe('');
-
-      // render it again and also change ICU case
-      fixture.componentInstance.condition = true;
-      fixture.componentInstance.count = 1;
-      fixture.detectChanges();
-      expect(fixture.debugElement.nativeElement.innerHTML)
-          .toContain('<my-cmp><div>ONE<!--ICU 13--></div><!--container--></my-cmp>');
+          .toBe('<my-cmp><div>OTHER<!--ICU 13--></div><!--container--></my-cmp>');
     });
 
     it('with nested ICU expression and inside a container when creating a view via vcr.createEmbeddedView',
        () => {
-         loadTranslations({
-           [computeMsgId(
-               '{VAR_PLURAL, plural, =1 {ONE} other {{INTERPOLATION} ' +
-               '{VAR_SELECT, select, cat {cats} dog {dogs} other {animals}}!}}')]:
-               '{VAR_PLURAL, plural, =1 {ONE} other {{INTERPOLATION} ' +
-               '{VAR_SELECT, select, cat {cats} dog {dogs} other {animals}}!}}'
-         });
-
-         let dir: Dir|null = null;
          @Directive({
            selector: '[someDir]',
          })
          class Dir {
            constructor(
                private readonly viewContainerRef: ViewContainerRef,
-               private readonly templateRef: TemplateRef<any>) {
-             dir = this;
-           }
+               private readonly templateRef: TemplateRef<any>) {}
 
-           attachEmbeddedView() { this.viewContainerRef.createEmbeddedView(this.templateRef); }
+           ngOnInit() { this.viewContainerRef.createEmbeddedView(this.templateRef); }
          }
 
          @Component({
@@ -941,11 +845,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
          fixture.componentRef.instance.count = 2;
          fixture.detectChanges();
          expect(fixture.debugElement.nativeElement.innerHTML)
-             .toBe('<my-cmp><!--container--></my-cmp>');
-
-         dir !.attachEmbeddedView();
-         fixture.detectChanges();
-         expect(fixture.debugElement.nativeElement.innerHTML)
              .toBe(
                  '<my-cmp><div>2 animals<!--nested ICU 0-->!<!--ICU 15--></div><!--container--></my-cmp>');
 
@@ -956,13 +855,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
        });
 
     it('with nested containers', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_SELECT, select, A {A } B {B } other {C }}')]:
-            '{VAR_SELECT, select, A {A } B {B } other {C }}',
-        [computeMsgId('{VAR_SELECT, select, A1 {A1 } B1 {B1 } other {C1 }}')]:
-            '{VAR_SELECT, select, A1 {A1 } B1 {B1 } other {C1 }}',
-        [computeMsgId(' {$ICU} ')]: ' {$ICU} ',
-      });
       @Component({
         selector: 'comp',
         template: `
@@ -997,13 +889,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('with named interpolations', () => {
-      loadTranslations({
-        [computeMsgId(
-            '{VAR_SELECT, select, A {A - {PH_A}} ' +
-            'B {B - {PH_B}} other {other - {PH_WITH_SPACES}}}')]:
-            '{VAR_SELECT, select, A {A (translated) - {PH_A}} ' +
-                'B {B (translated) - {PH_B}} other {other (translated) - {PH_WITH_SPACES}}}',
-      });
       @Component({
         selector: 'comp',
         template: `
@@ -1028,22 +913,16 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       const fixture = TestBed.createComponent(Comp);
       fixture.detectChanges();
 
-      expect(fixture.debugElement.nativeElement.innerHTML).toContain('A (translated) - Type A');
+      expect(fixture.debugElement.nativeElement.innerHTML).toContain('A - Type A');
 
       fixture.componentInstance.type = 'C';  // trigger "other" case
       fixture.detectChanges();
 
-      expect(fixture.debugElement.nativeElement.innerHTML).not.toContain('A (translated) - Type A');
-      expect(fixture.debugElement.nativeElement.innerHTML).toContain('other (translated) - Type C');
+      expect(fixture.debugElement.nativeElement.innerHTML).not.toContain('A - Type A');
+      expect(fixture.debugElement.nativeElement.innerHTML).toContain('other - Type C');
     });
 
     it('should work inside an ngTemplateOutlet inside an ngFor', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_SELECT, select, A {A } B {B } other {other - {PH_WITH_SPACES}}}')]:
-            '{VAR_SELECT, select, A {A } B {B } other {other - {PH_WITH_SPACES}}}',
-        [computeMsgId('{$ICU} ')]: '{$ICU} '
-      });
-
       @Component({
         selector: 'app',
         template: `
@@ -1052,8 +931,8 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
             select,
             A {A }
             B {B }
-            other {other - {{ typeC // i18n(ph="PH WITH SPACES") }}}
-          }
+            other {other - {{ typeC // i18n(ph="PH WITH SPACES") }}} 
+          }  
           </ng-template>
 
           <div *ngFor="let type of types">
@@ -1074,37 +953,18 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       expect(fixture.debugElement.nativeElement.innerHTML).toContain('A');
       expect(fixture.debugElement.nativeElement.innerHTML).toContain('B');
     });
-
-    it('should use metadata from container element if a message is a single ICU', () => {
-      loadTranslations({idA: '{VAR_SELECT, select, 1 {un} other {plus d\'un}}'});
-
-      @Component({
-        selector: 'app',
-        template: `
-          <div i18n="@@idA">{count, select, 1 {one} other {more than one}}</div>
-        `
-      })
-      class AppComponent {
-        count = 2;
-      }
-
-      TestBed.configureTestingModule({declarations: [AppComponent]});
-
-      const fixture = TestBed.createComponent(AppComponent);
-      fixture.detectChanges();
-      expect(fixture.debugElement.nativeElement.innerHTML).toContain('plus d\'un');
-    });
   });
 
   describe('should support attributes', () => {
     it('text', () => {
-      loadTranslations({[computeMsgId('text')]: 'texte'});
-      const fixture = initWithTemplate(AppComp, `<div i18n i18n-title title='text'></div>`);
+      ɵi18nConfigureLocalize({translations: {'text': 'texte'}});
+      const fixture = initWithTemplate(AppComp, `<div i18n i18n-title title="text"></div>`);
       expect(fixture.nativeElement.innerHTML).toEqual(`<div title="texte"></div>`);
     });
 
     it('interpolations', () => {
-      loadTranslations({[computeMsgId('hello {$INTERPOLATION}')]: 'bonjour {$INTERPOLATION}'});
+      ɵi18nConfigureLocalize(
+          {translations: {'hello {$interpolation}': 'bonjour {$interpolation}'}});
       const fixture =
           initWithTemplate(AppComp, `<div i18n i18n-title title="hello {{name}}"></div>`);
       expect(fixture.nativeElement.innerHTML).toEqual(`<div title="bonjour Angular"></div>`);
@@ -1115,14 +975,16 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('with pipes', () => {
-      loadTranslations({[computeMsgId('hello {$INTERPOLATION}')]: 'bonjour {$INTERPOLATION}'});
+      ɵi18nConfigureLocalize(
+          {translations: {'hello {$interpolation}': 'bonjour {$interpolation}'}});
       const fixture = initWithTemplate(
           AppComp, `<div i18n i18n-title title="hello {{name | uppercase}}"></div>`);
       expect(fixture.nativeElement.innerHTML).toEqual(`<div title="bonjour ANGULAR"></div>`);
     });
 
     it('multiple attributes', () => {
-      loadTranslations({[computeMsgId('hello {$INTERPOLATION}')]: 'bonjour {$INTERPOLATION}'});
+      ɵi18nConfigureLocalize(
+          {translations: {'hello {$interpolation}': 'bonjour {$interpolation}'}});
       const fixture = initWithTemplate(
           AppComp,
           `<input i18n i18n-title title="hello {{name}}" i18n-placeholder placeholder="hello {{name}}">`);
@@ -1136,17 +998,16 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('on removed elements', () => {
-      loadTranslations({
-        [computeMsgId('text')]: 'texte',
-        [computeMsgId('{$START_TAG_SPAN}content{$CLOSE_TAG_SPAN}')]: 'contenu',
-      });
+      ɵi18nConfigureLocalize(
+          {translations: {'text': 'texte', '{$startTagSpan}content{$closeTagSpan}': 'contenu'}});
       const fixture =
           initWithTemplate(AppComp, `<div i18n><span i18n-title title="text">content</span></div>`);
       expect(fixture.nativeElement.innerHTML).toEqual(`<div>contenu</div>`);
     });
 
     it('with custom interpolation config', () => {
-      loadTranslations({[computeMsgId('Hello {$INTERPOLATION}', 'm')]: 'Bonjour {$INTERPOLATION}'});
+      ɵi18nConfigureLocalize(
+          {translations: {'Hello {$interpolation}': 'Bonjour {$interpolation}'}});
       const interpolation = ['{%', '%}'] as[string, string];
       TestBed.overrideComponent(AppComp, {set: {interpolation}});
       const fixture =
@@ -1157,7 +1018,7 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('in nested template', () => {
-      loadTranslations({[computeMsgId('Item {$INTERPOLATION}', 'm')]: 'Article {$INTERPOLATION}'});
+      ɵi18nConfigureLocalize({translations: {'Item {$interpolation}': 'Article {$interpolation}'}});
       const fixture = initWithTemplate(AppComp, `
           <div *ngFor='let item of [1,2,3]'>
             <div i18n-title='m|d' title='Item {{ item }}'></div>
@@ -1171,7 +1032,8 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('should add i18n attributes on self-closing tags', () => {
-      loadTranslations({[computeMsgId('Hello {$INTERPOLATION}')]: 'Bonjour {$INTERPOLATION}'});
+      ɵi18nConfigureLocalize(
+          {translations: {'Hello {$interpolation}': 'Bonjour {$interpolation}'}});
       const fixture =
           initWithTemplate(AppComp, `<img src="logo.png" i18n-title title="Hello {{ name }}">`);
 
@@ -1180,7 +1042,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('should apply i18n attributes during second template pass', () => {
-      loadTranslations({[computeMsgId('Set')]: 'Set'});
       @Directive({
         selector: '[test]',
         inputs: ['test'],
@@ -1215,59 +1076,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       expect(fixture.debugElement.children[0].children[0].references.ref.test).toBe('Set');
       expect(fixture.debugElement.children[1].children[0].references.ref.test).toBe('Set');
     });
-
-    it('with complex expressions', () => {
-      loadTranslations({
-        [computeMsgId('{$INTERPOLATION} - {$INTERPOLATION_1} - {$INTERPOLATION_2}')]:
-            '{$INTERPOLATION} - {$INTERPOLATION_1} - {$INTERPOLATION_2} (fr)'
-      });
-      const fixture = initWithTemplate(AppComp, `
-        <div i18n-title title="{{ name | uppercase }} - {{ obj?.a?.b }} - {{ obj?.getA()?.b }}"></div>
-      `);
-      // the `obj` field is not yet defined, so 2nd and 3rd interpolations return empty strings
-      expect(fixture.nativeElement.firstChild.title).toEqual(`ANGULAR -  -  (fr)`);
-
-      fixture.componentRef.instance.obj = {
-        a: {b: 'value 1'},
-        getA: () => ({b: 'value 2'}),
-      };
-      fixture.detectChanges();
-      expect(fixture.nativeElement.firstChild.title).toEqual(`ANGULAR - value 1 - value 2 (fr)`);
-    });
-
-    it('should create corresponding ng-reflect properties', () => {
-      @Component({
-        selector: 'welcome',
-        template: '{{ messageText }}',
-      })
-      class WelcomeComp {
-        @Input() messageText !: string;
-      }
-
-      @Component({
-        template: `
-          <welcome
-            messageText="Hello"
-            i18n-messageText="Welcome message description">
-          </welcome>
-        `
-      })
-      class App {
-      }
-
-      TestBed.configureTestingModule({
-        declarations: [App, WelcomeComp],
-      });
-      loadTranslations({
-        [computeMsgId('Hello')]: 'Bonjour',
-      });
-      const fixture = TestBed.createComponent(App);
-      fixture.detectChanges();
-
-      const comp = fixture.debugElement.query(By.css('welcome'));
-      expect(comp.attributes['messagetext']).toBe('Bonjour');
-      expect(comp.attributes['ng-reflect-message-text']).toBe('Bonjour');
-    });
   });
 
   it('should work with directives and host bindings', () => {
@@ -1298,21 +1106,20 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     }
 
     TestBed.configureTestingModule({declarations: [ClsDir, MyApp]});
-    loadTranslations({
-      // Note that this translation switches the order of the expressions!
-      [computeMsgId('start {$INTERPOLATION} middle {$INTERPOLATION_1} end')]:
-          'début {$INTERPOLATION_1} milieu {$INTERPOLATION} fin',
-      [computeMsgId(
-          '{VAR_PLURAL, plural, =0 {no {START_BOLD_TEXT}emails{CLOSE_BOLD_TEXT}!} =1 {one {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} emails}}')]:
-          '{VAR_PLURAL, plural, =0 {aucun {START_BOLD_TEXT}email{CLOSE_BOLD_TEXT}!} =1 {un {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} emails}}',
-      [computeMsgId(' trad: {$ICU} ')]: ' traduction: {$ICU} '
+    ɵi18nConfigureLocalize({
+      translations: {
+        'start {$interpolation} middle {$interpolation_1} end':
+            'début {$interpolation_1} milieu {$interpolation} fin',
+        '{VAR_PLURAL, plural, =0 {no {START_BOLD_TEXT}emails{CLOSE_BOLD_TEXT}!} =1 {one {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} emails}}':
+            '{VAR_PLURAL, plural, =0 {aucun {START_BOLD_TEXT}email{CLOSE_BOLD_TEXT}!} =1 {un {START_ITALIC_TEXT}email{CLOSE_ITALIC_TEXT}} other {{INTERPOLATION} emails}}',
+        ' trad: {$icu}': ' traduction: {$icu}'
+      }
     });
     const fixture = TestBed.createComponent(MyApp);
     fixture.detectChanges();
     expect(fixture.nativeElement.innerHTML)
         .toEqual(
-            `<div test="" title="début 2 milieu 1 fin" class="foo"> traduction: un <i>email</i><!--ICU 21--> ` +
-            `</div><div test="" class="foo"></div>`);
+            `<div test="" title="début 2 milieu 1 fin" class="foo"> traduction: un <i>email</i><!--ICU 20--></div><div test="" class="foo"></div>`);
 
     directiveInstances.forEach(instance => instance.klass = 'bar');
     fixture.componentRef.instance.exp1 = 2;
@@ -1320,8 +1127,7 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.innerHTML)
         .toEqual(
-            `<div test="" title="début 3 milieu 2 fin" class="bar"> traduction: 2 emails<!--ICU 21--> ` +
-            `</div><div test="" class="bar"></div>`);
+            `<div test="" title="début 3 milieu 2 fin" class="bar"> traduction: 2 emails<!--ICU 20--></div><div test="" class="bar"></div>`);
   });
 
   it('should handle i18n attribute with directive inputs', () => {
@@ -1347,9 +1153,8 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     }
 
     TestBed.configureTestingModule({declarations: [AppComp, MyComp]});
-    loadTranslations({
-      [computeMsgId('Hello {$INTERPOLATION}')]: 'Bonjour {$INTERPOLATION}',
-      [computeMsgId('works')]: 'fonctionne',
+    ɵi18nConfigureLocalize({
+      translations: {'Hello {$interpolation}': 'Bonjour {$interpolation}', 'works': 'fonctionne'}
     });
     const fixture = initWithTemplate(
         AppComp,
@@ -1364,20 +1169,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should support adding/moving/removing nodes', () => {
-    loadTranslations({
-      [computeMsgId(
-          '{$START_TAG_DIV2}{$CLOSE_TAG_DIV2}' +
-          '{$START_TAG_DIV3}{$CLOSE_TAG_DIV3}' +
-          '{$START_TAG_DIV4}{$CLOSE_TAG_DIV4}' +
-          '{$START_TAG_DIV5}{$CLOSE_TAG_DIV5}' +
-          '{$START_TAG_DIV6}{$CLOSE_TAG_DIV6}' +
-          '{$START_TAG_DIV7}{$CLOSE_TAG_DIV7}' +
-          '{$START_TAG_DIV8}{$CLOSE_TAG_DIV8}')]: '{$START_TAG_DIV2}{$CLOSE_TAG_DIV2}' +
-          '{$START_TAG_DIV8}{$CLOSE_TAG_DIV8}' +
-          '{$START_TAG_DIV4}{$CLOSE_TAG_DIV4}' +
-          '{$START_TAG_DIV5}{$CLOSE_TAG_DIV5}Bonjour monde' +
-          '{$START_TAG_DIV3}{$CLOSE_TAG_DIV3}' +
-          '{$START_TAG_DIV7}{$CLOSE_TAG_DIV7}'
+    ɵi18nConfigureLocalize({
+      translations: {
+        '{$startTagDiv2}{$closeTagDiv2}{$startTagDiv3}{$closeTagDiv3}{$startTagDiv4}{$closeTagDiv4}{$startTagDiv5}{$closeTagDiv5}{$startTagDiv6}{$closeTagDiv6}{$startTagDiv7}{$closeTagDiv7}{$startTagDiv8}{$closeTagDiv8}':
+            '{$startTagDiv2}{$closeTagDiv2}{$startTagDiv8}{$closeTagDiv8}{$startTagDiv4}{$closeTagDiv4}{$startTagDiv5}{$closeTagDiv5}Bonjour monde{$startTagDiv3}{$closeTagDiv3}{$startTagDiv7}{$closeTagDiv7}'
+      }
     });
     const fixture = initWithTemplate(AppComp, `
       <div i18n>
@@ -1415,15 +1211,12 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
         name: string = 'Parent';
       }
       TestBed.configureTestingModule({declarations: [Parent, Child]});
-      loadTranslations({
-        [computeMsgId('Child of {$INTERPOLATION}')]: 'Enfant de {$INTERPOLATION}',
-        [computeMsgId(
-            '{$START_TAG_CHILD}I am projected from' +
-            ' {$START_BOLD_TEXT}{$INTERPOLATION}{$START_TAG_REMOVE_ME_1}{$CLOSE_TAG_REMOVE_ME_1}{$CLOSE_BOLD_TEXT}' +
-            '{$START_TAG_REMOVE_ME_2}{$CLOSE_TAG_REMOVE_ME_2}' +
-            '{$CLOSE_TAG_CHILD}' +
-            '{$START_TAG_REMOVE_ME_3}{$CLOSE_TAG_REMOVE_ME_3}')]:
-            '{$START_TAG_CHILD}Je suis projeté depuis {$START_BOLD_TEXT}{$INTERPOLATION}{$CLOSE_BOLD_TEXT}{$CLOSE_TAG_CHILD}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          'Child of {$interpolation}': 'Enfant de {$interpolation}',
+          '{$startTagChild}I am projected from {$startBoldText}{$interpolation}{$startTagRemoveMe_1}{$closeTagRemoveMe_1}{$closeBoldText}{$startTagRemoveMe_2}{$closeTagRemoveMe_2}{$closeTagChild}{$startTagRemoveMe_3}{$closeTagRemoveMe_3}':
+              '{$startTagChild}Je suis projeté depuis {$startBoldText}{$interpolation}{$closeBoldText}{$closeTagChild}'
+        }
       });
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
@@ -1452,10 +1245,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
         name: string = 'Parent';
       }
       TestBed.configureTestingModule({declarations: [Parent, Child]});
-      loadTranslations({
-        [computeMsgId('Child of {$INTERPOLATION}')]: 'Enfant de {$INTERPOLATION}',
-        [computeMsgId('I am projected from {$INTERPOLATION}')]:
-            'Je suis projeté depuis {$INTERPOLATION}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          'Child of {$interpolation}': 'Enfant de {$interpolation}',
+          'I am projected from {$interpolation}': 'Je suis projeté depuis {$interpolation}'
+        }
       });
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
@@ -1494,9 +1288,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       }
 
       TestBed.configureTestingModule({declarations: [Parent, Child, GrandChild]});
-      loadTranslations({
-        [computeMsgId('{$START_BOLD_TEXT}Hello{$CLOSE_BOLD_TEXT} World!')]:
-            '{$START_BOLD_TEXT}Bonjour{$CLOSE_BOLD_TEXT} monde!'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{$startBoldText}Hello{$closeBoldText} World!':
+              '{$startBoldText}Bonjour{$closeBoldText} monde!'
+        }
       });
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
@@ -1520,8 +1316,8 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       }
 
       TestBed.configureTestingModule({declarations: [Parent, Child, GrandChild]});
-      loadTranslations(
-          {[computeMsgId('{$START_BOLD_TEXT}Hello{$CLOSE_BOLD_TEXT} World!')]: 'Bonjour monde!'});
+      ɵi18nConfigureLocalize(
+          {translations: {'{$startBoldText}Hello{$closeBoldText} World!': 'Bonjour monde!'}});
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
       expect(fixture.nativeElement.innerHTML)
@@ -1529,7 +1325,7 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('should project translations with selectors', () => {
-      @Component({selector: 'child', template: `<ng-content select='span'></ng-content>`})
+      @Component({selector: 'child', template: `<ng-content select="span"></ng-content>`})
       class Child {
       }
 
@@ -1546,9 +1342,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       }
 
       TestBed.configureTestingModule({declarations: [Parent, Child]});
-      loadTranslations({
-        [computeMsgId('{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}{$START_TAG_SPAN_1}{$CLOSE_TAG_SPAN}')]:
-            '{$START_TAG_SPAN}Contenu{$CLOSE_TAG_SPAN}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{$startTagSpan}{$closeTagSpan}{$startTagSpan_1}{$closeTagSpan}':
+              '{$startTagSpan}Contenu{$closeTagSpan}'
+        }
       });
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
@@ -1569,9 +1367,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
         name: string = 'Parent';
       }
       TestBed.configureTestingModule({declarations: [Parent, Child]});
-      loadTranslations({
-        [computeMsgId('Content projected from {$START_TAG_NG_CONTENT}{$CLOSE_TAG_NG_CONTENT}')]:
-            'Contenu projeté depuis {$START_TAG_NG_CONTENT}{$CLOSE_TAG_NG_CONTENT}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          'Content projected from {$startTagNgContent}{$closeTagNgContent}':
+              'Contenu projeté depuis {$startTagNgContent}{$closeTagNgContent}'
+        }
       });
 
       const fixture = TestBed.createComponent(Parent);
@@ -1598,9 +1398,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
         name: string = 'Parent';
       }
       TestBed.configureTestingModule({declarations: [Parent, Child]});
-      loadTranslations({
-        [computeMsgId('Content projected from {$START_TAG_NG_CONTENT}{$CLOSE_TAG_NG_CONTENT}')]:
-            '{$START_TAG_NG_CONTENT}{$CLOSE_TAG_NG_CONTENT} a projeté le contenu'
+      ɵi18nConfigureLocalize({
+        translations: {
+          'Content projected from {$startTagNgContent}{$closeTagNgContent}':
+              '{$startTagNgContent}{$closeTagNgContent} a projeté le contenu'
+        }
       });
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
@@ -1619,11 +1421,12 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
         name: string = 'Parent';
       }
       TestBed.configureTestingModule({declarations: [Parent, Child]});
-      loadTranslations({
-        [computeMsgId('Child content {$START_TAG_NG_CONTENT}{$CLOSE_TAG_NG_CONTENT}')]:
-            'Contenu enfant {$START_TAG_NG_CONTENT}{$CLOSE_TAG_NG_CONTENT}',
-        [computeMsgId('and projection from {$INTERPOLATION}')]:
-            'et projection depuis {$INTERPOLATION}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          'Child content {$startTagNgContent}{$closeTagNgContent}':
+              'Contenu enfant {$startTagNgContent}{$closeTagNgContent}',
+          'and projection from {$interpolation}': 'et projection depuis {$interpolation}'
+        }
       });
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
@@ -1632,10 +1435,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
     });
 
     it('should project bare ICU expressions', () => {
-      loadTranslations({
-        [computeMsgId('{VAR_PLURAL, plural, =1 {one} other {at least {INTERPOLATION} .}}')]:
-            '{VAR_PLURAL, plural, =1 {one} other {at least {INTERPOLATION} .}}'
-      });
       @Component({selector: 'child', template: '<div><ng-content></ng-content></div>'})
       class Child {
       }
@@ -1654,6 +1453,7 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
         value = 3;
       }
       TestBed.configureTestingModule({declarations: [Parent, Child]});
+      ɵi18nConfigureLocalize({translations: {}});
 
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
@@ -1676,12 +1476,12 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
         name: string = 'Parent';
       }
       TestBed.configureTestingModule({declarations: [Parent, Child]});
-      loadTranslations({
-        [computeMsgId('{VAR_SELECT, select, angular {Angular} other {{INTERPOLATION}}}')]:
-            '{VAR_SELECT, select, angular {Angular} other {{INTERPOLATION}}}',
-        [computeMsgId('Child content {$START_TAG_NG_CONTENT}{$CLOSE_TAG_NG_CONTENT}')]:
-            'Contenu enfant {$START_TAG_NG_CONTENT}{$CLOSE_TAG_NG_CONTENT}',
-        [computeMsgId('and projection from {$ICU}')]: 'et projection depuis {$ICU}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          'Child content {$startTagNgContent}{$closeTagNgContent}':
+              'Contenu enfant {$startTagNgContent}{$closeTagNgContent}',
+          'and projection from {$icu}': 'et projection depuis {$icu}'
+        }
       });
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
@@ -1707,64 +1507,15 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
         name: string = 'Parent';
       }
       TestBed.configureTestingModule({declarations: [Parent, Child]});
-      loadTranslations({
-        [computeMsgId('Child content {$START_TAG_NG_CONTENT}{$CLOSE_TAG_NG_CONTENT}')]:
-            'Contenu enfant',
-        [computeMsgId('and projection from {$INTERPOLATION}')]:
-            'et projection depuis {$INTERPOLATION}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          'Child content {$startTagNgContent}{$closeTagNgContent}': 'Contenu enfant',
+          'and projection from {$interpolation}': 'et projection depuis {$interpolation}'
+        }
       });
       const fixture = TestBed.createComponent(Parent);
       fixture.detectChanges();
       expect(fixture.nativeElement.innerHTML).toEqual(`<child><div>Contenu enfant</div></child>`);
-    });
-
-    it('should display/destroy projected i18n content', () => {
-
-      loadTranslations({
-        [computeMsgId('{VAR_SELECT, select, A {A} B {B} other {other}}')]:
-            '{VAR_SELECT, select, A {A} B {B} other {other}}'
-      });
-      @Component({
-        selector: 'app',
-        template: `
-            <ng-container>(<ng-content></ng-content>)</ng-container>
-        `
-      })
-      class MyContentApp {
-      }
-
-      @Component({
-        selector: 'my-app',
-        template: `
-          <app i18n *ngIf="condition">{type, select, A {A} B {B} other {other}}</app>
-        `
-      })
-      class MyApp {
-        type = 'A';
-        condition = true;
-      }
-
-      TestBed.configureTestingModule({declarations: [MyApp, MyContentApp]});
-
-      const fixture = TestBed.createComponent(MyApp);
-      fixture.detectChanges();
-
-      expect(fixture.nativeElement.textContent).toContain('(A)');
-
-      // change `condition` to remove <app>
-      fixture.componentInstance.condition = false;
-      fixture.detectChanges();
-
-      // should not contain 'A'
-      expect(fixture.nativeElement.textContent).toBe('');
-
-      // display <app> again
-      fixture.componentInstance.type = 'B';
-      fixture.componentInstance.condition = true;
-      fixture.detectChanges();
-
-      // expect that 'B' is now displayed
-      expect(fixture.nativeElement.textContent).toContain('(B)');
     });
   });
 
@@ -1801,14 +1552,11 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
       }
 
       TestBed.configureTestingModule({declarations: [TextDirective, DivQuery]});
-      loadTranslations({
-        [computeMsgId(
-            '{$START_TAG_NG_TEMPLATE}{$START_TAG_DIV_1}' +
-            '{$START_TAG_DIV}' +
-            '{$START_TAG_SPAN}Content{$CLOSE_TAG_SPAN}' +
-            '{$CLOSE_TAG_DIV}' +
-            '{$CLOSE_TAG_DIV}{$CLOSE_TAG_NG_TEMPLATE}')]:
-            '{$START_TAG_NG_TEMPLATE}Contenu{$CLOSE_TAG_NG_TEMPLATE}'
+      ɵi18nConfigureLocalize({
+        translations: {
+          '{$startTagNgTemplate}{$startTagDiv_1}{$startTagDiv}{$startTagSpan}Content{$closeTagSpan}{$closeTagDiv}{$closeTagDiv}{$closeTagNgTemplate}':
+              '{$startTagNgTemplate}Contenu{$closeTagNgTemplate}'
+        }
       });
       const fixture = initWithTemplate(AppComp, `
           <div-query #q i18n>
@@ -1841,13 +1589,6 @@ onlyInIvy('Ivy i18n logic').describe('runtime i18n', () => {
   });
 
   it('should not alloc expando slots when there is no new variable to create', () => {
-    loadTranslations({
-      [computeMsgId('{$START_TAG_DIV} Some content {$CLOSE_TAG_DIV}')]:
-          '{$START_TAG_DIV} Some content {$CLOSE_TAG_DIV}',
-      [computeMsgId(
-          '{$START_TAG_SPAN_1}{$ICU}{$CLOSE_TAG_SPAN} - {$START_TAG_SPAN_1}{$ICU_1}{$CLOSE_TAG_SPAN}')]:
-          '{$START_TAG_SPAN_1}{$ICU}{$CLOSE_TAG_SPAN} - {$START_TAG_SPAN_1}{$ICU_1}{$CLOSE_TAG_SPAN}',
-    });
     @Component({
       template: `
       <div dialog i18n>

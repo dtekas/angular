@@ -19,7 +19,7 @@ import {ChildrenOutletContexts, ExtraOptions, NoPreloading, PreloadingStrategy, 
  * Allows to simulate the loading of ng modules in tests.
  *
  * ```
- * const loader = TestBed.inject(NgModuleFactoryLoader);
+ * const loader = TestBed.get(NgModuleFactoryLoader);
  *
  * @Component({template: 'lazy-loaded'})
  * class LazyLoadedComponent {}

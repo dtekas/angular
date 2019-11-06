@@ -7,7 +7,7 @@
  */
 
 import {CompilerConfig, ResourceLoader} from '@angular/compiler';
-import {CUSTOM_ELEMENTS_SCHEMA, Compiler, Component, ComponentFactoryResolver, Directive, Inject, Injectable, InjectionToken, Injector, Input, NgModule, Optional, Pipe, SkipSelf, ɵstringify as stringify} from '@angular/core';
+import {CUSTOM_ELEMENTS_SCHEMA, Compiler, Component, Directive, Inject, Injectable, Injector, Input, NgModule, Optional, Pipe, SkipSelf, ɵstringify as stringify} from '@angular/core';
 import {TestBed, async, fakeAsync, getTestBed, inject, tick, withModule} from '@angular/core/testing';
 import {expect} from '@angular/platform-browser/testing/src/matchers';
 import {ivyEnabled, modifiedInIvy, obsoleteInIvy, onlyInIvy} from '@angular/private/testing';
@@ -111,9 +111,6 @@ class SomeLibModule {
 })
 class CompWithUrlTemplate {
 }
-
-const aTok = new InjectionToken<string>('a');
-const bTok = new InjectionToken<string>('b');
 
 {
   describe('public testing API', () => {
@@ -418,67 +415,56 @@ const bTok = new InjectionToken<string>('b');
       });
 
       describe('overriding providers', () => {
-
-        describe('in core', () => {
-          it('ComponentFactoryResolver', () => {
-            const componentFactoryMock =
-                jasmine.createSpyObj('componentFactory', ['resolveComponentFactory']);
-            TestBed.overrideProvider(ComponentFactoryResolver, {useValue: componentFactoryMock});
-            expect(TestBed.get(ComponentFactoryResolver)).toEqual(componentFactoryMock);
-          });
-        });
-
         describe('in NgModules', () => {
-
           it('should support useValue', () => {
             TestBed.configureTestingModule({
               providers: [
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
               ]
             });
-            TestBed.overrideProvider(aTok, {useValue: 'mockValue'});
-            expect(TestBed.inject(aTok)).toBe('mockValue');
+            TestBed.overrideProvider('a', {useValue: 'mockValue'});
+            expect(TestBed.get('a')).toBe('mockValue');
           });
 
           it('should support useFactory', () => {
             TestBed.configureTestingModule({
               providers: [
                 {provide: 'dep', useValue: 'depValue'},
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
               ]
             });
             TestBed.overrideProvider(
-                aTok, {useFactory: (dep: any) => `mockA: ${dep}`, deps: ['dep']});
-            expect(TestBed.inject(aTok)).toBe('mockA: depValue');
+                'a', {useFactory: (dep: any) => `mockA: ${dep}`, deps: ['dep']});
+            expect(TestBed.get('a')).toBe('mockA: depValue');
           });
 
           it('should support @Optional without matches', () => {
             TestBed.configureTestingModule({
               providers: [
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
               ]
             });
             TestBed.overrideProvider(
-                aTok, {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new Optional(), 'dep']]});
-            expect(TestBed.inject(aTok)).toBe('mockA: null');
+                'a', {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new Optional(), 'dep']]});
+            expect(TestBed.get('a')).toBe('mockA: null');
           });
 
           it('should support Optional with matches', () => {
             TestBed.configureTestingModule({
               providers: [
                 {provide: 'dep', useValue: 'depValue'},
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
               ]
             });
             TestBed.overrideProvider(
-                aTok, {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new Optional(), 'dep']]});
-            expect(TestBed.inject(aTok)).toBe('mockA: depValue');
+                'a', {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new Optional(), 'dep']]});
+            expect(TestBed.get('a')).toBe('mockA: depValue');
           });
 
           it('should support SkipSelf', () => {
             @NgModule({
               providers: [
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
                 {provide: 'dep', useValue: 'depValue'},
               ]
             })
@@ -486,14 +472,13 @@ const bTok = new InjectionToken<string>('b');
             }
 
             TestBed.overrideProvider(
-                aTok, {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new SkipSelf(), 'dep']]});
+                'a', {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new SkipSelf(), 'dep']]});
             TestBed.configureTestingModule(
                 {providers: [{provide: 'dep', useValue: 'parentDepValue'}]});
 
-            const compiler = TestBed.inject(Compiler);
+            const compiler = TestBed.get(Compiler) as Compiler;
             const modFactory = compiler.compileModuleSync(MyModule);
-            expect(modFactory.create(getTestBed()).injector.get(aTok))
-                .toBe('mockA: parentDepValue');
+            expect(modFactory.create(getTestBed()).injector.get('a')).toBe('mockA: parentDepValue');
           });
 
           it('should keep imported NgModules eager', () => {
@@ -506,42 +491,42 @@ const bTok = new InjectionToken<string>('b');
 
             TestBed.configureTestingModule({
               providers: [
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
               ],
               imports: [SomeModule]
             });
-            TestBed.overrideProvider(aTok, {useValue: 'mockValue'});
+            TestBed.overrideProvider('a', {useValue: 'mockValue'});
 
-            expect(TestBed.inject(aTok)).toBe('mockValue');
+            expect(TestBed.get('a')).toBe('mockValue');
             expect(someModule).toBeAnInstanceOf(SomeModule);
           });
 
           describe('injecting eager providers into an eager overwritten provider', () => {
             @NgModule({
               providers: [
-                {provide: aTok, useFactory: () => 'aValue'},
-                {provide: bTok, useFactory: () => 'bValue'},
+                {provide: 'a', useFactory: () => 'aValue'},
+                {provide: 'b', useFactory: () => 'bValue'},
               ]
             })
             class MyModule {
               // NgModule is eager, which makes all of its deps eager
-              constructor(@Inject(aTok) a: any, @Inject(bTok) b: any) {}
+              constructor(@Inject('a') a: any, @Inject('b') b: any) {}
             }
 
             it('should inject providers that were declared before', () => {
               TestBed.configureTestingModule({imports: [MyModule]});
               TestBed.overrideProvider(
-                  bTok, {useFactory: (a: string) => `mockB: ${a}`, deps: [aTok]});
+                  'b', {useFactory: (a: string) => `mockB: ${a}`, deps: ['a']});
 
-              expect(TestBed.inject(bTok)).toBe('mockB: aValue');
+              expect(TestBed.get('b')).toBe('mockB: aValue');
             });
 
             it('should inject providers that were declared afterwards', () => {
               TestBed.configureTestingModule({imports: [MyModule]});
               TestBed.overrideProvider(
-                  aTok, {useFactory: (b: string) => `mockA: ${b}`, deps: [bTok]});
+                  'a', {useFactory: (b: string) => `mockA: ${b}`, deps: ['b']});
 
-              expect(TestBed.inject(aTok)).toBe('mockA: bValue');
+              expect(TestBed.get('a')).toBe('mockA: bValue');
             });
           });
         });
@@ -551,17 +536,17 @@ const bTok = new InjectionToken<string>('b');
             @Component({
               template: '',
               providers: [
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
               ]
             })
             class MComp {
             }
 
-            TestBed.overrideProvider(aTok, {useValue: 'mockValue'});
+            TestBed.overrideProvider('a', {useValue: 'mockValue'});
             const ctx =
                 TestBed.configureTestingModule({declarations: [MComp]}).createComponent(MComp);
 
-            expect(ctx.debugElement.injector.get(aTok)).toBe('mockValue');
+            expect(ctx.debugElement.injector.get('a')).toBe('mockValue');
           });
 
           it('should support useFactory', () => {
@@ -569,36 +554,36 @@ const bTok = new InjectionToken<string>('b');
               template: '',
               providers: [
                 {provide: 'dep', useValue: 'depValue'},
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
               ]
             })
             class MyComp {
             }
 
             TestBed.overrideProvider(
-                aTok, {useFactory: (dep: any) => `mockA: ${dep}`, deps: ['dep']});
+                'a', {useFactory: (dep: any) => `mockA: ${dep}`, deps: ['dep']});
             const ctx =
                 TestBed.configureTestingModule({declarations: [MyComp]}).createComponent(MyComp);
 
-            expect(ctx.debugElement.injector.get(aTok)).toBe('mockA: depValue');
+            expect(ctx.debugElement.injector.get('a')).toBe('mockA: depValue');
           });
 
           it('should support @Optional without matches', () => {
             @Component({
               template: '',
               providers: [
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
               ]
             })
             class MyComp {
             }
 
             TestBed.overrideProvider(
-                aTok, {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new Optional(), 'dep']]});
+                'a', {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new Optional(), 'dep']]});
             const ctx =
                 TestBed.configureTestingModule({declarations: [MyComp]}).createComponent(MyComp);
 
-            expect(ctx.debugElement.injector.get(aTok)).toBe('mockA: null');
+            expect(ctx.debugElement.injector.get('a')).toBe('mockA: null');
           });
 
           it('should support Optional with matches', () => {
@@ -606,25 +591,25 @@ const bTok = new InjectionToken<string>('b');
               template: '',
               providers: [
                 {provide: 'dep', useValue: 'depValue'},
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
               ]
             })
             class MyComp {
             }
 
             TestBed.overrideProvider(
-                aTok, {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new Optional(), 'dep']]});
+                'a', {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new Optional(), 'dep']]});
             const ctx =
                 TestBed.configureTestingModule({declarations: [MyComp]}).createComponent(MyComp);
 
-            expect(ctx.debugElement.injector.get(aTok)).toBe('mockA: depValue');
+            expect(ctx.debugElement.injector.get('a')).toBe('mockA: depValue');
           });
 
           it('should support SkipSelf', () => {
             @Directive({
               selector: '[myDir]',
               providers: [
-                {provide: aTok, useValue: 'aValue'},
+                {provide: 'a', useValue: 'aValue'},
                 {provide: 'dep', useValue: 'depValue'},
               ]
             })
@@ -641,17 +626,17 @@ const bTok = new InjectionToken<string>('b');
             }
 
             TestBed.overrideProvider(
-                aTok, {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new SkipSelf(), 'dep']]});
+                'a', {useFactory: (dep: any) => `mockA: ${dep}`, deps: [[new SkipSelf(), 'dep']]});
             const ctx = TestBed.configureTestingModule({declarations: [MyComp, MyDir]})
                             .createComponent(MyComp);
-            expect(ctx.debugElement.children[0].injector.get(aTok)).toBe('mockA: parentDepValue');
+            expect(ctx.debugElement.children[0].injector.get('a')).toBe('mockA: parentDepValue');
           });
 
           it('should support multiple providers in a template', () => {
             @Directive({
               selector: '[myDir1]',
               providers: [
-                {provide: aTok, useValue: 'aValue1'},
+                {provide: 'a', useValue: 'aValue1'},
               ]
             })
             class MyDir1 {
@@ -660,7 +645,7 @@ const bTok = new InjectionToken<string>('b');
             @Directive({
               selector: '[myDir2]',
               providers: [
-                {provide: aTok, useValue: 'aValue2'},
+                {provide: 'a', useValue: 'aValue2'},
               ]
             })
             class MyDir2 {
@@ -672,51 +657,51 @@ const bTok = new InjectionToken<string>('b');
             class MyComp {
             }
 
-            TestBed.overrideProvider(aTok, {useValue: 'mockA'});
+            TestBed.overrideProvider('a', {useValue: 'mockA'});
             const ctx = TestBed.configureTestingModule({declarations: [MyComp, MyDir1, MyDir2]})
                             .createComponent(MyComp);
-            expect(ctx.debugElement.children[0].injector.get(aTok)).toBe('mockA');
-            expect(ctx.debugElement.children[1].injector.get(aTok)).toBe('mockA');
+            expect(ctx.debugElement.children[0].injector.get('a')).toBe('mockA');
+            expect(ctx.debugElement.children[1].injector.get('a')).toBe('mockA');
           });
 
           describe('injecting eager providers into an eager overwritten provider', () => {
             @Component({
               template: '',
               providers: [
-                {provide: aTok, useFactory: () => 'aValue'},
-                {provide: bTok, useFactory: () => 'bValue'},
+                {provide: 'a', useFactory: () => 'aValue'},
+                {provide: 'b', useFactory: () => 'bValue'},
               ]
             })
             class MyComp {
               // Component is eager, which makes all of its deps eager
-              constructor(@Inject(aTok) a: any, @Inject(bTok) b: any) {}
+              constructor(@Inject('a') a: any, @Inject('b') b: any) {}
             }
 
             it('should inject providers that were declared before it', () => {
               TestBed.overrideProvider(
-                  bTok, {useFactory: (a: string) => `mockB: ${a}`, deps: [aTok]});
+                  'b', {useFactory: (a: string) => `mockB: ${a}`, deps: ['a']});
               const ctx =
                   TestBed.configureTestingModule({declarations: [MyComp]}).createComponent(MyComp);
 
-              expect(ctx.debugElement.injector.get(bTok)).toBe('mockB: aValue');
+              expect(ctx.debugElement.injector.get('b')).toBe('mockB: aValue');
             });
 
             it('should inject providers that were declared after it', () => {
               TestBed.overrideProvider(
-                  aTok, {useFactory: (b: string) => `mockA: ${b}`, deps: [bTok]});
+                  'a', {useFactory: (b: string) => `mockA: ${b}`, deps: ['b']});
               const ctx =
                   TestBed.configureTestingModule({declarations: [MyComp]}).createComponent(MyComp);
 
-              expect(ctx.debugElement.injector.get(aTok)).toBe('mockA: bValue');
+              expect(ctx.debugElement.injector.get('a')).toBe('mockA: bValue');
             });
           });
         });
 
         it('should reset overrides when the testing modules is resetted', () => {
-          TestBed.overrideProvider(aTok, {useValue: 'mockValue'});
+          TestBed.overrideProvider('a', {useValue: 'mockValue'});
           TestBed.resetTestingModule();
-          TestBed.configureTestingModule({providers: [{provide: aTok, useValue: 'aValue'}]});
-          expect(TestBed.inject(aTok)).toBe('aValue');
+          TestBed.configureTestingModule({providers: [{provide: 'a', useValue: 'aValue'}]});
+          expect(TestBed.get('a')).toBe('aValue');
         });
       });
 
@@ -754,7 +739,7 @@ const bTok = new InjectionToken<string>('b');
           class MyComponent {
           }
 
-          TestBed.inject(Injector);
+          TestBed.get(Injector);
 
           expect(() => TestBed.overrideTemplateUsingTestingModule(MyComponent, 'b'))
               .toThrowError(
@@ -781,7 +766,7 @@ const bTok = new InjectionToken<string>('b');
 
           it('should use set up providers', fakeAsync(() => {
                // Keeping this component inside the test is needed to make sure it's not resolved
-               // prior to this test, thus having ɵcmp and a reference in resource
+               // prior to this test, thus having ngComponentDef and a reference in resource
                // resolution queue. This is done to check external resoution logic in isolation by
                // configuring TestBed with the necessary ResourceLoader instance.
                @Component({
@@ -937,7 +922,7 @@ Did you run and wait for 'resolveComponentResources()'?` :
       });
 
 
-      modifiedInIvy(`Unknown property error thrown instead of logging a warning`)
+      modifiedInIvy(`Unknown property error thrown during update mode, not creation mode`)
           .it('should error on unknown bound properties on custom elements by default', () => {
             @Component({template: '<some-element [someUnknownProp]="true"></some-element>'})
             class ComponentUsingInvalidProperty {
@@ -956,18 +941,26 @@ Did you run and wait for 'resolveComponentResources()'?` :
             restoreJasmineIt();
           });
 
-      onlyInIvy(`Unknown property warning logged instead of an error`)
+      onlyInIvy(`Unknown property error thrown during update mode, not creation mode`)
           .it('should error on unknown bound properties on custom elements by default', () => {
-            @Component({template: '<div [someUnknownProp]="true"></div>'})
+            @Component({template: '<some-element [someUnknownProp]="true"></some-element>'})
             class ComponentUsingInvalidProperty {
             }
 
-            const spy = spyOn(console, 'warn');
-            withModule({declarations: [ComponentUsingInvalidProperty]}, () => {
-              const fixture = TestBed.createComponent(ComponentUsingInvalidProperty);
-              fixture.detectChanges();
-            })();
-            expect(spy.calls.mostRecent().args[0]).toMatch(/Can't bind to 'someUnknownProp'/);
+            const itPromise = patchJasmineIt();
+
+            expect(
+                () => it(
+                    'should fail', withModule(
+                                       {declarations: [ComponentUsingInvalidProperty]},
+                                       () => {
+                                         const fixture =
+                                             TestBed.createComponent(ComponentUsingInvalidProperty);
+                                         fixture.detectChanges();
+                                       })))
+                .toThrowError(/Can't bind to 'someUnknownProp'/);
+
+            restoreJasmineIt();
           });
     });
 

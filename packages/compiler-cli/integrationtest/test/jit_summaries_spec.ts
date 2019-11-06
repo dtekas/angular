@@ -44,7 +44,7 @@ describe('Jit Summaries', () => {
     TestBed.configureTestingModule({
       providers: [SomeService, SomeDep],
     });
-    TestBed.inject(SomeService);
+    TestBed.get(SomeService);
     expectInstanceCreated(SomeService);
   });
 

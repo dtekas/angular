@@ -8,7 +8,7 @@ When you are ready to deploy your Angular application to a remote server, you ha
 
 ## Simple deployment options
 
-Before fully deploying your application, you can test the process, build configuration, and deployed behavior by using one of these interim techniques.
+Before fully deploying your application, you can test the process, build configuration, and deployed behavior by using one of these interim techniques
 
 ### Building and serving from disk
 
@@ -41,7 +41,7 @@ You will need two terminals to get the live-reload experience.
 
   <code-example language="none" class="code-shell">
 
-   lite-server --baseDir="dist/project-name"
+   lite-server --baseDir="dist"
 
   </code-example>
 
@@ -52,36 +52,6 @@ You will need two terminals to get the live-reload experience.
 This method is for development and testing only, and is not a supported or secure way of deploying an application.
 
 </div>
-
-### Automatic deployment with the CLI
-
-The Angular CLI command `ng deploy` (introduced in version 8.3.0) executes the `deploy` [CLI builder](https://angular.io/guide/cli-builder) associated with your project. A number of third-party builders implement deployment capabilities to different platforms. You can add any of them to your project by running `ng add [package name]`.
-
-When you add a package with deployment capability, it'll automatically update your workspace configuration (`angular.json` file) with a `deploy` section for the selected project. You can then use the `ng deploy` command to deploy that project.
-
-For example, the following command automatically deploys a project to Firebase.
-
-<code-example language="none" class="code-shell">
-ng add @angular/fire
-ng deploy
-</code-example>
-
-The command is interactive. In this case, you must have or create a Firebase account, and authenticate using that account. The command prompts you to select a Firebase project for deployment
-
-After the command produces an optimal build of your application (equivalent to `ng deploy --prod`), it'll upload the production assets to Firebase.
-
-In the table below, you can find a list of packages which implement deployment functionality to different platforms. The `deploy` command for each package may require different command line options. You can read more by following the links associated with the package names below:
-
-| Deployment to                                                 | Package                                                                        |
-|---------------------------------------------------------------|--------------------------------------------------------------------------------|
-| [Firebase hosting](https://firebase.google.com/docs/hosting)  | [`@angular/fire`](https://npmjs.org/package/@angular/fire)                     |
-| [Azure](https://azure.microsoft.com/en-us/)                   | [`@azure/ng-deploy`](https://npmjs.org/package/@azure/ng-deploy)               |
-| [Now](https://zeit.co/now)                                    | [`@zeit/ng-deploy`](https://npmjs.org/package/@zeit/ng-deploy)                 |
-| [Netlify](https://www.netlify.com/)                           | [`@netlify-builder/deploy`](https://npmjs.org/package/@netlify-builder/deploy) |
-| [GitHub pages](https://pages.github.com/)                     | [`angular-cli-ghpages`](https://npmjs.org/package/angular-cli-ghpages)         |
-| [NPM](https://npmjs.com/)                                     | [`ngx-deploy-npm`](https://npmjs.org/package/ngx-deploy-npm)                   |
-
-If you're deploying to a self-managed server or there's no builder for your favorite cloud platform, you can either create a builder that allows you to use the `ng deploy` command, or read through this guide to learn how to manually deploy your app.
 
 ### Basic deployment to a remote server
 
@@ -202,54 +172,6 @@ modified to serve `index.html`:
   ```
 
 
-* [Golang](https://golang.org/): create a Golang server using ([gorilla/mux](https://github.com/gorilla/mux)) with a basic Golang file that configures the server `main.go`:
-
-  ``` go
-  package main
-
-  import (
-  	"net/http"
-  	"os"
-  	"github.com/gorilla/mux"
-  )
-  var httpPort = "80"
-  var folderDist = "./dist" // ng build output folder
-
-  func serverHandler(w http.ResponseWriter, r *http.Request) {
-  	if _, err := os.Stat(folderDist + r.URL.Path); err != nil {
-  		http.ServeFile(w, r, folderDist+"/index.html")
-  		return
-  	}
-  	http.ServeFile(w, r, folderDist+r.URL.Path)
-  }
-
-  func main() {
-  	r := mux.NewRouter()
-  	r.NotFoundHandler = r.NewRoute().HandlerFunc(serverHandler).GetHandler()
-  	http.Handle("/", r)
-  	http.ListenAndServe(":"+httpPort, nil)
-  }
-  ```
-  
-* [Ruby](https://www.ruby-lang.org/): create a Ruby server using ([sinatra](http://sinatrarb.com/)) with a basic Ruby file that configures the server `server.rb`:
-
-  ``` ruby
-  require 'sinatra'
-
-  # Folder structure
-  # .
-  # -- server.rb
-  # -- public
-  #    |-- dist
-  #        |-- index.html
-
-  get '/' do
-      folderDir = settings.public_folder + '/dist'  # ng build output folder
-      send_file File.join(folderDir, 'index.html')
-  end
-  ```
-
-
 * [IIS](https://www.iis.net/): add a rewrite rule to `web.config`, similar to the one shown
 [here](http://stackoverflow.com/a/26152011/2116927):
 
@@ -353,7 +275,7 @@ Configure the Angular Router to defer loading of all other modules (and their as
 or by [_lazy loading_](guide/router#asynchronous-routing "Lazy loading")
 them on demand.
 
-<div class="callout is-helpful">
+<div class="callout is-helpful>
 
 <header>Don't eagerly import something from a lazy-loaded module</header>
 
@@ -434,10 +356,8 @@ showing exactly which classes are included in the bundle.
 
 Here's the output for the _main_ bundle of an example app called `cli-quickstart`.
 
-<figure class="lightbox">
-  <div class="card">
-    <img src="generated/images/guide/deployment/quickstart-sourcemap-explorer.png" alt="quickstart sourcemap explorer">
-  </div>
+<figure>
+  <img src="generated/images/guide/deployment/quickstart-sourcemap-explorer.png" alt="quickstart sourcemap explorer">
 </figure>
 
 {@a base-tag}
@@ -475,7 +395,7 @@ Even as JavaScript continues to evolve, with new features being introduced, not 
 
 The code you write in development using TypeScript is compiled and bundled into ES2015, the JavaScript syntax that is compatible with most browsers.
 All modern browsers support ES2015 and beyond, but in most cases, you still have to account for users accessing your application from a browser that doesn't.
-When targeting older browsers, [polyfills](guide/browser-support#polyfills) can bridge the gap by providing functionality that doesn't exist in the older versions of JavaScript supported by those browsers.
+When targeting older browsers, [polyfills](guide/browser-support#polyfills) can bridge the gap by providing functionality that  doesn't exist in the older versions of JavaScript supported by those browsers.
 
 To maximize compatibility, you could ship a single bundle that includes all your compiled code, plus any polyfills that may be needed.
 Users with modern browsers, however, shouldn't have to pay the price of increased bundle size that comes with polyfills they don't need.
@@ -669,14 +589,14 @@ In `angular.json` add two new configuration sections under the `build` and `serv
      ...
     },
     "es5": {
-      "browserTarget": "<app-name>:build:es5"
+      "browserTarget": "app:build:es5"
     }
   }
 },
 
 </code-example>
 
-You can then run the `ng serve` command with this configuration. Make sure to replace `<app-name>` (in `"<app-name>:build:es5"`) with the actual name of the app, as it appears under `projects` in `angular.json`. For example, if your app name is `myAngularApp` the config will become `"browserTarget": "myAngularApp:build:es5"`.
+You can then run the serve with this configuration.
 
 <code-example language="none" class="code-shell">
 
@@ -731,24 +651,24 @@ Create an [ES5 serve configuration](guide/deployment#configuring-serve-for-es5) 
 
 <code-example language="json">
 
-"e2e": {
+"test": {
   "builder": "@angular-devkit/build-angular:protractor",
   "options": {
       ...
   },
   "configurations": {
-	  "production": {
-		  ...
-	  },
+	"production": {
+		...
+	},
     "es5": {
-      "devServerTarget": "<app-name>:serve:es5"
+      "devServerTarget": "app:serve:es5"
     }
   }
 },
 
 </code-example>
 
-You can then run the `ng e2e` command with this configuration. Make sure to replace `<app-name>` (in `"<app-name>:serve:es5"`) with the actual name of the app, as it appears under `projects` in `angular.json`. For example, if your app name is `myAngularApp` the config will become `"devServerTarget": "myAngularApp:serve:es5"`.
+You can then run the e2e's with this configuration
 
 <code-example language="none" class="code-shell">
 

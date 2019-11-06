@@ -9,7 +9,9 @@
 import {TestFile, runInEachFileSystem} from '@angular/compiler-cli/src/ngtsc/file_system/testing';
 import * as ts from 'typescript';
 
-import {TestDeclaration, ngForDeclaration, ngForDts, typecheck} from './test_utils';
+import {Diagnostic} from '../src/diagnostics';
+
+import {NGFOR_DECLARATION, TestDeclaration, ngForDts, typecheck} from './test_utils';
 
 runInEachFileSystem(() => {
   describe('template diagnostics', () => {
@@ -33,7 +35,7 @@ runInEachFileSystem(() => {
           }]);
 
       expect(messages).toEqual(
-          [`synthetic.html(1, 10): Type 'string' is not assignable to type 'number'.`]);
+          [`synthetic.html(9, 30): Type 'string' is not assignable to type 'number | undefined'.`]);
     });
 
     it('infers type of template variables', () => {
@@ -44,10 +46,10 @@ runInEachFileSystem(() => {
           
           render(input: string): string { return input; }
         }`,
-          [ngForDeclaration()], [ngForDts()]);
+          [NGFOR_DECLARATION], [ngForDts()]);
 
       expect(messages).toEqual([
-        `synthetic.html(1, 62): Argument of type 'number' is not assignable to parameter of type 'string'.`,
+        `synthetic.html(61, 64): Argument of type 'number' is not assignable to parameter of type 'string'.`,
       ]);
     });
 
@@ -59,7 +61,7 @@ runInEachFileSystem(() => {
           
           render(input: string): string { return input; }
         }`,
-          [ngForDeclaration()], [ngForDts()]);
+          [NGFOR_DECLARATION], [ngForDts()]);
 
       expect(messages).toEqual([]);
     });
@@ -81,7 +83,7 @@ runInEachFileSystem(() => {
           }]);
 
       expect(messages).toEqual([
-        `synthetic.html(1, 24): Argument of type 'HTMLDivElement' is not assignable to parameter of type 'string'.`,
+        `synthetic.html(23, 25): Argument of type 'HTMLDivElement' is not assignable to parameter of type 'string'.`,
       ]);
     });
 
@@ -102,7 +104,7 @@ runInEachFileSystem(() => {
           }]);
 
       expect(messages).toEqual([
-        `synthetic.html(1, 31): Argument of type 'Dir' is not assignable to parameter of type 'string'.`,
+        `synthetic.html(30, 33): Argument of type 'Dir' is not assignable to parameter of type 'string'.`,
       ]);
     });
 
@@ -113,7 +115,7 @@ runInEachFileSystem(() => {
       }`);
 
       expect(messages).toEqual([
-        `synthetic.html(1, 30): Argument of type 'TemplateRef<any>' is not assignable to parameter of type 'string'.`,
+        `synthetic.html(29, 33): Argument of type 'TemplateRef<any>' is not assignable to parameter of type 'string'.`,
       ]);
     });
 
@@ -125,15 +127,15 @@ runInEachFileSystem(() => {
             name: string;
           }[];
         }`,
-          [ngForDeclaration()], [ngForDts()]);
+          [NGFOR_DECLARATION], [ngForDts()]);
 
       expect(messages).toEqual([
-        `synthetic.html(1, 40): Property 'namme' does not exist on type '{ name: string; }'. Did you mean 'name'?`,
+        `synthetic.html(39, 52): Property 'namme' does not exist on type '{ name: string; }'. Did you mean 'name'?`,
       ]);
     });
 
     it('interprets interpolation as strings', () => {
-      const messages = diagnose(`<blockquote title="{{ person }}"></blockquote>`, `
+      const messages = diagnose(`<blockquote cite="{{ person }}"></blockquote>`, `
       class TestComponent {
         person: {};
       }`);
@@ -149,27 +151,8 @@ runInEachFileSystem(() => {
       }`);
 
       expect(messages).toEqual([
-        `synthetic.html(1, 29): Property 'heihgt' does not exist on type 'TestComponent'. Did you mean 'height'?`,
-        `synthetic.html(1, 6): Can't bind to 'srcc' since it isn't a known property of 'img'.`,
-      ]);
-    });
-
-    it('checks text attributes that are consumed by bindings with literal string types', () => {
-      const messages = diagnose(
-          `<div dir mode="drak"></div><div dir mode="light"></div>`, `
-        class Dir {
-          mode: 'dark'|'light';
-        }
-        class TestComponent {}`,
-          [{
-            type: 'directive',
-            name: 'Dir',
-            selector: '[dir]',
-            inputs: {'mode': 'mode'},
-          }]);
-
-      expect(messages).toEqual([
-        `synthetic.html(1, 10): Type '"drak"' is not assignable to type '"dark" | "light"'.`,
+        `synthetic.html(5, 17): Property 'srcc' does not exist on type 'HTMLImageElement'. Did you mean 'src'?`,
+        `synthetic.html(28, 34): Property 'heihgt' does not exist on type 'TestComponent'. Did you mean 'height'?`,
       ]);
     });
 
@@ -188,7 +171,7 @@ runInEachFileSystem(() => {
           [{type: 'pipe', name: 'Pipe', pipeName: 'pipe'}]);
 
       expect(messages).toEqual([
-        `synthetic.html(1, 28): Argument of type 'number' is not assignable to parameter of type 'string'.`,
+        `synthetic.html(27, 37): Argument of type 'number' is not assignable to parameter of type 'string'.`,
       ]);
     });
 
@@ -204,62 +187,6 @@ runInEachFileSystem(() => {
       expect(messages).toEqual([]);
     });
 
-    describe('outputs', () => {
-      it('should produce a diagnostic for directive outputs', () => {
-        const messages = diagnose(
-            `<div dir (event)="handleEvent($event)"></div>`, `
-          import {EventEmitter} from '@angular/core';
-          class Dir {
-            out = new EventEmitter<number>();
-          }
-          class TestComponent {
-            handleEvent(event: string): void {}
-          }`,
-            [{type: 'directive', name: 'Dir', selector: '[dir]', outputs: {'out': 'event'}}]);
-
-        expect(messages).toEqual([
-          `synthetic.html(1, 31): Argument of type 'number' is not assignable to parameter of type 'string'.`,
-        ]);
-      });
-
-      it('should produce a diagnostic for animation events', () => {
-        const messages = diagnose(`<div dir (@animation.done)="handleEvent($event)"></div>`, `
-          class TestComponent {
-            handleEvent(event: string): void {}
-          }`);
-
-        expect(messages).toEqual([
-          `synthetic.html(1, 41): Argument of type 'AnimationEvent' is not assignable to parameter of type 'string'.`,
-        ]);
-      });
-
-      it('should produce a diagnostic for element outputs', () => {
-        const messages = diagnose(`<div (click)="handleEvent($event)"></div>`, `
-          import {EventEmitter} from '@angular/core';
-          class TestComponent {
-            handleEvent(event: string): void {}
-          }`);
-
-        expect(messages).toEqual([
-          `synthetic.html(1, 27): Argument of type 'MouseEvent' is not assignable to parameter of type 'string'.`,
-        ]);
-      });
-
-      it('should not produce a diagnostic when $event implicitly has an any type', () => {
-        const messages = diagnose(
-            `<div dir (event)="handleEvent($event)"></div>`, `
-          class Dir {
-            out: any;
-          }
-          class TestComponent {
-            handleEvent(event: string): void {}
-          }`,
-            [{type: 'directive', name: 'Dir', selector: '[dir]', outputs: {'out': 'event'}}]);
-
-        expect(messages).toEqual([]);
-      });
-    });
-
     describe('strict null checks', () => {
       it('produces diagnostic for unchecked property access', () => {
         const messages =
@@ -272,7 +199,7 @@ runInEachFileSystem(() => {
           };
         }`);
 
-        expect(messages).toEqual([`synthetic.html(1, 26): Object is possibly 'undefined'.`]);
+        expect(messages).toEqual([`synthetic.html(25, 46): Object is possibly 'undefined'.`]);
       });
 
       it('does not produce diagnostic for checked property access', () => {
@@ -291,7 +218,7 @@ runInEachFileSystem(() => {
     });
 
     it('computes line and column offsets', () => {
-      const messages = diagnose(
+      const diagnostics = typecheck(
           `
 <div>
   <img [src]="srcc"
@@ -304,10 +231,9 @@ class TestComponent {
   height: number;
 }`);
 
-      expect(messages).toEqual([
-        `synthetic.html(3, 15): Property 'srcc' does not exist on type 'TestComponent'. Did you mean 'src'?`,
-        `synthetic.html(4, 18): Property 'heihgt' does not exist on type 'TestComponent'. Did you mean 'height'?`,
-      ]);
+      expect(diagnostics.length).toBe(2);
+      expect(formatSpan(diagnostics[0])).toBe('2:14, 2:18');
+      expect(formatSpan(diagnostics[1])).toBe('3:17, 3:23');
     });
   });
 });
@@ -316,11 +242,16 @@ function diagnose(
     template: string, source: string, declarations?: TestDeclaration[],
     additionalSources: TestFile[] = []): string[] {
   const diagnostics = typecheck(template, source, declarations, additionalSources);
-  return diagnostics.map(diag => {
-    const text =
-        typeof diag.messageText === 'string' ? diag.messageText : diag.messageText.messageText;
-    const fileName = diag.file !.fileName;
-    const {line, character} = ts.getLineAndCharacterOfPosition(diag.file !, diag.start !);
-    return `${fileName}(${line + 1}, ${character + 1}): ${text}`;
+  return diagnostics.map(diagnostic => {
+    const span = diagnostic.span !;
+    return `${span.start.file.url}(${span.start.offset}, ${span.end.offset}): ${diagnostic.messageText}`;
   });
+}
+
+function formatSpan(diagostic: ts.Diagnostic | Diagnostic): string {
+  if (diagostic.source !== 'angular') {
+    return '<unexpected non-angular span>';
+  }
+  const diag = diagostic as Diagnostic;
+  return `${diag.span!.start.line}:${diag.span!.start.col}, ${diag.span!.end.line}:${diag.span!.end.col}`;
 }

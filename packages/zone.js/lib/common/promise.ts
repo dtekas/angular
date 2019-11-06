@@ -132,7 +132,7 @@ Zone.__load_patch('ZoneAwarePromise', (global: any, Zone: ZoneType, api: _ZonePr
       if (state !== REJECTED && value instanceof ZoneAwarePromise &&
           value.hasOwnProperty(symbolState) && value.hasOwnProperty(symbolValue) &&
           (value as any)[symbolState] !== UNRESOLVED) {
-        clearRejectedNoCatch(value);
+        clearRejectedNoCatch(<Promise<any>>value as any);
         resolvePromise(promise, (value as any)[symbolState], (value as any)[symbolValue]);
       } else if (state !== REJECTED && typeof then === 'function') {
         try {
@@ -176,20 +176,25 @@ Zone.__load_patch('ZoneAwarePromise', (global: any, Zone: ZoneType, api: _ZonePr
         }
         if (queue.length == 0 && state == REJECTED) {
           (promise as any)[symbolState] = REJECTED_NO_CATCH;
-          try {
-            // try to print more readable error log
-            throw new Error(
-                'Uncaught (in promise): ' + readableObjectToString(value) +
-                (value && value.stack ? '\n' + value.stack : ''));
-          } catch (err) {
-            const error: UncaughtPromiseError = err;
-            error.rejection = value;
-            error.promise = promise;
-            error.zone = Zone.current;
-            error.task = Zone.currentTask !;
-            _uncaughtPromiseErrors.push(error);
-            api.scheduleMicroTask();  // to make sure that it is running
+          let uncaughtPromiseError: any;
+          if (value instanceof Error || (value && value.message)) {
+            uncaughtPromiseError = value;
+          } else {
+            try {
+              // try to print more readable error log
+              throw new Error(
+                  'Uncaught (in promise): ' + readableObjectToString(value) +
+                  (value && value.stack ? '\n' + value.stack : ''));
+            } catch (err) {
+              uncaughtPromiseError = err;
+            }
           }
+          uncaughtPromiseError.rejection = value;
+          uncaughtPromiseError.promise = promise;
+          uncaughtPromiseError.zone = Zone.current;
+          uncaughtPromiseError.task = Zone.currentTask !;
+          _uncaughtPromiseErrors.push(uncaughtPromiseError);
+          api.scheduleMicroTask();  // to make sure that it is running
         }
       }
     }
@@ -222,7 +227,7 @@ Zone.__load_patch('ZoneAwarePromise', (global: any, Zone: ZoneType, api: _ZonePr
   }
 
   function scheduleResolveOrReject<R, U1, U2>(
-      promise: ZoneAwarePromise<any>, zone: Zone, chainPromise: ZoneAwarePromise<any>,
+      promise: ZoneAwarePromise<any>, zone: AmbientZone, chainPromise: ZoneAwarePromise<any>,
       onFulfilled?: ((value: R) => U1) | null | undefined,
       onRejected?: ((error: any) => U2) | null | undefined): void {
     clearRejectedNoCatch(promise);
@@ -286,20 +291,7 @@ Zone.__load_patch('ZoneAwarePromise', (global: any, Zone: ZoneType, api: _ZonePr
       return promise;
     }
 
-    static all<R>(values: any): Promise<R> { return ZoneAwarePromise.allWithCallback(values); }
-
-    static allSettled<R>(values: any): Promise<R> {
-      const P = this && this.prototype instanceof ZoneAwarePromise ? this : ZoneAwarePromise;
-      return P.allWithCallback(values, {
-        thenCallback: (value: any) => ({status: 'fulfilled', value}),
-        errorCallback: (err: any) => ({status: 'rejected', reason: err})
-      });
-    }
-
-    static allWithCallback<R>(values: any, callback?: {
-      thenCallback: (value: any) => any,
-      errorCallback: (err: any) => any
-    }): Promise<R> {
+    static all<R>(values: any): Promise<R> {
       let resolve: (v: any) => void;
       let reject: (v: any) => void;
       let promise = new this<R>((res, rej) => {
@@ -318,29 +310,13 @@ Zone.__load_patch('ZoneAwarePromise', (global: any, Zone: ZoneType, api: _ZonePr
         }
 
         const curValueIndex = valueIndex;
-        try {
-          value.then(
-              (value: any) => {
-                resolvedValues[curValueIndex] = callback ? callback.thenCallback(value) : value;
-                unresolvedCount--;
-                if (unresolvedCount === 0) {
-                  resolve !(resolvedValues);
-                }
-              },
-              (err: any) => {
-                if (!callback) {
-                  reject !(err);
-                } else {
-                  resolvedValues[curValueIndex] = callback.errorCallback(err);
-                  unresolvedCount--;
-                  if (unresolvedCount === 0) {
-                    resolve !(resolvedValues);
-                  }
-                }
-              });
-        } catch (thenErr) {
-          reject !(thenErr);
-        }
+        value.then((value: any) => {
+          resolvedValues[curValueIndex] = value;
+          unresolvedCount--;
+          if (unresolvedCount === 0) {
+            resolve !(resolvedValues);
+          }
+        }, reject !);
 
         unresolvedCount++;
         valueIndex++;

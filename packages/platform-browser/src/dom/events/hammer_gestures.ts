@@ -7,11 +7,9 @@
  */
 
 import {DOCUMENT} from '@angular/common';
-import {Inject, Injectable, InjectionToken, NgModule, Optional, Provider, ɵConsole as Console} from '@angular/core';
+import {Inject, Injectable, InjectionToken, Optional, ɵConsole as Console} from '@angular/core';
 
-import {EVENT_MANAGER_PLUGINS, EventManagerPlugin} from './event_manager';
-
-
+import {EventManagerPlugin} from './event_manager';
 
 /**
  * Supported HammerJS recognizer event names.
@@ -58,7 +56,6 @@ const EVENT_NAMES = {
  * DI token for providing [HammerJS](http://hammerjs.github.io/) support to Angular.
  * @see `HammerGestureConfig`
  *
- * @ngModule HammerModule
  * @publicApi
  */
 export const HAMMER_GESTURE_CONFIG = new InjectionToken<HammerGestureConfig>('HammerGestureConfig');
@@ -152,11 +149,6 @@ export class HammerGestureConfig {
   }
 }
 
-/**
- * Event plugin that adds Hammer support to an application.
- *
- * @ngModule HammerModule
- */
 @Injectable()
 export class HammerGesturesPlugin extends EventManagerPlugin {
   constructor(
@@ -241,41 +233,4 @@ export class HammerGesturesPlugin extends EventManagerPlugin {
   }
 
   isCustomEvent(eventName: string): boolean { return this._config.events.indexOf(eventName) > -1; }
-}
-
-/**
- * In Ivy, support for Hammer gestures is optional, so applications must
- * import the `HammerModule` at root to turn on support. This means that
- * Hammer-specific code can be tree-shaken away if not needed.
- */
-export const HAMMER_PROVIDERS__POST_R3__ = [];
-
-/**
- * In View Engine, support for Hammer gestures is built-in by default.
- */
-export const HAMMER_PROVIDERS__PRE_R3__: Provider[] = [
-  {
-    provide: EVENT_MANAGER_PLUGINS,
-    useClass: HammerGesturesPlugin,
-    multi: true,
-    deps: [DOCUMENT, HAMMER_GESTURE_CONFIG, Console, [new Optional(), HAMMER_LOADER]]
-  },
-  {provide: HAMMER_GESTURE_CONFIG, useClass: HammerGestureConfig, deps: []},
-];
-
-export const HAMMER_PROVIDERS = HAMMER_PROVIDERS__PRE_R3__;
-
-/**
- * Adds support for HammerJS.
- *
- * Import this module at the root of your application so that Angular can work with
- * HammerJS to detect gesture events.
- *
- * Note that applications still need to include the HammerJS script itself. This module
- * simply sets up the coordination layer between HammerJS and Angular's EventManager.
- *
- * @publicApi
- */
-@NgModule({providers: HAMMER_PROVIDERS__PRE_R3__})
-export class HammerModule {
 }

@@ -18,7 +18,7 @@ describe('applyRedirects', () => {
   const serializer = new DefaultUrlSerializer();
   let testModule: NgModuleRef<any>;
 
-  beforeEach(() => { testModule = TestBed.inject(NgModuleRef); });
+  beforeEach(() => { testModule = TestBed.get(NgModuleRef); });
 
   it('should return the same url tree when no redirects', () => {
     checkRedirect(

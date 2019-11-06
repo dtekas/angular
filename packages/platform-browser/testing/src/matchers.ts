@@ -7,17 +7,14 @@
  */
 
 
-import {ɵgetDOM as getDOM} from '@angular/common';
 import {Type, ɵglobal as global} from '@angular/core';
 import {ComponentFixture} from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
-import {childNodesAsList, hasClass, hasStyle, isCommentNode} from './browser_util';
+import {By, ɵgetDOM as getDOM} from '@angular/platform-browser';
+
 
 
 /**
  * Jasmine matchers that check Angular specific conditions.
- *
- * Note: These matchers will only work in a browser environment.
  */
 export interface NgMatchers<T = any> extends jasmine.Matchers<T> {
   /**
@@ -186,7 +183,7 @@ _global.beforeEach(function() {
       function buildError(isNot: boolean) {
         return function(actual: any, className: string) {
           return {
-            pass: hasClass(actual, className) == !isNot,
+            pass: getDOM().hasClass(actual, className) == !isNot,
             get message() {
               return `Expected ${actual.outerHTML} ${isNot ? 'not ' : ''}to contain the CSS class "${className}"`;
             }
@@ -200,11 +197,12 @@ _global.beforeEach(function() {
         compare: function(actual: any, styles: {[k: string]: string}|string) {
           let allPassed: boolean;
           if (typeof styles === 'string') {
-            allPassed = hasStyle(actual, styles);
+            allPassed = getDOM().hasStyle(actual, styles);
           } else {
             allPassed = Object.keys(styles).length !== 0;
-            Object.keys(styles).forEach(
-                prop => { allPassed = allPassed && hasStyle(actual, prop, styles[prop]); });
+            Object.keys(styles).forEach(prop => {
+              allPassed = allPassed && getDOM().hasStyle(actual, prop, styles[prop]);
+            });
           }
 
           return {
@@ -279,7 +277,7 @@ _global.beforeEach(function() {
 
 function elementText(n: any): string {
   const hasNodes = (n: any) => {
-    const children = n.childNodes;
+    const children = getDOM().childNodes(n);
     return children && children.length > 0;
   };
 
@@ -287,25 +285,21 @@ function elementText(n: any): string {
     return n.map(elementText).join('');
   }
 
-  if (isCommentNode(n)) {
+  if (getDOM().isCommentNode(n)) {
     return '';
   }
 
-  if (getDOM().isElementNode(n) && (n as Element).tagName == 'CONTENT') {
-    return elementText(Array.prototype.slice.apply((<any>n).getDistributedNodes()));
+  if (getDOM().isElementNode(n) && getDOM().tagName(n) == 'CONTENT') {
+    return elementText(Array.prototype.slice.apply(getDOM().getDistributedNodes(n)));
   }
 
-  if (hasShadowRoot(n)) {
-    return elementText(childNodesAsList((<any>n).shadowRoot));
+  if (getDOM().hasShadowRoot(n)) {
+    return elementText(getDOM().childNodesAsList(getDOM().getShadowRoot(n)));
   }
 
   if (hasNodes(n)) {
-    return elementText(childNodesAsList(n));
+    return elementText(getDOM().childNodesAsList(n));
   }
 
-  return (n as any).textContent;
-}
-
-function hasShadowRoot(node: any): boolean {
-  return node.shadowRoot != null && node instanceof HTMLElement;
+  return getDOM().getText(n) !;
 }

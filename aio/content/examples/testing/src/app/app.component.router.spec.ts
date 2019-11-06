@@ -103,7 +103,7 @@ xdescribe('AppComponent & Lazy Loading (not working yet)', () => {
 
   beforeEach(fakeAsync(() => {
     createComponent();
-    loader = TestBed.inject(NgModuleFactoryLoader);
+    loader = TestBed.get(NgModuleFactoryLoader);
     loader.stubbedModules = { expected: HeroModule };
     router.resetConfig([{path: 'heroes', loadChildren: 'expected'}]);
   }));

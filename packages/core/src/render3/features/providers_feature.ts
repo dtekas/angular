@@ -18,18 +18,19 @@ import {DirectiveDef} from '../interfaces/definition';
  * class ComponentWithProviders {
  *   constructor(private greeter: GreeterDE) {}
  *
- *   static ɵcmp = defineComponent({
+ *   static ngComponentDef = defineComponent({
  *     type: ComponentWithProviders,
  *     selectors: [['component-with-providers']],
  *    factory: () => new ComponentWithProviders(directiveInject(GreeterDE as any)),
- *    decls: 1,
+ *    consts: 1,
  *    vars: 1,
  *    template: function(fs: RenderFlags, ctx: ComponentWithProviders) {
  *      if (fs & RenderFlags.Create) {
  *        ɵɵtext(0);
  *      }
  *      if (fs & RenderFlags.Update) {
- *        ɵɵtextInterpolate(ctx.greeter.greet());
+ *        ɵɵselect(0);
+ *        ɵɵtextBinding(ctx.greeter.greet());
  *      }
  *    },
  *    features: [ProvidersFeature([GreeterDE])]

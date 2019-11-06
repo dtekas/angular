@@ -7,7 +7,9 @@
  */
 import {AttributeMarker, TAttributes} from '../interfaces/node';
 import {CssSelector} from '../interfaces/projection';
-import {ProceduralRenderer3, RElement, Renderer3, isProceduralRenderer} from '../interfaces/renderer';
+import {ProceduralRenderer3, RElement, isProceduralRenderer} from '../interfaces/renderer';
+import {RENDERER} from '../interfaces/view';
+import {getLView} from '../state';
 
 
 /**
@@ -32,12 +34,13 @@ import {ProceduralRenderer3, RElement, Renderer3, isProceduralRenderer} from '..
  * Note that this instruction does not support assigning style and class values to
  * an element. See `elementStart` and `elementHostAttrs` to learn how styling values
  * are applied to an element.
- * @param renderer The renderer to be used
+ *
  * @param native The element that the attributes will be assigned to
  * @param attrs The attribute array of values that will be assigned to the element
  * @returns the index value that was last accessed in the attributes array
  */
-export function setUpAttributes(renderer: Renderer3, native: RElement, attrs: TAttributes): number {
+export function setUpAttributes(native: RElement, attrs: TAttributes): number {
+  const renderer = getLView()[RENDERER];
   const isProc = isProceduralRenderer(renderer);
 
   let i = 0;
@@ -73,8 +76,9 @@ export function setUpAttributes(renderer: Renderer3, native: RElement, attrs: TA
         }
       } else {
         isProc ?
-            (renderer as ProceduralRenderer3).setAttribute(native, attrName, attrVal as string) :
-            native.setAttribute(attrName, attrVal as string);
+            (renderer as ProceduralRenderer3)
+                .setAttribute(native, attrName as string, attrVal as string) :
+            native.setAttribute(attrName as string, attrVal as string);
       }
       i++;
     }
@@ -85,6 +89,17 @@ export function setUpAttributes(renderer: Renderer3, native: RElement, attrs: TA
   // whether by running into an unsupported marker or if all the static values were
   // iterated over.
   return i;
+}
+
+
+export function attrsStylingIndexOf(attrs: TAttributes, startIndex: number): number {
+  for (let i = startIndex; i < attrs.length; i++) {
+    const val = attrs[i];
+    if (val === AttributeMarker.Classes || val === AttributeMarker.Styles) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 /**
@@ -99,9 +114,8 @@ export function isNameOnlyAttributeMarker(marker: string | AttributeMarker | Css
       marker === AttributeMarker.I18n;
 }
 
+export const ANIMATION_PROP_PREFIX = '@';
+
 export function isAnimationProp(name: string): boolean {
-  // Perf note: accessing charCodeAt to check for the first character of a string is faster as
-  // compared to accessing a character at index 0 (ex. name[0]). The main reason for this is that
-  // charCodeAt doesn't allocate memory to return a substring.
-  return name.charCodeAt(0) === 64;  // @
+  return name[0] === ANIMATION_PROP_PREFIX;
 }

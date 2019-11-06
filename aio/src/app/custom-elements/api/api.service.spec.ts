@@ -35,7 +35,11 @@ describe('ApiService', () => {
   it('subscribers should be completed/unsubscribed when service destroyed', () => {
       let completed = false;
 
-      service.sections.subscribe({complete: () => completed = true});
+      service.sections.subscribe(
+        undefined,
+        undefined,
+        () => completed = true
+      );
 
       service.ngOnDestroy();
       expect(completed).toBe(true);

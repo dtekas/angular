@@ -6,9 +6,10 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {DOCUMENT, ɵgetDOM as getDOM} from '@angular/common';
+import {DOCUMENT} from '@angular/common';
 import {Inject, Injectable, ɵɵinject} from '@angular/core';
 
+import {getDOM} from '../dom/dom_adapter';
 
 /**
  * Factory to create Title service.
@@ -33,11 +34,11 @@ export class Title {
   /**
    * Get the title of the current HTML document.
    */
-  getTitle(): string { return this._doc.title; }
+  getTitle(): string { return getDOM().getTitle(this._doc); }
 
   /**
    * Set the title of the current HTML document.
    * @param newTitle
    */
-  setTitle(newTitle: string) { this._doc.title = newTitle || ''; }
+  setTitle(newTitle: string) { getDOM().setTitle(this._doc, newTitle); }
 }
